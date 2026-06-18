@@ -1,0 +1,17 @@
+.topbar-user-btn {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-family: 'Archivo', sans-serif;
+  color: var(--blanco);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.topbar-user-btn:hover {
+  background: rgba(201,168,76,.15);
+  border-color: rgba(201,168,76,.35);
+  color: var(--dorado);
+}

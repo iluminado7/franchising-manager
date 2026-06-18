@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cerrajería Leonardo — Iniciar sesión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/style.css">
+<link rel="stylesheet" href="styles/login.css">
+<script src="js/config.js"></script>
+</head>
+<body>
+
+<div id="screen-login">
+
+  <div class="login-izq">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1C8.676 1 6 3.676 6 7v1H4v14h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+        </svg>
+      </div>
+      <div class="brand-name">
+        Sistema de Gestión de Franquicias
+        <span>Franchising Manager by GoHarv.</span>
+      </div>
+    </div>
+
+    <div class="login-izq-copy">
+      <h1>Gestión de<br>manuales <em>operativos</em></h1>
+      <p>Plataforma centralizada para la redacción, edición, notificación, capacitación y trazabilidad legal de manuales de franquicias conforme a la normativa vigente.</p>
+    </div>
+
+    <div class="login-features">
+      <div class="feature-item"><div class="feature-dot"></div>Gestión en tiempo real y desde cualquier lugar</div>
+      <div class="feature-item"><div class="feature-dot"></div>Doble validación digital y física</div>
+      <div class="feature-item"><div class="feature-dot"></div>Notificaciones automáticas de cambios</div>
+    </div>
+  </div>
+
+  <div class="login-der">
+    <div class="login-card">
+      <h2>Iniciar sesión</h2>
+      <p class="sub">Ingresá con tu cuenta del sistema</p>
+
+      <div class="login-error" id="login-error"></div>
+
+      <div class="form-group">
+        <label for="inp-email">Email</label>
+        <input type="email" id="inp-email" placeholder="tu@email.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="inp-password">Contraseña</label>
+        <div style="position:relative">
+          <input type="password" id="inp-password" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px">
+          <button
+            type="button"
+            onclick="togglePassword()"
+            style="position:absolute;right:0;top:0;height:100%;width:44px;background:transparent;border:none;cursor:pointer;color:var(--gris4);display:flex;align-items:center;justify-content:center;border-radius:0 8px 8px 0;transition:color .2s"
+            onmouseover="this.style.color='var(--blanco)'"
+            onmouseout="this.style.color='var(--gris4)'"
+          >
+            <svg id="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="icon-eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-login" id="btn-login" onclick="hacerLogin()">
+        <div class="spinner" id="login-spinner"></div>
+        <span id="login-btn-text">Ingresar</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function destinoPorRol(rol) {
+  if (rol === 'franquiciante') return '/manuales-mi-empresa.php';
+  if (rol === 'super_admin')   return '/dashboard.php';
+  return '/mis-manuales.php'; // franquiciado, empleado
+}
+
+async function hacerLogin() {
+  const email    = document.getElementById('inp-email').value.trim();
+  const password = document.getElementById('inp-password').value;
+  const btn      = document.getElementById('btn-login');
+  const spinner  = document.getElementById('login-spinner');
+  const btnText  = document.getElementById('login-btn-text');
+
+  mostrarError('');
+
+  if (!email || !password) { mostrarError('Completá los dos campos.'); return; }
+
+  btn.disabled          = true;
+  spinner.style.display = 'block';
+  btnText.textContent   = 'Ingresando...';
+
+  try {
+    const res = await fetch(API + '/login', {
+      method:      'POST',
+      headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      credentials: 'include',
+      body:        JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      mostrarError(data?.errors?.email?.[0] || data?.message || 'Credenciales incorrectas.');
+      return;
+    }
+
+    localStorage.setItem('cl_rol', data.rol);
+    window.location.href = BASE_URL + destinoPorRol(data.rol);
+
+  } catch (err) {
+    mostrarError('Error de conexión. Verificá que el servidor esté activo.');
+  } finally {
+    btn.disabled          = false;
+    spinner.style.display = 'none';
+    btnText.textContent   = 'Ingresar';
+  }
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent   = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function togglePassword() {
+  const input  = document.getElementById('inp-password');
+  const eyeOn  = document.getElementById('icon-eye');
+  const eyeOff = document.getElementById('icon-eye-off');
+  const visible = input.type === 'text';
+  input.type           = visible ? 'password' : 'text';
+  eyeOn.style.display  = visible ? 'block' : 'none';
+  eyeOff.style.display = visible ? 'none'  : 'block';
+}
+
+document.getElementById('inp-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') hacerLogin();
+});
+
+// Auto-login
+(async () => {
+  if (!localStorage.getItem('cl_rol')) return;
+  try {
+    const res = await fetch(API + '/me', {
+      headers:     { 'Accept': 'application/json' },
+      credentials: 'include',
+    });
+    if (res.ok) {
+      const me = await res.json();
+      window.location.href = BASE_URL + destinoPorRol(me.rol);
+    } else {
+      localStorage.removeItem('cl_rol');
+    }
+  } catch (_) {
+    localStorage.removeItem('cl_rol');
+  }
+})();
+</script>
+
+</body>
+</html>

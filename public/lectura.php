@@ -1,0 +1,357 @@
+<?php
+require_once __DIR__ . '/layout/config.php';
+require_once __DIR__ . '/layout/auth.php';
+verificarSesion();
+$titulo        = 'Lectura de Manual';
+$pagina_actual = '';
+$modo_editor   = true;
+include 'layout/head.php';
+?>
+
+<style>
+body {
+  background: #F2F0EB !important;
+  --negro:  #F2F0EB;
+  --blanco: #1A1A1A;
+  --gris1:  #FFFFFF;
+  --gris2:  #E0DDD6;
+  --gris3:  #AAAAAA;
+  --gris4:  #666666;
+  --gris5:  #333333;
+}
+.topbar { background: #FFFFFF !important; border-bottom: 1px solid #E0DDD6 !important; }
+.topbar-brand     { color: #1A1A1A !important; }
+.topbar-brand-dot { background: var(--dorado) !important; }
+.btn-logout       { color: #666; border-color: #ddd; }
+.btn-logout:hover { color: #1A1A1A; border-color: #aaa; }
+.notif-btn        { color: #888; }
+.notif-btn:hover  { color: #1A1A1A; background: #f0ede8; }
+
+.lectura-layout {
+  min-height: calc(100vh - 56px);
+  padding: 40px 24px 80px;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+.doc-topbar {
+  width: 100%; max-width: 800px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+}
+.doc-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: #888; text-decoration: none;
+  transition: color .15s; font-family: 'Archivo', sans-serif;
+}
+.doc-back:hover { color: #1A1A1A; }
+.doc-meta {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12px; color: #888; font-family: 'Archivo Narrow', sans-serif;
+}
+.doc-meta span { display: flex; align-items: center; gap: 5px; }
+
+.doc-page {
+  width: 100%; max-width: 800px;
+  background: #FFFFFF; border-radius: 4px;
+  box-shadow: 0 2px 20px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.06);
+  padding: 72px 80px; min-height: 600px;
+}
+.doc-content {
+  font-family: 'Lora', 'Georgia', serif;
+  font-size: 15px; line-height: 1.85; color: #2A2A2A;
+}
+.doc-content h1 {
+  font-family: 'Archivo', sans-serif; font-size: 26px; font-weight: 700;
+  color: #111; margin: 0 0 20px; padding-bottom: 14px;
+  border-bottom: 2px solid #E8E4DC; line-height: 1.2;
+}
+.doc-content h2 {
+  font-family: 'Archivo', sans-serif; font-size: 18px; font-weight: 600;
+  color: #1A1A1A; margin: 32px 0 12px;
+}
+.doc-content h3 {
+  font-family: 'Archivo', sans-serif; font-size: 15px; font-weight: 600;
+  color: #333; margin: 20px 0 8px;
+}
+.doc-content p  { margin: 0 0 12px; }
+.doc-content ul, .doc-content ol { padding-left: 24px; margin: 0 0 12px; }
+.doc-content li { margin-bottom: 5px; }
+.doc-content strong { font-weight: 700; color: #111; }
+.doc-content em     { font-style: italic; }
+.doc-content u      { text-decoration: underline; }
+.doc-content table  { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; font-family: 'Archivo Narrow', sans-serif; }
+.doc-content td, .doc-content th { border: 1px solid #E0DDD6; padding: 9px 14px; text-align: left; }
+.doc-content th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Archivo', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+
+.doc-footer { width: 100%; max-width: 800px; margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+
+.estado-aceptacion {
+  padding: 14px 20px; border-radius: 10px; font-size: 13px;
+  font-family: 'Archivo Narrow', sans-serif;
+  display: flex; align-items: center; gap: 10px;
+}
+.estado-aceptacion.aceptado  { background: rgba(92,184,122,.1);  border: 1px solid rgba(92,184,122,.25); color: #27500A; }
+.estado-aceptacion.pendiente { background: rgba(226,92,92,.06);  border: 1px solid rgba(226,92,92,.2);  color: #791F1F; }
+
+.btn-aceptar-doc {
+  width: 100%; padding: 16px; background: var(--dorado);
+  color: #1A1A1A; border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 700; font-family: 'Archivo', sans-serif;
+  cursor: pointer; transition: opacity .2s, transform .1s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-aceptar-doc:hover    { opacity: .88; }
+.btn-aceptar-doc:active   { transform: scale(.99); }
+.btn-aceptar-doc:disabled { opacity: .4; cursor: not-allowed; }
+
+.nota-legal {
+  font-size: 11px; color: #999; text-align: center;
+  font-family: 'Archivo Narrow', sans-serif; line-height: 1.5; padding: 0 8px;
+}
+
+.modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:16px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#FFFFFF;border:1px solid #E0DDD6;border-radius:14px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.modal-header { padding:18px 20px;border-bottom:1px solid #E8E4DC;display:flex;align-items:center;justify-content:space-between; }
+.modal-header h3 { font-size:15px;font-weight:600;color:#1A1A1A; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:#999;padding:4px;border-radius:5px;display:flex;transition:color .15s; }
+.modal-close:hover { color:#1A1A1A; }
+.modal-body  { padding:20px; }
+.modal-footer { padding:14px 20px;border-top:1px solid #E8E4DC;display:flex;justify-content:flex-end;gap:8px; }
+.btn-modal-cancel  { padding:8px 16px;border-radius:7px;border:1px solid #E0DDD6;background:transparent;font-size:13px;font-family:'Archivo',sans-serif;color:#666;cursor:pointer;transition:all .15s; }
+.btn-modal-cancel:hover { border-color:#aaa;color:#1A1A1A; }
+.btn-modal-confirm { padding:8px 16px;border-radius:7px;border:none;background:var(--dorado);color:#1A1A1A;font-size:13px;font-weight:600;font-family:'Archivo',sans-serif;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px; }
+.btn-modal-confirm:hover    { opacity:.88; }
+.btn-modal-confirm:disabled { opacity:.4;cursor:not-allowed; }
+
+.loading-doc { display:flex;align-items:center;justify-content:center;gap:12px;padding:80px 0;color:#999;font-size:14px;font-family:'Archivo Narrow',sans-serif; }
+.spinner-doc { width:20px;height:20px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius:10px;padding:12px 16px;font-size:13px;color:#F5F3EE;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:340px; }
+.toast.show { transform:translateY(0);opacity:1; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #F2F0EB; }
+::-webkit-scrollbar-thumb { background: #D0CDC6; border-radius: 3px; }
+
+@media (max-width: 860px) { .doc-page { padding: 40px 28px; } }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<div class="app-layout">
+  <?php include 'layout/topbar.php'; ?>
+
+  <div class="lectura-layout">
+
+    <div class="doc-topbar">
+      <a href="mis-manuales.php" class="doc-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver a manuales
+      </a>
+      <div class="doc-meta">
+        <span id="doc-empresa">—</span>
+        <span style="color:#ccc">·</span>
+        <span id="doc-version">—</span>
+        <span style="color:#ccc">·</span>
+        <span id="doc-fecha">—</span>
+      </div>
+    </div>
+
+    <div class="doc-page">
+      <div id="doc-content-wrap">
+        <div class="loading-doc">
+          <div class="spinner-doc"></div>
+          Cargando manual...
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-footer" id="doc-footer" style="display:none">
+      <div id="estado-aceptacion-wrap"></div>
+      <div id="btn-aceptar-wrap"></div>
+      <div class="nota-legal" id="nota-legal" style="display:none">
+        Al aceptar, confirmás haber leído y comprendido el contenido de este manual.<br>
+        La aceptación queda registrada con tu IP, fecha y hora bajo los términos de la <strong>Ley 25.506</strong> de firma digital argentina.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN -->
+<div class="modal-overlay" id="modal-confirmar">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Confirmar aceptación digital</h3>
+      <button class="modal-close" onclick="cerrarModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#444;line-height:1.7;font-family:'Archivo Narrow',sans-serif;margin-bottom:12px">
+        Estás a punto de aceptar digitalmente el manual:
+      </p>
+      <div style="background:#F7F5F0;border-radius:8px;padding:12px 16px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600;color:#1A1A1A" id="modal-manual-nombre"></div>
+        <div style="font-size:12px;color:#888;margin-top:3px;font-family:'Archivo Narrow',sans-serif" id="modal-manual-version"></div>
+      </div>
+      <p style="font-size:13px;color:#666;line-height:1.6;font-family:'Archivo Narrow',sans-serif">
+        Esta acción es <strong style="color:#1A1A1A">irreversible</strong> y queda registrada con tu IP, fecha y hora exacta bajo los términos de la <strong style="color:#1A1A1A">Ley 25.506</strong>.
+      </p>
+      <div id="modal-error" style="display:none;margin-top:12px;background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:#E25C5C"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-modal-confirm" id="btn-confirmar" onclick="ejecutarAceptacion()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Confirmar aceptación
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
+
+<script>
+const MANUAL_ID = new URLSearchParams(location.search).get('id');
+
+let versionActivaId = null;
+let yaAceptado      = false;
+let rolUsuario      = '';
+
+async function init() {
+  if (!MANUAL_ID) {
+    mostrarToast('No se especificó un manual.', 'error');
+    setTimeout(() => window.location.href = 'manuales.php', 2000);
+    return;
+  }
+
+  try {
+    // Obtener rol del usuario para saber si mostrar aceptación
+    const me = await apiFetch('GET', '/me');
+    rolUsuario = me.rol;
+
+    const manual  = await apiFetch('GET', `/manuales/${MANUAL_ID}`);
+    const version = manual.version_activa?.[0];
+
+    if (!version) {
+      document.getElementById('doc-content-wrap').innerHTML =
+        `<div class="loading-doc" style="color:#999">Este manual no tiene versión publicada.</div>`;
+      return;
+    }
+
+    versionActivaId = version.id;
+    yaAceptado      = manual.mi_aceptacion || false;
+
+    document.title = `${manual.titulo} — Cerrajería Leonardo`;
+    document.getElementById('doc-empresa').textContent  = me.perfil
+      ? (me.empresa?.nombre || '—') : '—';
+    document.getElementById('doc-version').textContent  = `v${version.version_number}`;
+    document.getElementById('doc-fecha').textContent    = formatFecha(version.publicado_at);
+
+    document.getElementById('doc-content-wrap').innerHTML =
+      version.contenido_html || '<p style="color:#999">Sin contenido.</p>';
+
+    document.getElementById('doc-footer').style.display = 'flex';
+
+    // Empleado: solo lectura, sin aceptación ni nota legal
+    if (rolUsuario === 'empleado') {
+      document.getElementById('estado-aceptacion-wrap').innerHTML = '';
+      document.getElementById('btn-aceptar-wrap').innerHTML       = '';
+      document.getElementById('nota-legal').style.display         = 'none';
+      return;
+    }
+
+    // Franquiciado: muestra estado de aceptación
+    const estadoWrap = document.getElementById('estado-aceptacion-wrap');
+    if (yaAceptado) {
+      estadoWrap.innerHTML = `
+        <div class="estado-aceptacion aceptado">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Ya aceptaste este manual digitalmente.
+        </div>`;
+    } else {
+      estadoWrap.innerHTML = `
+        <div class="estado-aceptacion pendiente">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Todavía no aceptaste este manual. Leelo y aceptá al finalizar.
+        </div>`;
+
+      document.getElementById('btn-aceptar-wrap').innerHTML = `
+        <button class="btn-aceptar-doc" onclick="abrirModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Aceptar manual
+        </button>`;
+
+      document.getElementById('nota-legal').style.display = 'block';
+
+      document.getElementById('modal-manual-nombre').textContent  = manual.titulo;
+      document.getElementById('modal-manual-version').textContent =
+        `Versión ${version.version_number} · Publicado el ${formatFecha(version.publicado_at)}`;
+    }
+
+  } catch (e) {
+    document.getElementById('doc-content-wrap').innerHTML =
+      `<div class="loading-doc" style="color:#999">Error al cargar el manual.</div>`;
+  }
+}
+
+function abrirModal() {
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('modal-confirmar').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modal-confirmar').classList.remove('open');
+}
+
+async function ejecutarAceptacion() {
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled  = true;
+  btn.innerHTML = `<div style="width:14px;height:14px;border:2px solid rgba(26,26,26,.3);border-top-color:#1A1A1A;border-radius:50%;animation:spin .6s linear infinite"></div> Registrando...`;
+
+  try {
+    await apiFetch('POST', `/versiones/${versionActivaId}/aceptar`);
+    cerrarModal();
+    mostrarToast('¡Manual aceptado correctamente!', 'exito');
+    document.getElementById('estado-aceptacion-wrap').innerHTML = `
+      <div class="estado-aceptacion aceptado">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        ¡Aceptaste este manual digitalmente!
+      </div>`;
+    document.getElementById('btn-aceptar-wrap').innerHTML   = '';
+    document.getElementById('nota-legal').style.display     = 'none';
+  } catch (e) {
+    const msg = e.data?.message || 'Error al registrar la aceptación.';
+    document.getElementById('modal-error').textContent   = msg;
+    document.getElementById('modal-error').style.display = 'block';
+    btn.disabled  = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar aceptación`;
+  }
+}
+
+function formatFecha(str) {
+  if (!str) return '—';
+  return new Date(str).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+let toastTimer;
+function mostrarToast(msg, tipo = 'exito') {
+  const el   = document.getElementById('toast');
+  const icon = tipo === 'exito'
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5CB87A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E25C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  document.getElementById('toast-icon').innerHTML  = icon;
+  document.getElementById('toast-msg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+document.addEventListener('DOMContentLoaded', () => init());
+</script>
+
+<?php include 'layout/footer.php'; ?>
