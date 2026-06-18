@@ -1,3 +1,3 @@
-<script src="/manuales-franquiciantes/public/js/layout.js"></script>
+<script src="<?= BASE_URL_PHP ?>/js/layout.js"></script>
 </body>
 </html>
