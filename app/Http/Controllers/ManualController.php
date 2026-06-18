@@ -467,7 +467,11 @@ class ManualController extends Controller
         $config->set('CSS.AllowedProperties',
             'text-align,font-weight,font-style,text-decoration,width,height'
         );
-        $config->set('Cache.SerializerPath', storage_path('app/htmlpurifier'));
+        $cacheDir = storage_path('app/htmlpurifier');
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0775, true);
+        }
+        $config->set('Cache.SerializerPath', $cacheDir);
 
         return (new HTMLPurifier($config))->purify($html);
     }
