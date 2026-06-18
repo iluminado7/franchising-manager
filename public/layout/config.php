@@ -1,6 +1,8 @@
 <?php
-// layout/config.php
-define('BASE_URL_PHP', '/manuales-franquiciantes/public');
+// BASE_URL_PHP se adapta solo: en local (XAMPP) usa la subcarpeta; en Cloud, la raíz del dominio.
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$esLocal = str_starts_with($host, 'localhost') || str_starts_with($host, '127.0.0.1');
+define('BASE_URL_PHP', $esLocal ? '/manuales-franquiciantes/public' : '');
 
 // Leer el .env manualmente (parse_ini_file falla con caracteres especiales)
 $envFile = dirname(__DIR__, 2) . '/.env';
