@@ -165,6 +165,25 @@ include 'layout/head.php';
         </div>
       </div>
 
+      <!-- Notas / Sugerencias -->
+      <div class="panel-section">
+        <div class="panel-section-title">Notas y sugerencias</div>
+
+        <!-- Caja para escribir (solo franquiciante) -->
+        <div id="nota-form" style="display:none;margin-bottom:12px">
+          <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; una sugerencia sobre este manual..." style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--gris2);border-radius:8px;color:var(--blanco);font-family:'Archivo Narrow',sans-serif;font-size:12.5px;padding:8px 10px;resize:vertical;outline:none;line-height:1.5"></textarea>
+          <button class="btn btn-ghost" id="btn-nota-enviar" onclick="agregarNota()" style="width:100%;justify-content:center;margin-top:8px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+            Enviar nota
+          </button>
+        </div>
+
+        <!-- Hilo de notas -->
+        <div class="notas-list" id="notas-list">
+          <div style="font-size:12px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">Cargando notas...</div>
+        </div>
+      </div>
+
       <!-- Historial de versiones -->
       <div class="panel-section" style="flex:1">
         <div class="panel-section-title">Historial de versiones</div>
@@ -188,12 +207,12 @@ include 'layout/head.php';
     </div>
     <div class="modal-body">
 
-      <!-- Contenido para super_admin -->
+      <!-- Contenido para superadmin -->
       <div id="pub-body-admin">
-        <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif">
+        <p style="font-size:15px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif">
           Se creará una nueva versión del manual. Todos los franquiciados activos recibirán una notificación. Esta acción no se puede deshacer.
         </p>
-        <p style="margin-top:8px;font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris3)">
+        <p style="margin-top:8px;font-size:14px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris3)">
           Las imágenes del documento no se importan. Solo se conserva el texto y el formato.
         </p>
       </div>
@@ -205,21 +224,21 @@ include 'layout/head.php';
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <div style="font-size:13px;font-weight:600;color:var(--error)">Advertencia importante</div>
           </div>
-          <p style="font-size:12.5px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif;margin:0">
+          <p style="font-size:14.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:0">
             Estás por publicar una versión de un manual operativo. Toda modificación o creación de contenido que realices queda <strong style="color:var(--blanco)">bajo tu entera responsabilidad</strong> y puede tener <strong style="color:var(--blanco)">repercusiones legales</strong> para tu empresa y sus franquicias.
           </p>
-          <p style="font-size:12.5px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif;margin:10px 0 0">
+          <p style="font-size:14.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:10px 0 0">
             Antes de continuar, te recomendamos <strong style="color:var(--blanco)">consultar con el equipo técnico</strong> o asesoría legal para validar los cambios.
           </p>
         </div>
 
-        <p style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5;margin-bottom:14px">
+        <p style="font-size:14px;color:var(--gris4);font-family:'Montserrat',sans-serif;line-height:1.5;margin-bottom:14px">
           Una vez publicado, todos los franquiciados activos de tu empresa recibirán una notificación y la versión quedará registrada con fecha, hora y autoría. Esta acción no se puede deshacer.
         </p>
 
         <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--gris2)">
           <input type="checkbox" id="pub-confirmo" onchange="toggleBotonPublicar()" style="margin-top:2px;width:15px;height:15px;accent-color:var(--dorado);flex-shrink:0">
-          <span style="font-size:12px;color:var(--gris5);line-height:1.5;font-family:'Archivo Narrow',sans-serif">
+          <span style="font-size:13px;color:var(--gris5);line-height:1.5;font-family:'Montserrat',sans-serif">
             Confirmo que reviso y asumo la responsabilidad por las modificaciones realizadas en este manual.
           </span>
         </label>
@@ -463,6 +482,40 @@ include 'layout/head.php';
 .version-item.cargada .version-num {
   color: #378ADD;
 }
+
+/* Notas / Sugerencias */
+.notas-list { display: flex; flex-direction: column; gap: 8px; }
+.nota-item {
+  background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
+  border-radius: 8px; padding: 10px 12px;
+}
+.nota-item-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 5px;
+}
+.nota-autor { font-size: 12px; font-weight: 600; color: var(--blanco); }
+.nota-fecha { font-size: 10.5px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; white-space: nowrap; }
+.nota-contenido { font-size: 12.5px; color: var(--gris5); font-family: 'Archivo Narrow', sans-serif; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.nota-meta { display: flex; align-items: center; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+.nota-estado {
+  display: inline-block; font-size: 9.5px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 20px;
+}
+.nota-estado.pendiente { background: rgba(201,168,76,.15); color: var(--dorado); }
+.nota-estado.leida     { background: rgba(55,138,221,.15); color: #378ADD; }
+.nota-estado.resuelta  { background: rgba(92,184,122,.15); color: var(--exito); }
+.nota-ver { font-size: 10px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; }
+.nota-acciones { display: flex; gap: 6px; margin-top: 8px; }
+.nota-btn {
+  flex: 1; font-size: 10.5px; font-family: 'Archivo Narrow', sans-serif;
+  padding: 5px 8px; border-radius: 6px; cursor: pointer;
+  background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.nota-btn:hover { border-color: var(--gris3); color: var(--blanco); background: rgba(255,255,255,.04); }
+.nota-btn.activo { border-color: rgba(201,168,76,.4); color: var(--dorado); background: rgba(201,168,76,.06); cursor: default; }
+
 </style>
 
 <script src="<?= BASE_URL_PHP ?>/js/mammoth.browser.min.js"></script>
@@ -529,6 +582,8 @@ async function init() {
     } else {
       habilitarEditor();
     }
+    cargarNotas();
+
     // Si viene de importación desde manuales.php
     const htmlImportado = sessionStorage.getItem(`import_html_${MANUAL_ID}`);
     if (htmlImportado) {
@@ -898,6 +953,100 @@ document.addEventListener('keydown', e => {
 window.addEventListener('beforeunload', e => {
   if (estado.modificado) { e.preventDefault(); e.returnValue = ''; }
 });
+
+// ── NOTAS / SUGERENCIAS ───────────────────────────────────────
+async function cargarNotas() {
+  const el = document.getElementById('notas-list');
+  // La caja para escribir solo la ve el franquiciante; el super_admin solo marca estado.
+  if (rolUsuario === 'franquiciante') {
+    document.getElementById('nota-form').style.display = 'block';
+  }
+  try {
+    const notas = await apiFetch('GET', `/manuales/${MANUAL_ID}/notas`);
+    renderNotas(notas);
+  } catch (e) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--error);font-family:'Archivo Narrow',sans-serif">Error al cargar las notas.</div>`;
+  }
+}
+
+function escNota(str) {
+  return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function nombreAutorNota(nota) {
+  const a = nota.autor || {};
+  const p = a.franchise_staff || a.system_admin || a.super_admin;
+  if (p && (p.nombre || p.apellido)) return `${p.nombre || ''} ${p.apellido || ''}`.trim();
+  return a.email || 'Usuario';
+}
+
+function renderNotas(notas) {
+  const el = document.getElementById('notas-list');
+  if (!notas.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">Todav&iacute;a no hay notas para este manual.</div>`;
+    return;
+  }
+
+  const esAdmin = rolUsuario === 'super_admin';
+
+  el.innerHTML = notas.map(n => {
+    const estado = n.estado || 'pendiente';
+    const ver    = n.version?.version_number ? `<span class="nota-ver">v${n.version.version_number}</span>` : '';
+
+    const acciones = esAdmin ? `
+      <div class="nota-acciones">
+        <button class="nota-btn ${estado === 'leida' ? 'activo' : ''}"    onclick="marcarEstadoNota(${n.id}, 'leida')">Le&iacute;da</button>
+        <button class="nota-btn ${estado === 'resuelta' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'resuelta')">Resuelta</button>
+      </div>` : '';
+
+    return `
+      <div class="nota-item">
+        <div class="nota-item-header">
+          <span class="nota-autor">${escNota(nombreAutorNota(n))}</span>
+          <span class="nota-fecha">${formatFecha(n.created_at)}</span>
+        </div>
+        <div class="nota-contenido">${escNota(n.contenido || '')}</div>
+        <div class="nota-meta">
+          <span class="nota-estado ${estado}">${estado}</span>
+          ${ver}
+        </div>
+        ${acciones}
+      </div>`;
+  }).join('');
+}
+
+// Franquiciante: agrega una nota (siempre se asocia a la versión activa en el backend)
+async function agregarNota() {
+  const ta  = document.getElementById('nota-texto');
+  const txt = ta.value.trim();
+  if (!txt) { mostrarToast('Escribí algo antes de enviar.', 'error'); return; }
+
+  const btn = document.getElementById('btn-nota-enviar');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    await apiFetch('POST', `/manuales/${MANUAL_ID}/notas`, { contenido: txt });
+    ta.value = '';
+    mostrarToast('Nota enviada.', 'exito');
+    await cargarNotas();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'Error al enviar la nota.', 'error');
+  } finally {
+    btn.disabled  = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg> Enviar nota`;
+  }
+}
+
+// Super_admin: marca el estado de una nota
+async function marcarEstadoNota(id, estado) {
+  try {
+    await apiFetch('PUT', `/notas/${id}/estado`, { estado });
+    mostrarToast(`Nota marcada como ${estado}.`, 'exito');
+    await cargarNotas();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'Error al actualizar la nota.', 'error');
+  }
+}
+
 
 document.addEventListener('DOMContentLoaded', () => init());
 </script>

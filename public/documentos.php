@@ -103,29 +103,30 @@ include 'layout/head.php';
             <option value="otro">Otro</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Franquicia destino</label>
-          <select id="doc-franquicia" class="form-select">
-            <option value="">Toda la empresa (global)</option>
-          </select>
-          <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Dejá vacío para que aplique a todas las franquicias.</div>
-        </div>
-      </div>
-
-      <!-- Empresa — solo super_admin -->
-      <div class="form-group" id="grupo-empresa-doc" style="display:none">
+        <div class="form-group" id="grupo-empresa-doc" style="display:none">
         <label>Empresa *</label>
         <select id="doc-empresa" class="form-select" onchange="onEmpresaDocChange()">
           <option value="">Seleccioná una empresa</option>
         </select>
+        </div>
       </div>
 
       <div class="form-group">
         <label>
-          <input type="checkbox" id="doc-visible" checked style="margin-right:6px;accent-color:var(--dorado)">
-          Visible para franquiciados
+          <input type="checkbox" id="doc-visible" style="margin-right:6px;accent-color:var(--dorado)">
+         Permitir que los franquiciados vean este documento
+         Si está desactivado, el documento quedará oculto aunque tenga una franquicia destino asignada
         </label>
         <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Si está activado, los franquiciados podrán ver y descargar este documento.</div>
+      </div>      
+
+      <!-- Empresa — solo super_admin -->
+      <div class="form-group">
+          <label>Franquicia destino</label>
+          <select id="doc-franquicia" class="form-select">
+            <option value="">Toda la empresa (global)</option>
+          </select>
+          <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Dejá vacío para que aplique a todas las franquicias. <br> En caso de NO querer mostrarlo a los franquiciados,</div>
       </div>
 
       <!-- Zona de archivo -->
@@ -479,7 +480,7 @@ function abrirModalSubir() {
   document.getElementById('doc-titulo').value      = '';
   document.getElementById('doc-tipo').value        = '';
   document.getElementById('doc-franquicia').value  = '';
-  document.getElementById('doc-visible').checked   = true;
+  document.getElementById('doc-visible').checked   = false;
   document.getElementById('doc-archivo').value     = '';
   document.getElementById('doc-error').style.display = 'none';
   resetDropZone();

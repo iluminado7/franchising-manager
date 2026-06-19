@@ -113,7 +113,7 @@ async function cargarDashboard() {
       configurarVistaSuperAdmin(empresas);
     } else {
       hacerClickeable('card-franquicias', `${BASE_PHP}/franquicias.php`);
-      renderFranquiciasRegistradas(franquicias);
+      renderManualesPublicados(manuales);
     }
 
   } catch (e) {
@@ -165,18 +165,35 @@ function configurarVistaSuperAdmin(empresas) {
     : `<tr><td colspan="6" class="empty-state" style="padding:24px">Sin empresas registradas.</td></tr>`;
 }
 
-// ── FRANQUICIANTE (vista original) ────────────────────────────
-function renderFranquiciasRegistradas(franquicias) {
-  document.getElementById('tabla-lista').innerHTML = franquicias.length
-    ? franquicias.slice(0, 6).map(f => `
+// ── FRANQUICIANTE: manuales publicados (con vista previa) ────
+function renderManualesPublicados(manuales) {
+  const publicados = manuales.filter(m => m.estado === 'publicado');
+
+  document.getElementById('tabla-titulo').textContent = 'Manuales publicados';
+  document.getElementById('tabla-head').innerHTML = `
+    <tr>
+      <th>Manual</th>
+      <th>Categoría</th>
+      <th>Versión</th>
+      <th>Vista previa</th>
+    </tr>`;
+
+  document.getElementById('tabla-lista').innerHTML = publicados.length
+    ? publicados.map(m => {
+        const v = m.version_activa?.[0]?.version_number ?? m.version_activa?.version_number;
+        return `
         <tr>
-          <td style="color:var(--blanco);font-weight:500">${esc(f.nombre)}</td>
-          <td>${esc(f.razon_social)}</td>
-          <td>${esc(f.cuit)}</td>
-          <td><span class="estado-pill ${f.activa ? 'estado-completo' : 'estado-pendiente'}">${f.activa ? 'Activa' : 'Inactiva'}</span></td>
-          <td><a href="${BASE_PHP}/franquicias.php?id=${f.id}&vista=dashboard" class="btn btn-ghost" style="padding:4px 10px;font-size:12px">Ver</a></td>
-        </tr>`).join('')
-    : `<tr><td colspan="5" class="empty-state" style="padding:24px">Sin franquicias registradas.</td></tr>`;
+          <td style="color:var(--blanco);font-weight:500">${esc(m.titulo)}</td>
+          <td>${esc(m.categoria)}</td>
+          <td>${v ? 'v' + v : '—'}</td>
+          <td>
+            <a href="${BASE_PHP}/lectura.php?id=${m.id}" class="btn btn-ghost" style="padding:4px 10px;font-size:12px">
+              Vista previa
+            </a>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="4" class="empty-state" style="padding:24px">Sin manuales publicados.</td></tr>`;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────

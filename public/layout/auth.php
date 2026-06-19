@@ -45,7 +45,7 @@ function verificarSesion(?string $rol_requerido = null): void
     }
 
     $stmt = $pdo->prepare("
-        SELECT u.id, u.rol, u.activo
+        SELECT u.id, u.rol, u.activo, u.empresa_id
         FROM personal_access_tokens pat
         JOIN users u ON u.id = pat.tokenable_id
         WHERE pat.id = ?
@@ -99,6 +99,63 @@ function verificarSesion(?string $rol_requerido = null): void
     }
 
     $GLOBALS['usuario_actual'] = $usuario;
+
+    // Bloqueo de navegación: el franquiciado no puede ir a otras secciones
+    // mientras tenga manuales con versión activa sin aceptar.
+    verificarAceptacionesPendientes($pdo, $usuario);
+}
+
+/**
+ * Gate de cumplimiento para franquiciados.
+ * Si el franquiciado tiene manuales asignados a su empresa con una versión
+ * activa que todavía no aceptó, lo redirige a leer/aceptar ese manual y le
+ * impide navegar a cualquier otra sección hasta que no quede ninguno pendiente.
+ * Se resuelven de a uno. El logout (acción JS hacia login.html) no pasa por acá.
+ */
+function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
+{
+    // Solo aplica a franquiciado. Empleado es solo lectura; los demás no aceptan.
+    if (($usuario['rol'] ?? '') !== 'franquiciado') {
+        return;
+    }
+
+    $empresaId = $usuario['empresa_id'] ?? null;
+    if (!$empresaId) {
+        return; // sin empresa asignada no hay nada que bloquear
+    }
+
+    // Manuales asignados a su empresa, con versión activa, sin aceptación del usuario.
+    $stmt = $pdo->prepare("
+        SELECT mea.manual_id
+        FROM manual_empresa_assignments mea
+        JOIN manual_versions mv
+          ON mv.manual_id = mea.manual_id
+         AND mv.es_activa = 1
+        LEFT JOIN acceptances a
+          ON a.manual_version_id = mv.id
+         AND a.user_id = ?
+        WHERE mea.empresa_id = ?
+          AND a.id IS NULL
+        ORDER BY mea.manual_id
+    ");
+    $stmt->execute([$usuario['id'], $empresaId]);
+    $pendientes = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+    if (!$pendientes) {
+        return; // al día: navega libre
+    }
+
+    // Si ya está leyendo/aceptando uno de los manuales pendientes, dejarlo seguir.
+    $paginaActual = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    $idActual     = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+    if ($paginaActual === 'lectura.php' && in_array($idActual, $pendientes, true)) {
+        return;
+    }
+
+    // Si no, lo mandamos al primer manual pendiente.
+    header('Location: ' . BASE_URL_PHP . '/lectura.php?id=' . $pendientes[0]);
+    exit;
 }
 
 function _redirigirLogin(): never

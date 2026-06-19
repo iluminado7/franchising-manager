@@ -136,6 +136,43 @@ body {
 ::-webkit-scrollbar-thumb { background: #D0CDC6; border-radius: 3px; }
 
 @media (max-width: 860px) { .doc-page { padding: 40px 28px; } }
+
+/* Notas / Sugerencias (vista franquiciado) */
+.notas-box {
+  width: 100%; max-width: 800px; margin-top: 24px;
+  background: #FFFFFF; border: 1px solid #E0DDD6; border-radius: 12px;
+  padding: 24px 28px; box-shadow: 0 2px 20px rgba(0,0,0,.05);
+}
+.notas-box-title { font-family: 'Archivo', sans-serif; font-size: 16px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
+.notas-box-sub   { font-size: 12.5px; color: #888; font-family: 'Archivo Narrow', sans-serif; margin-bottom: 14px; line-height: 1.5; }
+.nota-textarea {
+  width: 100%; background: #F7F5F0; border: 1px solid #E0DDD6; border-radius: 8px;
+  color: #1A1A1A; font-family: 'Archivo Narrow', sans-serif; font-size: 13.5px;
+  padding: 10px 12px; resize: vertical; outline: none; line-height: 1.5;
+}
+.nota-textarea:focus { border-color: var(--dorado); }
+.btn-nota-enviar {
+  margin-top: 10px; padding: 10px 18px; background: var(--dorado);
+  color: #1A1A1A; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; font-family: 'Archivo', sans-serif;
+  cursor: pointer; transition: opacity .2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-nota-enviar:hover    { opacity: .88; }
+.btn-nota-enviar:disabled { opacity: .4; cursor: not-allowed; }
+.notas-list { display: flex; flex-direction: column; gap: 10px; }
+.notas-list .nota-item {
+  background: #F7F5F0; border: 1px solid #E8E4DC; border-radius: 10px; padding: 12px 14px;
+}
+.nota-item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.nota-fecha { font-size: 11px; color: #999; font-family: 'Archivo Narrow', sans-serif; }
+.nota-contenido { font-size: 13.5px; color: #333; font-family: 'Archivo Narrow', sans-serif; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.nota-estado { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+.nota-estado.pendiente { background: rgba(201,168,76,.15); color: #8A6D1B; }
+.nota-estado.leida     { background: rgba(55,138,221,.12); color: #2A5E9E; }
+.nota-estado.resuelta  { background: rgba(92,184,122,.15); color: #27500A; }
+.notas-empty { font-size: 12.5px; color: #aaa; font-family: 'Archivo Narrow', sans-serif; padding: 4px 0; }
+
 </style>
 
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -177,6 +214,20 @@ body {
       </div>
     </div>
 
+    <!-- Notas / Sugerencias (solo franquiciado) -->
+    <div class="notas-box" id="notas-box" style="display:none">
+      <div class="notas-box-title">Notas y sugerencias</div>
+      <p class="notas-box-sub">Dej&aacute; una sugerencia sobre este manual. El administrador la va a revisar y marcar&aacute; su estado.</p>
+
+      <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; tu sugerencia..." class="nota-textarea"></textarea>
+      <button class="btn-nota-enviar" id="btn-nota-enviar" onclick="agregarNota()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+        Enviar sugerencia
+      </button>
+
+      <div class="notas-list" id="notas-list" style="margin-top:16px"></div>
+    </div>
+
   </div>
 </div>
 
@@ -190,14 +241,14 @@ body {
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:14px;color:#444;line-height:1.7;font-family:'Archivo Narrow',sans-serif;margin-bottom:12px">
+      <p style="font-size:14px;color:#444;line-height:1.7;font-family:'Montserrat',sans-serif;margin-bottom:12px">
         Estás a punto de aceptar digitalmente el manual:
       </p>
       <div style="background:#F7F5F0;border-radius:8px;padding:12px 16px;margin-bottom:14px">
         <div style="font-size:14px;font-weight:600;color:#1A1A1A" id="modal-manual-nombre"></div>
         <div style="font-size:12px;color:#888;margin-top:3px;font-family:'Archivo Narrow',sans-serif" id="modal-manual-version"></div>
       </div>
-      <p style="font-size:13px;color:#666;line-height:1.6;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:14px;color:#666;line-height:1.6;font-family:'Montserrat',sans-serif">
         Esta acción es <strong style="color:#1A1A1A">irreversible</strong> y queda registrada con tu IP, fecha y hora exacta bajo los términos de la <strong style="color:#1A1A1A">Ley 25.506</strong>.
       </p>
       <div id="modal-error" style="display:none;margin-top:12px;background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:#E25C5C"></div>
@@ -233,6 +284,12 @@ async function init() {
     const me = await apiFetch('GET', '/me');
     rolUsuario = me.rol;
 
+    // El franquiciante llega acá en modo "vista previa" desde el dashboard.
+    if (rolUsuario === 'franquiciante') {
+      const back = document.querySelector('.doc-back');
+      if (back) back.setAttribute('href', 'dashboard.php');
+    }
+
     const manual  = await apiFetch('GET', `/manuales/${MANUAL_ID}`);
     const version = manual.version_activa?.[0];
 
@@ -256,8 +313,9 @@ async function init() {
 
     document.getElementById('doc-footer').style.display = 'flex';
 
-    // Empleado: solo lectura, sin aceptación ni nota legal
-    if (rolUsuario === 'empleado') {
+    // Solo el franquiciado acepta; el resto ve solo lectura, sin aceptación ni nota legal
+    if (rolUsuario !== 'franquiciado') {
+      document.getElementById('doc-footer').style.display         = 'none';
       document.getElementById('estado-aceptacion-wrap').innerHTML = '';
       document.getElementById('btn-aceptar-wrap').innerHTML       = '';
       document.getElementById('nota-legal').style.display         = 'none';
@@ -291,6 +349,8 @@ async function init() {
       document.getElementById('modal-manual-version').textContent =
         `Versión ${version.version_number} · Publicado el ${formatFecha(version.publicado_at)}`;
     }
+
+    if (rolUsuario === 'franquiciado') cargarNotas();
 
   } catch (e) {
     document.getElementById('doc-content-wrap').innerHTML =
@@ -348,6 +408,61 @@ function mostrarToast(msg, tipo = 'exito') {
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── NOTAS / SUGERENCIAS (franquiciado) ────────────────────────
+async function cargarNotas() {
+  document.getElementById('notas-box').style.display = 'block';
+  const el = document.getElementById('notas-list');
+  el.innerHTML = `<div class="notas-empty">Cargando notas...</div>`;
+  try {
+    const notas = await apiFetch('GET', `/manuales/${MANUAL_ID}/notas`);
+    renderNotas(notas);
+  } catch (e) {
+    el.innerHTML = `<div class="notas-empty" style="color:#E25C5C">Error al cargar las notas.</div>`;
+  }
+}
+
+function escNota(str) {
+  return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderNotas(notas) {
+  const el = document.getElementById('notas-list');
+  if (!notas.length) {
+    el.innerHTML = `<div class="notas-empty">Todavía no dejaste ninguna nota en este manual.</div>`;
+    return;
+  }
+  el.innerHTML = notas.map(n => {
+    const estado = n.estado || 'pendiente';
+    return `
+      <div class="nota-item">
+        <div class="nota-item-header">
+          <span class="nota-estado ${estado}">${estado}</span>
+          <span class="nota-fecha">${formatFecha(n.created_at)}</span>
+        </div>
+        <div class="nota-contenido">${escNota(n.contenido || '')}</div>
+      </div>`;
+  }).join('');
+}
+
+async function agregarNota() {
+  const ta  = document.getElementById('nota-texto');
+  const txt = ta.value.trim();
+  if (!txt) { mostrarToast('Escribí algo antes de enviar.', 'error'); return; }
+
+  const btn = document.getElementById('btn-nota-enviar');
+  btn.disabled = true;
+  try {
+    await apiFetch('POST', `/manuales/${MANUAL_ID}/notas`, { contenido: txt });
+    ta.value = '';
+    mostrarToast('Sugerencia enviada.', 'exito');
+    await cargarNotas();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'Error al enviar la sugerencia.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
