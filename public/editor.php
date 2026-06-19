@@ -198,7 +198,7 @@ include 'layout/head.php';
 
 <!-- ── MODAL PUBLICAR ─────────────────────────────────────────── -->
 <div class="modal-overlay" id="modal-publicar" onclick="if(event.target===this)cerrarModal()">
-  <div class="modal-box" style="max-width:400px">
+  <div class="modal-box" style="max-width:500px">
     <div class="modal-header">
       <h3 id="pub-modal-titulo">Publicar nueva versión</h3>
       <button class="modal-close" onclick="cerrarModal()">
@@ -224,15 +224,15 @@ include 'layout/head.php';
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <div style="font-size:13px;font-weight:600;color:var(--error)">Advertencia importante</div>
           </div>
-          <p style="font-size:14.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:0">
+          <p style="font-size:13.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:0">
             Estás por publicar una versión de un manual operativo. Toda modificación o creación de contenido que realices queda <strong style="color:var(--blanco)">bajo tu entera responsabilidad</strong> y puede tener <strong style="color:var(--blanco)">repercusiones legales</strong> para tu empresa y sus franquicias.
           </p>
-          <p style="font-size:14.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:10px 0 0">
+          <p style="font-size:13.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:10px 0 0">
             Antes de continuar, te recomendamos <strong style="color:var(--blanco)">consultar con el equipo técnico</strong> o asesoría legal para validar los cambios.
           </p>
         </div>
 
-        <p style="font-size:14px;color:var(--gris4);font-family:'Montserrat',sans-serif;line-height:1.5;margin-bottom:14px">
+        <p style="font-size:13px;color:var(--gris4);font-family:'Montserrat',sans-serif;line-height:1.5;margin-bottom:14px">
           Una vez publicado, todos los franquiciados activos de tu empresa recibirán una notificación y la versión quedará registrada con fecha, hora y autoría. Esta acción no se puede deshacer.
         </p>
 

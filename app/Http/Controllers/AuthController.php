@@ -29,6 +29,19 @@ class AuthController extends Controller
             ]);
         }
 
+        // Bloqueo por suspensión de empresa o sucursal (super_admin nunca se bloquea).
+        if (!$user->esSuperAdmin()) {
+            $empresaSuspendida    = $user->empresa && !$user->empresa->activa;
+            $franquicia           = optional($user->franchiseStaff)->franquicia;
+            $franquiciaSuspendida = $franquicia && !$franquicia->activa;
+
+            if ($empresaSuspendida || $franquiciaSuspendida) {
+                throw ValidationException::withMessages([
+                    'email' => ['Tu empresa o sucursal fue suspendida. Contactá al administrador.'],
+                ]);
+            }
+        }
+
         // Cargar perfil según rol — ahora incluye super_admin
         $perfil = match($user->rol) {
             'super_admin'   => $user->superAdmin,

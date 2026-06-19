@@ -28,11 +28,11 @@ function renderSidebar(rol) {
   const NAV = {
     super_admin: [
       { id: 'dashboard',   label: 'Inicio',       href: 'dashboard.php',   icon: 'home'        },
-      { id: 'manuales',    label: 'Manuales',         href: 'manuales.php',    icon: 'file-text'   },
-      { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'      },
       { id: 'empresas',    label: 'Empresas',         href: 'empresas.php',    icon: 'building'    },
       { id: 'franquicias', label: 'Franquicias',      href: 'franquicias.php', icon: 'store'    },
       { id: 'usuarios',    label: 'Usuarios',         href: 'usuarios.php',    icon: 'users'       },
+      { id: 'manuales',    label: 'Manuales',         href: 'manuales.php',    icon: 'file-text'   },
+      { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'      },
       { id: 'planes',      label: 'Planes',           href: 'planes.php',      icon: 'credit-card' },
       { id: 'log',         label: 'Log de actividad', href: 'log.php',         icon: 'shield'      },
       { id: 'perfil',      label: 'Mi perfil',        href: 'perfil.php',      icon: 'user'        },
@@ -47,7 +47,6 @@ function renderSidebar(rol) {
     ],
     franquiciado: [
       { id: 'manuales',   label: 'Mis manuales', href: 'mis-manuales.php',   icon: 'file-text' },
-      { id: 'usuarios',    label: 'Usuarios',    href: 'usuarios.php',    icon: 'users'     },
       { id: 'perfil',     label: 'Mi perfil',    href: 'perfil.php',     icon: 'user'      },
     ],
     empleado: [

@@ -113,11 +113,10 @@ include 'layout/head.php';
 
       <div class="form-group">
         <label>
-          <input type="checkbox" id="doc-visible" style="margin-right:6px;accent-color:var(--dorado)">
-         Permitir que los franquiciados vean este documento
-         Si está desactivado, el documento quedará oculto aunque tenga una franquicia destino asignada
+        <input type="checkbox" id="doc-visible" style="margin-right:6px;accent-color:var(--dorado)">
+         Marque si quiere permitir que los franquiciados vean este documento
         </label>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Si está activado, los franquiciados podrán ver y descargar este documento.</div>
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Si está activado, los franquiciados podrán ver y descargar este documento. Si no quiere que ocurra, dejar desactivado</div>
       </div>      
 
       <!-- Empresa — solo super_admin -->
@@ -126,7 +125,7 @@ include 'layout/head.php';
           <select id="doc-franquicia" class="form-select">
             <option value="">Toda la empresa (global)</option>
           </select>
-          <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Dejá vacío para que aplique a todas las franquicias. <br> En caso de NO querer mostrarlo a los franquiciados,</div>
+          <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Dejá vacío para que aplique a todas las franquicias.</div>
       </div>
 
       <!-- Zona de archivo -->
@@ -204,6 +203,9 @@ include 'layout/head.php';
 .tipo-anexo    { background: rgba(201,168,76,.12);  color: var(--dorado); border: 1px solid rgba(201,168,76,.25); }
 .tipo-acta     { background: rgba(76,175,80,.12);   color: var(--exito);  border: 1px solid rgba(76,175,80,.25); }
 .tipo-otro     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
+.tipo-politica     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
+.tipo-circulo     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
+.tipo-protocolo     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
 
 /* ── Drop zone ────────────────────────────────────────────── */
 .drop-zone {
@@ -428,7 +430,7 @@ function renderTabla(lista) {
   }
 
   const tipoBadge = (tipo) => {
-    const map = { contrato: 'tipo-contrato', anexo: 'tipo-anexo', acta: 'tipo-acta', otro: 'tipo-otro' };
+    const map = { contrato: 'tipo-contrato', politica: 'tipo-politica', protocolo: 'tipo-protocolo', circulo: 'tipo-circulo', anexo: 'tipo-anexo', acta: 'tipo-acta', otro: 'tipo-otro' };
     return `<span class="tipo-badge ${map[tipo] || 'tipo-otro'}">${tipo}</span>`;
   };
 
@@ -455,6 +457,8 @@ function renderTabla(lista) {
           : `<span style="color:var(--gris3);font-size:11px">● Oculto</span>`
         }</td>` : '';
 
+    const esPdf = (d.mime_type === 'application/pdf') || /\.pdf$/i.test(d.archivo_url || '');
+
     return `<tr>
       ${empresaCol}
       <td>
@@ -466,10 +470,17 @@ function renderTabla(lista) {
       ${visibilidadCol}
       <td style="font-size:12px;color:var(--gris4);white-space:nowrap">${formatFecha(d.created_at)}</td>
       <td>
-        <a href="#" onclick="event.preventDefault(); descargarDocumento(${d.id})" class="accion-btn" style="color:var(--dorado)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Descargar
-        </a>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          ${esPdf ? `
+          <a href="#" onclick="event.preventDefault(); previsualizarDocumento(${d.id})" class="accion-btn" style="color:var(--gris5)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Vista previa
+          </a>` : ''}
+          <a href="#" onclick="event.preventDefault(); descargarDocumento(${d.id})" class="accion-btn" style="color:var(--dorado)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar
+          </a>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -634,6 +645,28 @@ async function descargarDocumento(id) {
     window.URL.revokeObjectURL(url);
   } catch (e) {
     mostrarToast('Error al descargar el documento.', 'error');
+  }
+}
+
+async function previsualizarDocumento(id) {
+  // Abrimos la pestaña en el mismo gesto del click para que no la bloquee el navegador.
+  const win = window.open('', '_blank');
+  if (win) win.document.write('<p style="font-family:sans-serif;color:#555;padding:24px">Cargando vista previa...</p>');
+  try {
+    const res = await fetch(API + '/documentos/' + id + '/preview', { credentials: 'include' });
+    if (!res.ok) {
+      if (win) win.close();
+      mostrarToast('No se pudo abrir la vista previa.', 'error');
+      return;
+    }
+    const blob = await res.blob();
+    const url  = window.URL.createObjectURL(blob);
+    if (win) { win.location.href = url; } else { window.open(url, '_blank'); }
+    // Liberamos el blob después de un rato (ya quedó cargado en el visor).
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+  } catch (e) {
+    if (win) win.close();
+    mostrarToast('Error al abrir la vista previa.', 'error');
   }
 }
 

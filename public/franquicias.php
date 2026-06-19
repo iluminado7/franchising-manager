@@ -179,7 +179,7 @@ include 'layout/head.php';
       <div class="form-group">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--gris5)">
           <input type="checkbox" id="form-sede-central" style="width:auto;accent-color:var(--dorado);width:15px;height:15px">
-          Esta franquicia es la sede central
+          ¿Esta franquicia es la sede central?
         </label>
         <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Solo puede haber una sede central por empresa. Al marcarla se desmarca la anterior automáticamente.</div>
       </div>

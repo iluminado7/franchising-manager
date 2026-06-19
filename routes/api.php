@@ -17,13 +17,14 @@ use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EmpresaEmailController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Middleware\EnsureActiveTenant;
 
 // ── Rutas públicas ────────────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
 
 // ── Rutas protegidas ──────────────────────────────────────────────────
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function () {
 
     // Auth — todos los roles
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -145,6 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('/documentos/{id}/descargar', [DocumentController::class, 'descargar']);
+    Route::get('/documentos/{id}/preview',   [DocumentController::class, 'preview']);
 
     // Notas de manuales
     // Leer el hilo: super_admin (todas), franquiciante (su empresa), franquiciado (las suyas).

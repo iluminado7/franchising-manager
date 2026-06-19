@@ -100,6 +100,9 @@ function verificarSesion(?string $rol_requerido = null): void
 
     $GLOBALS['usuario_actual'] = $usuario;
 
+    // Bloqueo por suspensión de empresa o sucursal (prioridad sobre todo lo demás).
+    verificarSuspension($pdo, $usuario);
+
     // Bloqueo de navegación: el franquiciado no puede ir a otras secciones
     // mientras tenga manuales con versión activa sin aceptar.
     verificarAceptacionesPendientes($pdo, $usuario);
@@ -155,6 +158,89 @@ function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
 
     // Si no, lo mandamos al primer manual pendiente.
     header('Location: ' . BASE_URL_PHP . '/lectura.php?id=' . $pendientes[0]);
+    exit;
+}
+
+/**
+ * Bloqueo por suspensión de empresa o sucursal.
+ * super_admin nunca se bloquea. Cualquier otro usuario queda bloqueado si su empresa
+ * (users.empresa_id) o su franquicia (vía franchise_staff) tiene activa = 0.
+ */
+function verificarSuspension(PDO $pdo, array $usuario): void
+{
+    if (($usuario['rol'] ?? '') === 'super_admin') {
+        return;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            e.activa  AS empresa_activa,
+            fr.activa AS franquicia_activa
+        FROM users u
+        LEFT JOIN empresas e         ON e.id  = u.empresa_id
+        LEFT JOIN franchise_staff fs ON fs.user_id = u.id
+        LEFT JOIN franquicias fr     ON fr.id = fs.franquicia_id
+        WHERE u.id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$usuario['id']]);
+    $estado = $stmt->fetch();
+
+    $empresaSuspendida    = $estado && $estado['empresa_activa']    !== null && (int) $estado['empresa_activa']    === 0;
+    $franquiciaSuspendida = $estado && $estado['franquicia_activa'] !== null && (int) $estado['franquicia_activa'] === 0;
+
+    if (!$empresaSuspendida && !$franquiciaSuspendida) {
+        return; // todo activo
+    }
+
+    $motivo = $empresaSuspendida
+        ? 'La empresa a la que pertenecés fue suspendida.'
+        : 'La sucursal a la que pertenecés fue suspendida.';
+
+    _mostrarSuspendido($motivo);
+}
+
+function _mostrarSuspendido(string $motivo): never
+{
+    // Matamos la sesión: un usuario suspendido no debe seguir logueado.
+    setcookie('auth_token', '', [
+        'expires'  => time() - 3600,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
+
+    http_response_code(403);
+    echo '<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso suspendido</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #0A0A0A; color: #F5F3EE;
+           display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .card { background: #1A1A1A; border: 1px solid #2C2C2C; border-radius: 12px;
+            padding: 40px 32px; text-align: center; max-width: 400px; width: 90%; }
+    .icon { font-size: 40px; margin-bottom: 16px; }
+    h2 { color: #E2B65C; font-size: 20px; margin-bottom: 10px; }
+    p  { color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    a  { display: inline-block; background: #C9A84C; color: #0A0A0A;
+         padding: 10px 24px; border-radius: 7px; text-decoration: none;
+         font-weight: 600; font-size: 13px; }
+    a:hover { opacity: .85; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">⛔</div>
+    <h2>Acceso suspendido</h2>
+    <p>' . htmlspecialchars($motivo) . ' Si creés que es un error, contactá al administrador.</p>
+    <a href="' . BASE_URL_PHP . '/login.html">Volver al inicio</a>
+  </div>
+</body>
+</html>';
     exit;
 }
 

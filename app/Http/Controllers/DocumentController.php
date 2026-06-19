@@ -55,7 +55,7 @@ class DocumentController extends Controller
         $request->validate([
             'archivo'              => 'required|file|mimes:pdf,doc,docx|max:20480',
             'titulo'               => 'required|string|max:200',
-            'tipo'                 => 'required|in:contrato,anexo,acta,otro',
+            'tipo'                 => 'required|in:contrato,politica,protocolo,circular,anexo,acta,otro',
             'franquicia_id'        => 'nullable|integer|exists:franquicias,id',
             'visible_franquiciado' => 'nullable|boolean',
             'empresa_id'           => 'nullable|integer|exists:empresas,id',
@@ -137,6 +137,42 @@ class DocumentController extends Controller
             'Content-Type'   => $documento->mime_type,
             'Content-Length' => $documento->tamano_bytes,
         ]);
+    }
+
+    // GET /api/documentos/{id}/preview
+    // Igual que descargar, pero inline: el navegador lo muestra (PDF/imagen) en vez de bajarlo.
+    // Sigue detrás de auth:sanctum -> nadie sin sesión puede verlo por la URL.
+    public function preview(Request $request, int $id): StreamedResponse
+    {
+        $documento = Document::findOrFail($id);
+        $user      = $request->user();
+
+        // Mismo control de acceso que descargar
+        if ($user->esFranquiciante() || $user->esFranquiciado() || $user->esEmpleado()) {
+            if ($documento->empresa_id !== $user->empresa_id) {
+                abort(403, 'Sin acceso a este documento.');
+            }
+            if (!$user->esFranquiciante() && !$documento->visible_franquiciado) {
+                abort(403, 'Sin acceso a este documento.');
+            }
+        }
+
+        $disk = config('filesystems.default');
+
+        if (!Storage::disk($disk)->exists($documento->archivo_url)) {
+            abort(404, 'Archivo no encontrado.');
+        }
+
+        $extension = pathinfo($documento->archivo_url, PATHINFO_EXTENSION);
+        $nombre    = $documento->titulo . '.' . $extension;
+
+        // El 4to argumento 'inline' fija Content-Disposition: inline.
+        return response()->streamDownload(function () use ($disk, $documento) {
+            echo Storage::disk($disk)->get($documento->archivo_url);
+        }, $nombre, [
+            'Content-Type'   => $documento->mime_type,
+            'Content-Length' => $documento->tamano_bytes,
+        ], 'inline');
     }
 
     private function notificarNuevoDocumento(Document $documento): void
