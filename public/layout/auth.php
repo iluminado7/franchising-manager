@@ -2,7 +2,9 @@
 // src/auth.php
 // Verificación server-side de sesión y rol.
 // super_admin tiene acceso a TODAS las páginas sin importar el rol requerido.
-
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: ' . gmdate('D, d M Y H:i:s', time() - 3600) . ' GMT');
 function verificarSesion(?string $rol_requerido = null): void
 {
     $tokenRaw = $_COOKIE['auth_token'] ?? null;
