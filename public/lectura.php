@@ -249,7 +249,7 @@ body {
         <div style="font-size:12px;color:#888;margin-top:3px;font-family:'Archivo Narrow',sans-serif" id="modal-manual-version"></div>
       </div>
       <p style="font-size:14px;color:#666;line-height:1.6;font-family:'Montserrat',sans-serif">
-        Esta acción es <strong style="color:#1A1A1A">irreversible</strong> y queda registrada con tu IP, fecha y hora exacta bajo los términos de la <strong style="color:#1A1A1A">Ley 25.506</strong>.
+        Esta acción es <strong style="color:#1A1A1A">queda registrada</strong> una vez aceptes que leiste el manual.</strong>.
       </p>
       <div id="modal-error" style="display:none;margin-top:12px;background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:#E25C5C"></div>
     </div>
