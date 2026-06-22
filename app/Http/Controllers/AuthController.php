@@ -21,6 +21,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)
                     ->where('activo', 1)
+                    ->whereNull('deleted_at')
                     ->first();
 
         if (!$user || !Hash::check($request->password, $user->password_hash)) {

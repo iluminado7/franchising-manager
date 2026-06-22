@@ -55,6 +55,24 @@ include 'layout/head.php';
         <button class="tb-btn" onclick="exec('justifyCenter')" data-cmd="justifyCenter" title="Centrar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
         </button>
+       <button class="tb-btn" onclick="exec('justifyRight')" data-cmd="justifyRight" title="Derecha">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="21" y1="6" x2="3" y2="6"/>
+          <line x1="21" y1="10" x2="7" y2="10"/>
+          <line x1="21" y1="14" x2="3" y2="14"/>
+          <line x1="21" y1="18" x2="7" y2="18"/>
+        </svg>
+      </button>
+      <button class="tb-btn" onclick="exec('justifyFull')" data-cmd="justifyFull" title="Justificar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <line x1="3" y1="14" x2="21" y2="14"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
 
         <div class="tb-sep"></div>
 
@@ -106,6 +124,10 @@ include 'layout/head.php';
         <div class="panel-section-title">Manual</div>
         <div class="manual-info-nombre" id="panel-titulo">Cargando...</div>
         <div class="manual-info-cat"    id="panel-categoria"></div>
+        <button class="btn btn-ghost" onclick="abrirModalEditarDatos()" style="margin-top:10px;width:100%;justify-content:center;font-size:12px;padding:6px 12px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar datos
+        </button>
       </div>
 
       <!-- Estado -->
@@ -249,6 +271,43 @@ include 'layout/head.php';
       <button class="btn btn-success" onclick="publicar()" id="btn-confirmar-publicar">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
         Confirmar publicación
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL EDITAR DATOS DEL MANUAL
+     ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-editar-datos" onclick="if(event.target===this)cerrarModalEditar()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Editar datos del manual</h3>
+      <button class="modal-close" onclick="cerrarModalEditar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gris4);margin-bottom:16px;font-family:'Archivo Narrow',sans-serif">
+        Los cambios se aplican a todas las versiones del manual.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Título *</label>
+        <input id="edit-titulo" type="text" class="form-input" maxlength="200" placeholder="Título del manual">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <input id="edit-categoria" type="text" class="form-input" maxlength="100" placeholder="Ej: Operativo, Recursos humanos...">
+      </div>
+
+      <div class="form-error" id="edit-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEditar()">Cancelar</button>
+      <button class="btn btn-success" id="btn-guardar-datos" onclick="guardarDatosManual()">
+        Guardar cambios
       </button>
     </div>
   </div>
@@ -431,7 +490,7 @@ include 'layout/head.php';
 
 .modal-box {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 14px; width: 100%; overflow: hidden;
+  border-radius: 14px; width: 50%; overflow: hidden;
 }
 
 .modal-header {
@@ -451,6 +510,34 @@ include 'layout/head.php';
 .modal-footer {
   padding: 14px 20px; border-top: 1px solid var(--gris2);
   display: flex; justify-content: flex-end; gap: 8px;
+}
+
+/* Form fields (modal de editar datos) */
+.form-group { margin-bottom: 16px; }
+.form-group:last-of-type { margin-bottom: 0; }
+.form-label {
+  display: block; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--gris4); margin-bottom: 6px;
+  font-family: 'Archivo', sans-serif;
+}
+.form-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--gris1); border: 1px solid var(--gris2);
+  border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; color: var(--blanco);
+  font-family: 'Archivo Narrow', sans-serif;
+  transition: border-color .15s, background .15s;
+}
+.form-input::placeholder { color: var(--gris3); }
+.form-input:focus {
+  outline: none; border-color: var(--dorado); background: var(--negro);
+}
+.form-error {
+  display: none; background: rgba(226,92,92,.1);
+  border: 1px solid rgba(226,92,92,.3); border-radius: 8px;
+  padding: 10px 12px; color: var(--error); font-size: 12px;
+  margin-top: 12px; font-family: 'Archivo Narrow', sans-serif;
 }
 
 .btn-success { background: var(--exito); color: var(--negro); }
@@ -1044,6 +1131,53 @@ async function marcarEstadoNota(id, estado) {
     await cargarNotas();
   } catch (e) {
     mostrarToast(e.data?.message || 'Error al actualizar la nota.', 'error');
+  }
+}
+
+// ── MODAL EDITAR DATOS DEL MANUAL ─────────────────────────────
+function abrirModalEditarDatos() {
+  if (!estado.manual) return;
+
+  document.getElementById('edit-titulo').value    = estado.manual.titulo    || '';
+  document.getElementById('edit-categoria').value = estado.manual.categoria || '';
+  document.getElementById('edit-error').textContent   = '';
+  document.getElementById('edit-error').style.display = 'none';
+
+  document.getElementById('modal-editar-datos').classList.add('open');
+}
+
+function cerrarModalEditar() {
+  document.getElementById('modal-editar-datos').classList.remove('open');
+}
+
+async function guardarDatosManual() {
+  const btn    = document.getElementById('btn-guardar-datos');
+  const errBox = document.getElementById('edit-error');
+  errBox.style.display = 'none';
+
+  const titulo    = document.getElementById('edit-titulo').value.trim();
+  const categoria = document.getElementById('edit-categoria').value.trim();
+
+  if (!titulo) {
+    errBox.textContent = 'El título es obligatorio.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const updated = await apiFetch('PUT', `/manuales/${MANUAL_ID}`, { titulo, categoria });
+    estado.manual = { ...estado.manual, ...updated };
+    document.title = `Editor — ${updated.titulo}`;
+    document.getElementById('panel-titulo').textContent    = updated.titulo;
+    document.getElementById('panel-categoria').textContent = updated.categoria || 'Sin categoría';
+    mostrarToast('Datos del manual actualizados.', 'exito');
+    cerrarModalEditar();
+  } catch (e) {
+    errBox.textContent = e.data?.message || 'Error al guardar los cambios.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
   }
 }
 

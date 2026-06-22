@@ -26,6 +26,8 @@ class User extends Authenticatable
         'rol',
         'celular',
         'activo',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected $hidden = [
@@ -33,7 +35,8 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
+        'activo'     => 'boolean',
+        'deleted_at' => 'datetime',
     ];
 
     // ── Relaciones de empresa ────────────────────────────────────────
@@ -42,6 +45,20 @@ class User extends Authenticatable
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
+
+    // Usuario que lo eliminó (super_admin o franquiciante)
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    // ── Scopes ───────────────────────────────────────────────────────
+
+    // Excluir usuarios eliminados (deleted_at NOT NULL)
+    public function scopeNoEliminados($query)
+    {
+        return $query->whereNull('deleted_at');
     }
 
     // ── Relaciones de perfil (1 a 1) ────────────────────────────────

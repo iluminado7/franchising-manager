@@ -37,6 +37,10 @@ include 'layout/head.php';
         <select id="sel-franquicia" onchange="aplicarFiltros()" class="filtro-select">
           <option value="">Todas las franquicias</option>
         </select>
+        <button id="btn-mostrar-eliminados" class="filtro-btn" style="display:none;margin-left:auto" onclick="toggleMostrarEliminados(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Mostrar eliminados
+        </button>
       </div>
 
       <!-- Tabla -->
@@ -219,6 +223,28 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL ELIMINAR USUARIO
+     ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-eliminar" onclick="if(event.target===this)cerrarModalEliminar()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <h3>Eliminar usuario</h3>
+      <button class="modal-close" onclick="cerrarModalEliminar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <div class="form-error" id="eliminar-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-eliminar-confirmar" onclick="ejecutarEliminar()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── TOAST ─────────────────────────────────────────────────── -->
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
@@ -294,6 +320,8 @@ let modoEdicion         = false;
 let rolEditando         = null; // rol del usuario que se está editando
 let miRol               = localStorage.getItem('cl_rol') || '';
 let miEmpresaId         = null; // se completa en init() para franquiciante
+let pendingEliminar     = null;
+let mostrarEliminados   = false;
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -355,6 +383,8 @@ async function init() {
         opt.value = e.id; opt.textContent = e.nombre;
         selEmpFiltro.appendChild(opt);
       });
+      // Mostrar el toggle de "Mostrar eliminados" solo a super_admin
+      document.getElementById('btn-mostrar-eliminados').style.display = '';
     }
 
     // Filtro franquicias
@@ -420,6 +450,12 @@ function renderTabla(lista) {
     const nombre    = perfil ? `${perfil.nombre} ${perfil.apellido}` : '—';
     const dni       = perfil?.dni || '—';
 
+    // Estado de eliminación (solo aparece para super_admin con flag include_deleted=1)
+    const eliminado     = !!u.deleted_at;
+    const badgeElim     = eliminado
+      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Archivo',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado</span>`
+      : '';
+
     // Empresa / franquicia según rol
     let contexto = '—';
     if (u.rol === 'franquiciante') {
@@ -427,6 +463,24 @@ function renderTabla(lista) {
       contexto  = emp ? `<div style="font-size:12px;color:var(--blanco)">${esc(emp.nombre)}</div><div style="font-size:11px;color:var(--gris4)">Franquiciante</div>` : '—';
     } else if (u.franchise_staff?.franquicia) {
       contexto = `<div style="font-size:12px">${esc(u.franchise_staff.franquicia.nombre)}</div>`;
+    }
+
+    // Si está eliminado: solo super_admin lo ve, y solo puede restaurarlo (sin otras acciones)
+    if (eliminado) {
+      return `<tr style="opacity:.65">
+        <td style="color:var(--blanco);font-weight:500">${esc(nombre)}${badgeElim}</td>
+        <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif">${esc(u.email)}</td>
+        <td><span class="rol-badge ${u.rol}">${u.rol.replace('_',' ')}</span></td>
+        <td>${contexto}</td>
+        <td style="font-family:'Archivo Narrow',sans-serif">${esc(dni)}</td>
+        <td><span class="estado-pill estado-pendiente">Eliminado</span></td>
+        <td>
+          <button class="accion-btn" style="color:var(--dorado)" onclick="restaurarUsuario(${u.id}, '${esc(nombre)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar
+          </button>
+        </td>
+      </tr>`;
     }
 
     // Botón toggle — no aparece para super_admin; franquiciante no puede tocar a franquiciantes
@@ -439,6 +493,17 @@ function renderTabla(lista) {
           ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Desactivar`
           : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Activar`
         }
+      </button>` : '';
+
+    // Botón eliminar:
+    // - super_admin puede eliminar a cualquiera (excepto a sí mismo, que ya está filtrado en backend)
+    // - franquiciante solo puede eliminar franquiciados/empleados de su empresa
+    const puedeEliminar = u.rol !== 'super_admin' &&
+      !(miRol === 'franquiciante' && u.rol === 'franquiciante');
+    const btnEliminar = puedeEliminar ? `
+      <button class="accion-btn" style="color:var(--gris5)" onclick="abrirModalEliminar(${u.id}, '${esc(nombre)}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        Eliminar
       </button>` : '';
 
     return `<tr>
@@ -460,6 +525,7 @@ function renderTabla(lista) {
             Manuales
           </button>` : ''}
           ${btnToggle}
+          ${btnEliminar}
         </div>
       </td>
     </tr>`;
@@ -476,9 +542,9 @@ function filtrarRol(rol, btn) {
 
 function aplicarFiltros() {
   let lista      = [...todosLosUsuarios];
-  const texto    = document.getElementById('inp-buscar').value.toLowerCase().trim();
-  const empId    = document.getElementById('sel-empresa').value;
-  const franqId  = document.getElementById('sel-franquicia').value;
+  const texto    = document.getElementById('inp-buscar')?.value.toLowerCase().trim() || '';
+  const empId    = document.getElementById('sel-empresa')?.value || '';
+  const franqId  = document.getElementById('sel-franquicia')?.value || '';
 
   if (filtroRolActual !== 'todos')
     lista = lista.filter(u => u.rol === filtroRolActual);
@@ -493,7 +559,7 @@ function aplicarFiltros() {
     lista = lista.filter(u => {
       const perfil = u.super_admin || u.system_admin || u.franchise_staff;
       const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}`.toLowerCase() : '';
-      return nombre.includes(texto) || u.email.toLowerCase().includes(texto);
+      return nombre.includes(texto);
     });
   }
 
@@ -743,14 +809,68 @@ async function confirmarToggle() {
     await apiFetch('POST', `/usuarios/${id}/toggle-activo`);
     mostrarToast(activo ? 'Usuario desactivado.' : 'Usuario activado.', activo ? 'error' : 'exito');
     cerrarModalToggle();
-    const usuarios = await apiFetch('GET', '/usuarios');
-    todosLosUsuarios = usuarios;
-    aplicarFiltros();
+    await recargarUsuarios();
   } catch (e) {
     document.getElementById('toggle-error').textContent  = e.data?.message || 'Error al procesar.';
     document.getElementById('toggle-error').style.display = 'block';
     btn.disabled = false;
     btn.textContent = activo ? 'Desactivar' : 'Activar';
+  }
+}
+
+// ── HELPER: recargar lista de usuarios (respeta el flag de eliminados) ─
+async function recargarUsuarios() {
+  const url = mostrarEliminados ? '/usuarios?include_deleted=1' : '/usuarios';
+  todosLosUsuarios = await apiFetch('GET', url);
+  aplicarFiltros();
+}
+
+// ── MOSTRAR ELIMINADOS (solo super_admin) ─────────────────────
+async function toggleMostrarEliminados(btn) {
+  mostrarEliminados = !mostrarEliminados;
+  if (mostrarEliminados) {
+    btn.classList.add('active');
+  } else {
+    btn.classList.remove('active');
+  }
+  await recargarUsuarios();
+}
+
+// ── MODAL ELIMINAR USUARIO ────────────────────────────────────
+function abrirModalEliminar(id, nombre) {
+  pendingEliminar = id;
+  document.getElementById('eliminar-msg').textContent =
+    `¿Eliminar a "${nombre}"? El usuario perderá acceso al sistema inmediatamente y dejará de ser visible.`;
+  document.getElementById('eliminar-error').textContent = '';
+  document.getElementById('eliminar-error').style.display = 'none';
+  document.getElementById('modal-eliminar').classList.add('open');
+}
+function cerrarModalEliminar() { document.getElementById('modal-eliminar').classList.remove('open'); pendingEliminar = null; }
+
+async function ejecutarEliminar() {
+  if (!pendingEliminar) return;
+  const btn = document.getElementById('btn-eliminar-confirmar');
+  btn.disabled = true; btn.textContent = 'Eliminando...';
+  try {
+    await apiFetch('DELETE', `/usuarios/${pendingEliminar}`);
+    mostrarToast('Usuario eliminado correctamente.', 'exito');
+    cerrarModalEliminar();
+    await recargarUsuarios();
+  } catch (e) {
+    document.getElementById('eliminar-error').textContent = e.data?.message || 'Error al eliminar.';
+    document.getElementById('eliminar-error').style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Eliminar';
+  }
+}
+
+// ── RESTAURAR USUARIO (solo super_admin) ──────────────────────
+async function restaurarUsuario(id, nombre) {
+  try {
+    await apiFetch('POST', `/usuarios/${id}/restore`);
+    mostrarToast(`"${nombre}" restaurado correctamente.`, 'exito');
+    await recargarUsuarios();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'Error al restaurar.', 'error');
   }
 }
 

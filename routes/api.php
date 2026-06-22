@@ -99,6 +99,8 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::post('/usuarios',                    [UserController::class, 'store']);
         Route::put('/usuarios/{id}',                [UserController::class, 'update']);
         Route::post('/usuarios/{id}/toggle-activo', [UserController::class, 'toggleActivo']);
+        Route::delete('/usuarios/{id}',             [UserController::class, 'destroy']);
+        Route::post('/usuarios/{id}/restore',       [UserController::class, 'restore']);
     });
 
     // ── SUPER ADMIN + FRANQUICIANTE ───────────────────────────────────

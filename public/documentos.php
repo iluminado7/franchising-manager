@@ -45,7 +45,7 @@ include 'layout/head.php';
         </select>
 
         <select id="sel-franquicia" class="filtro-select" onchange="aplicarFiltros()">
-          <option value="">Todas las franquicias</option>
+          <option value="">Todos</option>
           <option value="global">Solo globales</option>
         </select>
 
@@ -365,7 +365,7 @@ async function onEmpresaChange() {
 
   // Actualizar franquicias del filtro
   const selFiltro = document.getElementById('sel-franquicia');
-  selFiltro.innerHTML = '<option value="">Todas las franquicias</option><option value="global">Solo globales</option>';
+  selFiltro.innerHTML = '<option value="">Todos</option><option value="global">Solo globales</option>';
 
   if (empresaId) {
     try {

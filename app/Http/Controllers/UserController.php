@@ -18,8 +18,17 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user  = $request->user();
-        $query = User::with(['superAdmin', 'systemAdmin', 'franchiseStaff.franquicia'])
+
+        // Super admin puede ver los eliminados con ?include_deleted=1 (para poder restaurarlos)
+        $includeDeleted = $user->esSuperAdmin() && (bool) $request->query('include_deleted', false);
+
+        $query = User::with(['superAdmin', 'systemAdmin', 'franchiseStaff.franquicia', 'deletedBy:id,rol'])
                      ->where('id', '!=', $user->id);
+
+        // Por defecto, nadie ve los eliminados. Solo super_admin con flag explícito.
+        if (!$includeDeleted) {
+            $query->noEliminados();
+        }
 
         // Franquiciante solo ve usuarios de su empresa
         if ($user->esFranquiciante()) {
@@ -256,5 +265,89 @@ class UserController extends Controller
             'message' => $nuevoEstado ? 'Usuario activado.' : 'Usuario desactivado.',
             'activo'  => $nuevoEstado,
         ]);
+    }
+
+    // DELETE /api/usuarios/{id}
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $user  = User::findOrFail($id);
+        $actor = $request->user();
+
+        // Nadie puede eliminarse a sí mismo
+        if ($user->id === $actor->id) {
+            return response()->json(['error' => 'No podés eliminarte a vos mismo.'], 403);
+        }
+
+        // Reglas por rol
+        if ($actor->esFranquiciante()) {
+            // Solo franquiciados y empleados de su empresa
+            if (!in_array($user->rol, ['franquiciado', 'empleado'])) {
+                return response()->json(['error' => 'Sin permisos para eliminar este usuario.'], 403);
+            }
+            if ($user->empresa_id !== $actor->empresa_id) {
+                return response()->json(['error' => 'Sin acceso.'], 403);
+            }
+        } elseif (!$actor->esSuperAdmin()) {
+            // Franquiciado/empleado no pueden eliminar
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        // Si ya está eliminado, no hacer nada
+        if ($user->deleted_at !== null) {
+            return response()->json(['error' => 'El usuario ya fue eliminado.'], 409);
+        }
+
+        $user->update([
+            'deleted_by' => $actor->id,
+            'deleted_at' => now(),
+        ]);
+
+        // Matar la sesión activa del usuario eliminado (si la tuviera)
+        $user->tokens()->delete();
+
+        ActivityLog::registrar(
+            userId:      $actor->id,
+            accion:      'usuario_eliminado',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'users',
+            entidadId:   $user->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Usuario eliminado correctamente.']);
+    }
+
+    // POST /api/usuarios/{id}/restore  (solo super_admin)
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        $actor = $request->user();
+
+        if (!$actor->esSuperAdmin()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        $user = User::findOrFail($id);
+
+        if ($user->deleted_at === null) {
+            return response()->json(['error' => 'El usuario no está eliminado.'], 409);
+        }
+
+        $user->update([
+            'deleted_by' => null,
+            'deleted_at' => null,
+        ]);
+
+        ActivityLog::registrar(
+            userId:      $actor->id,
+            accion:      'usuario_restaurado',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'users',
+            entidadId:   $user->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Usuario restaurado correctamente.']);
     }
 }
