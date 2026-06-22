@@ -197,6 +197,25 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- MODAL ELIMINAR MANUAL -->
+<div class="modal-overlay" id="modal-eliminar" onclick="if(event.target===this)cerrarModalEliminar()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <button class="modal-close" onclick="cerrarModalEliminar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h3>Eliminar manual</h3>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--gris4);margin:12px 0 24px">¿Descartar el manual "<span id="modal-eliminar-titulo" style="color:var(--blanco);font-weight:500"></span>"? Esta acción es reversible.</p>
+    </div> 
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-eliminar-confirmar" onclick="ejecutarEliminar()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NOTAS -->
 <div class="modal-overlay" id="modal-notas" onclick="if(event.target===this)cerrarModalNotas()">
   <div class="modal-box" style="max-width:620px">
@@ -300,6 +319,7 @@ let empresaFiltroId  = '';
 let modoImport       = 'scratch';
 let htmlImportado    = '';
 let pendingArchivar  = null;
+let pendingEliminar = null;
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -495,6 +515,11 @@ function renderTabla(lista) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><polyline points="9 13 12 10 15 13"/><line x1="12" y1="10" x2="12" y2="17"/></svg>
             Restaurar
           </button>`}
+          ${m.estado !== 'eliminado' ? `
+          <button class="accion-btn" style="color:var(--gris5)" onclick="abrirModalEliminar(${m.id}, '${esc(m.titulo)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            Eliminar
+          </button>` : ''}
           </div>
         </td>
       </tr>`);
@@ -624,6 +649,33 @@ async function ejecutarArchivar() {
     btn.disabled = false; btn.textContent = 'Archivar';
   }
 }
+
+// ── MODAL ELIMINAR MANUAL ────────────────────────────────────────
+function abrirModalEliminar(id, titulo) {
+  pendingEliminar = id;
+  document.getElementById('modal-eliminar-titulo').textContent = titulo;
+  document.getElementById('modal-eliminar').style.display = 'flex';
+}
+
+function cerrarModalEliminar() {
+  document.getElementById('modal-eliminar').style.display = 'none';
+  pendingEliminar = null;
+}
+
+async function ejecutarEliminar() {
+  if (!pendingEliminar) return;
+  const id = pendingEliminar;
+  try {
+    const res = await apiFetch('DELETE', `/manuales/${id}`);
+    mostrarToast('Manual eliminado correctamente.', 'success');
+    cerrarModalEliminar();
+    cargarManuales();
+  } catch (e) {
+    mostrarToast('Error al eliminar el manual.', 'error');
+  }
+}
+
+// ── DESARCHIVACIÓN ───────────────────────────────────────────────
 async function desarchivarManual(id, titulo) {
   try {
     await apiFetch('POST', `/manuales/${id}/desarchivar`);

@@ -12,7 +12,7 @@ class Manual extends Model
     protected $table = 'manuals';
 
     public $timestamps = false;
-    protected $dates = ['created_at', 'updated_at'];
+    protected $dates = ['created_at', 'updated_at', 'deleted_at'];
 
     protected $fillable = [
         'titulo',
@@ -20,6 +20,8 @@ class Manual extends Model
         'created_by',
         'estado',
         'orden',
+        'deleted_by',
+        'deleted_at',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -28,6 +30,12 @@ class Manual extends Model
     public function creador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // Usuario que eliminó el manual (puede ser super_admin o franquiciante)
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public function versiones(): HasMany
@@ -88,7 +96,30 @@ class Manual extends Model
         );
     }
 
+    // Excluir manuales marcados como eliminados
+    public function scopeNoEliminados($query)
+    {
+        return $query->where('estado', '!=', 'eliminado');
+    }
+
+    // Visibilidad para super_admin: ve todos los no-eliminados + los eliminados por franquiciantes
+    // (porque para super_admin el borrado del franquiciante no es definitivo).
+    // Los eliminados por super_admin sí quedan ocultos por defecto.
+    public function scopeVisiblesParaSuperAdmin($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('estado', '!=', 'eliminado')
+              ->orWhereHas('deletedBy', fn($du) => $du->where('rol', 'franquiciante'));
+        });
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
+
+
+    public function estaEliminado(): bool
+    {
+        return $this->estado === 'eliminado';
+    }
 
     public function estaPublicado(): bool
     {

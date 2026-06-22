@@ -21,10 +21,16 @@ class ManualController extends Controller
     {
         $user = $request->user();
 
+        // Super admin puede ver TODOS los eliminados (incluyendo los borrados por él) con ?include_deleted=1
+        $includeDeleted = (bool) $request->query('include_deleted', false);
+
         $manuales = match($user->rol) {
 
-            // Super admin ve todos los manuales globales
+            // Super admin: por defecto ve los no-eliminados + los eliminados por franquiciantes
+            // (para él, el borrado de un franquiciante no es definitivo).
+            // Con ?include_deleted=1 ve también los eliminados por super_admin.
             'super_admin' => Manual::with(['versionActiva', 'empresasAsignadas'])
+                       ->when(!$includeDeleted, fn($q) => $q->visiblesParaSuperAdmin())
                        ->orderBy('orden')
                        ->get()
                        ->map(function ($manual) {
@@ -37,6 +43,7 @@ class ManualController extends Controller
                        }),
             // Franquiciante ve los manuales asignados a su empresa
             'franquiciante' => Manual::with('versionActiva')
+                         ->noEliminados()
                          ->whereHas('empresasAsignadas', fn($q) =>
                              $q->where('empresa_id', $user->empresa_id)
                          )
@@ -474,5 +481,112 @@ class ManualController extends Controller
         $config->set('Cache.SerializerPath', $cacheDir);
 
         return (new HTMLPurifier($config))->purify($html);
+    }
+    // DELETE /api/manuales/{id}
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $manual = Manual::findOrFail($id);
+        $user   = $request->user();
+
+        // Franquiciante solo puede eliminar manuales de su empresa
+        if ($user->esFranquiciante()) {
+            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
+                                            ->where('empresa_id', $user->empresa_id)
+                                            ->exists();
+            if (!$asignado) {
+                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
+            }
+        }
+
+        $manual->update([
+            'estado'     => 'eliminado',
+            'deleted_by' => $user->id,
+            'deleted_at' => now(),
+        ]);
+
+        // Si quien elimina es franquiciante: avisar a los super_admin.
+        // Usamos el tipo 'modificacion_manual' (con manual_version_id) porque la tabla
+        // notifications tiene un CHECK (chk_notif_fk) que valida la combinación tipo/FK.
+        if ($user->esFranquiciante()) {
+            // Nombre legible del franquiciante (mismo patrón que en publicar())
+            $nombreAutor = trim(($user->franchiseStaff?->nombre ?? '') . ' ' . ($user->franchiseStaff?->apellido ?? ''));
+            if ($nombreAutor === '') {
+                $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
+            }
+
+            // Tomamos la última versión activa o la última creada, si existe
+            $versionId = $manual->versiones()->orderByDesc('id')->value('id');
+
+            if ($versionId !== null) {
+                $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
+                $notifSuper  = $superadmins->map(fn($uid) => [
+                    'user_id'           => $uid,
+                    'tipo'              => 'modificacion_manual',
+                    'manual_id'         => null,
+                    'manual_version_id' => $versionId,
+                    'document_id'       => null,
+                    'titulo'            => "El franquiciante {$nombreAutor} eliminó el manual \"{$manual->titulo}\"",
+                    'created_at'        => now(),
+                ])->toArray();
+                // Best-effort: si la notificación fallara, no debe tumbar la eliminación.
+                try {
+                    if (!empty($notifSuper)) {
+                        Notification::insert($notifSuper);
+                    }
+                } catch (\Throwable $e) {
+                    // Se ignora a propósito: el manual ya fue marcado como eliminado.
+                }
+            }
+        }
+
+        ActivityLog::registrar(
+            userId:      $user->id,
+            accion:      'manual_eliminado',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'manuals',
+            entidadId:   $manual->id,
+            detalle:     ['manual_titulo' => $manual->titulo],
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Manual eliminado correctamente.']);
+    }
+
+    // POST /api/manuales/{id}/restore
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        $manual = Manual::findOrFail($id);
+        $user   = $request->user();
+
+        // Franquiciante solo puede restaurar manuales de su empresa
+        if ($user->esFranquiciante()) {
+            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
+                                            ->where('empresa_id', $user->empresa_id)
+                                            ->exists();
+            if (!$asignado) {
+                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
+            }
+        }
+
+        // Restaurar a borrador (estado seguro) y limpiar metadata de eliminación
+        $manual->update([
+            'estado'     => 'borrador',
+            'deleted_by' => null,
+            'deleted_at' => null,
+        ]);
+
+        ActivityLog::registrar(
+            userId:      $user->id,
+            accion:      'manual_restaurado',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'manuals',
+            entidadId:   $manual->id,
+            detalle:     ['manual_titulo' => $manual->titulo],
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Manual restaurado a borrador.']);
     }
 }

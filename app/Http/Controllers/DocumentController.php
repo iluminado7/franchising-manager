@@ -18,16 +18,25 @@ class DocumentController extends Controller
     {
         $user = $request->user();
 
+        // Super admin puede ver TODOS los eliminados (incluso los borrados por él) con ?include_deleted=1
+        $includeDeleted = (bool) $request->query('include_deleted', false);
+
         if ($user->esFranquiciante()) {
             $documentos = Document::with(['franquicia', 'empresa'])
                                   ->where('empresa_id', $user->empresa_id)
+                                  ->noEliminados()
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
         } elseif ($user->esSuperAdmin()) {
-            $query = Document::with(['franquicia', 'empresa'])->orderBy('created_at', 'desc');
+            $query = Document::with(['franquicia', 'empresa', 'deletedBy:id,rol'])->orderBy('created_at', 'desc');
             if ($request->filled('empresa_id')) {
                 $query->where('empresa_id', $request->empresa_id);
+            }
+            // Por defecto: no-eliminados + los eliminados por franquiciantes.
+            // Con ?include_deleted=1: también los eliminados por super_admin.
+            if (!$includeDeleted) {
+                $query->visiblesParaSuperAdmin();
             }
             $documentos = $query->get();
 
@@ -42,6 +51,7 @@ class DocumentController extends Controller
                                         ->orWhere('franquicia_id', $franquiciaId);
                                   })
                                   ->visiblesParaFranquiciado()
+                                  ->noEliminados()
                                   ->orderBy('created_at', 'desc')
                                   ->get();
         }
@@ -109,6 +119,11 @@ class DocumentController extends Controller
         $documento = Document::findOrFail($id);
         $user      = $request->user();
 
+        // Si el documento está eliminado, solo super_admin puede acceder
+        if ($documento->deleted_at !== null && !$user->esSuperAdmin()) {
+            abort(403, 'Sin acceso a este documento.');
+        }
+
         // Verificar acceso segun rol
         if ($user->esFranquiciante() || $user->esFranquiciado() || $user->esEmpleado()) {
             if ($documento->empresa_id !== $user->empresa_id) {
@@ -147,6 +162,11 @@ class DocumentController extends Controller
         $documento = Document::findOrFail($id);
         $user      = $request->user();
 
+        // Si el documento está eliminado, solo super_admin puede acceder
+        if ($documento->deleted_at !== null && !$user->esSuperAdmin()) {
+            abort(403, 'Sin acceso a este documento.');
+        }
+
         // Mismo control de acceso que descargar
         if ($user->esFranquiciante() || $user->esFranquiciado() || $user->esEmpleado()) {
             if ($documento->empresa_id !== $user->empresa_id) {
@@ -173,6 +193,97 @@ class DocumentController extends Controller
             'Content-Type'   => $documento->mime_type,
             'Content-Length' => $documento->tamano_bytes,
         ], 'inline');
+    }
+
+    // DELETE /api/documentos/{id}
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $documento = Document::findOrFail($id);
+        $user      = $request->user();
+
+        // Franquiciante solo puede eliminar documentos de su empresa
+        if ($user->esFranquiciante()) {
+            if ($documento->empresa_id !== $user->empresa_id) {
+                return response()->json(['error' => 'Sin acceso a este documento.'], 403);
+            }
+        }
+
+        $documento->update([
+            'deleted_by' => $user->id,
+            'deleted_at' => now(),
+        ]);
+
+        // Si quien elimina es franquiciante: avisar a los super_admin.
+        // Reusamos el tipo 'nuevo_documento' (con document_id) — la constraint chk_notif_fk lo permite.
+        if ($user->esFranquiciante()) {
+            $nombreAutor = trim(($user->franchiseStaff?->nombre ?? '') . ' ' . ($user->franchiseStaff?->apellido ?? ''));
+            if ($nombreAutor === '') {
+                $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
+            }
+
+            $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
+            $notifSuper  = $superadmins->map(fn($uid) => [
+                'user_id'           => $uid,
+                'tipo'              => 'nuevo_documento',
+                'manual_id'         => null,
+                'manual_version_id' => null,
+                'document_id'       => $documento->id,
+                'titulo'            => "El franquiciante {$nombreAutor} eliminó el documento \"{$documento->titulo}\"",
+                'created_at'        => now(),
+            ])->toArray();
+
+            // Best-effort: si la notificación fallara, no debe tumbar la eliminación.
+            try {
+                if (!empty($notifSuper)) {
+                    Notification::insert($notifSuper);
+                }
+            } catch (\Throwable $e) {
+                // Se ignora a propósito: el documento ya fue marcado como eliminado.
+            }
+        }
+
+        ActivityLog::registrar(
+            userId:      $user->id,
+            accion:      'documento_eliminado',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'documents',
+            entidadId:   $documento->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Documento eliminado correctamente.']);
+    }
+
+    // POST /api/documentos/{id}/restore
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        $documento = Document::findOrFail($id);
+        $user      = $request->user();
+
+        // Franquiciante solo puede restaurar documentos de su empresa
+        if ($user->esFranquiciante()) {
+            if ($documento->empresa_id !== $user->empresa_id) {
+                return response()->json(['error' => 'Sin acceso a este documento.'], 403);
+            }
+        }
+
+        $documento->update([
+            'deleted_by' => null,
+            'deleted_at' => null,
+        ]);
+
+        ActivityLog::registrar(
+            userId:      $user->id,
+            accion:      'documento_restaurado',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'documents',
+            entidadId:   $documento->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Documento restaurado correctamente.']);
     }
 
     private function notificarNuevoDocumento(Document $documento): void

@@ -180,6 +180,26 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- MODAL ELIMINAR MANUAL -->
+<div class="modal-overlay" id="modal-eliminar" onclick="if(event.target===this)cerrarModalEliminar()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <h3>Eliminar manual</h3>
+      <button class="modal-close" onclick="cerrarModalEliminar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <div class="form-error" id="eliminar-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-eliminar-confirmar" onclick="ejecutarEliminar()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NOTAS -->
 <div class="modal-overlay" id="modal-notas" onclick="if(event.target===this)cerrarModalNotas()">
   <div class="modal-box" style="max-width:600px">
@@ -285,6 +305,7 @@ let filtroActual     = 'todos';
 let modoImport       = 'scratch';
 let htmlImportado    = '';
 let pendingArchivar  = null;
+let pendingEliminar = null;
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -371,6 +392,11 @@ function renderTabla(lista) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><polyline points="9 13 12 10 15 13"/><line x1="12" y1="10" x2="12" y2="17"/></svg>
             Restaurar
           </button>`}
+          ${m.estado !== 'eliminado' ? `
+          <button class="accion-btn" style="color:var(--gris5)" onclick="abrirModalEliminar(${m.id}, '${esc(m.titulo)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            Eliminar
+          </button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -505,6 +531,33 @@ async function desarchivarManual(id, titulo) {
     mostrarToast(e.data?.message || 'Error al restaurar.', 'error');
   }
 }
+
+// ── MODAL ELIMINAR MANUAL ─────────────────────────────────────
+function abrirModalEliminar(id, titulo) {
+  pendingEliminar = id;
+  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los franquiciados y empleados. El super_admin podrá restaurarlo si fue un error.`;
+  document.getElementById('eliminar-error').textContent = '';
+  document.getElementById('eliminar-error').style.display = 'none';
+  document.getElementById('modal-eliminar').classList.add('open');
+}
+function cerrarModalEliminar() { document.getElementById('modal-eliminar').classList.remove('open'); pendingEliminar = null; }
+
+async function ejecutarEliminar() {
+  if (!pendingEliminar) return;
+  const btn = document.getElementById('btn-eliminar-confirmar');
+  btn.disabled = true; btn.textContent = 'Eliminando...';
+  try {
+    await apiFetch('DELETE', `/manuales/${pendingEliminar}`);
+    mostrarToast('Manual eliminado correctamente.', 'exito');
+    cerrarModalEliminar();
+    await cargarManuales();
+  } catch (e) {
+    document.getElementById('eliminar-error').textContent = e.data?.message || 'Error al eliminar.';
+    document.getElementById('eliminar-error').style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Eliminar';
+  }
+}
+
 // ── ACEPTACIONES ──────────────────────────────────────────────
 async function verAceptaciones(manualId, titulo, versionId) {
   document.getElementById('acept-titulo').textContent = `Aceptaciones — ${titulo}`;

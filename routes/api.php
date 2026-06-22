@@ -114,6 +114,8 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // Manuales — escritura
         Route::post('/manuales',               [ManualController::class, 'store']);
         Route::put('/manuales/{id}',           [ManualController::class, 'update']);
+        Route::delete('/manuales/{id}',         [ManualController::class, 'destroy']);
+        Route::post('/manuales/{id}/restore',   [ManualController::class, 'restore']);
         Route::post('/manuales/{id}/publicar', [ManualController::class, 'publicar']);
         Route::post('/manuales/{id}/archivar', [ManualController::class, 'archivar']);
         Route::post('/manuales/{id}/borrador', [ManualController::class, 'guardarBorrador']);
@@ -121,6 +123,8 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
         // Documentos — subir
         Route::post('/documentos', [DocumentController::class, 'store']);
+        Route::delete('/documentos/{id}',         [DocumentController::class, 'destroy']);
+        Route::post('/documentos/{id}/restore',   [DocumentController::class, 'restore']);
 
         // Aceptaciones — ver
         Route::get('/versiones/{versionId}/aceptaciones',  [AcceptanceController::class, 'porVersion']);

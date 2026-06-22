@@ -153,6 +153,28 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL ELIMINAR DOCUMENTO
+     ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-eliminar">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <h3>Eliminar documento</h3>
+      <button class="modal-close" onclick="cerrarModalEliminar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <div class="form-error" id="eliminar-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-eliminar-confirmar" onclick="ejecutarEliminar()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── TOAST ──────────────────────────────────────────────────── -->
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
@@ -258,6 +280,7 @@ let todasLasEmpresas  = [];
 let todasLasFranquicias = [];
 let rolUsuario        = '';
 let miEmpresaId       = null;
+let pendingEliminar   = null;
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -459,10 +482,17 @@ function renderTabla(lista) {
 
     const esPdf = (d.mime_type === 'application/pdf') || /\.pdf$/i.test(d.archivo_url || '');
 
+    // Estado de eliminación (solo relevante para super_admin: a los demás no les llega un eliminado)
+    const eliminado          = !!d.deleted_at;
+    const eliminadoPorFranq  = eliminado && d.deleted_by?.rol === 'franquiciante';
+    const badgeEliminado     = eliminado
+      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Archivo',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado${eliminadoPorFranq ? ' por franquiciante' : ''}</span>`
+      : '';
+
     return `<tr>
       ${empresaCol}
       <td>
-        <div style="color:var(--blanco);font-weight:500">${esc(d.titulo)}</div>
+        <div style="color:var(--blanco);font-weight:500">${esc(d.titulo)}${badgeEliminado}</div>
         <div style="font-size:11px;color:var(--gris4);margin-top:2px">${esc(d.mime_type || '')} · ${tamano(d.tamano_bytes)}</div>
       </td>
       <td>${tipoBadge(d.tipo)}</td>
@@ -480,6 +510,15 @@ function renderTabla(lista) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Descargar
           </a>
+          ${eliminado ? `
+          <a href="#" onclick="event.preventDefault(); restaurarDocumento(${d.id}, '${esc(d.titulo)}')" class="accion-btn" style="color:var(--dorado)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar
+          </a>` : `
+          <a href="#" onclick="event.preventDefault(); abrirModalEliminar(${d.id}, '${esc(d.titulo)}')" class="accion-btn" style="color:var(--gris5)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            Eliminar
+          </a>`}
         </div>
       </td>
     </tr>`;
@@ -667,6 +706,43 @@ async function previsualizarDocumento(id) {
   } catch (e) {
     if (win) win.close();
     mostrarToast('Error al abrir la vista previa.', 'error');
+  }
+}
+
+// ── MODAL ELIMINAR DOCUMENTO ──────────────────────────────────
+function abrirModalEliminar(id, titulo) {
+  pendingEliminar = id;
+  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible en caso de haber designado este documento a algun franquiciado.`;
+  document.getElementById('eliminar-error').textContent = '';
+  document.getElementById('eliminar-error').style.display = 'none';
+  document.getElementById('modal-eliminar').classList.add('open');
+}
+function cerrarModalEliminar() { document.getElementById('modal-eliminar').classList.remove('open'); pendingEliminar = null; }
+
+async function ejecutarEliminar() {
+  if (!pendingEliminar) return;
+  const btn = document.getElementById('btn-eliminar-confirmar');
+  btn.disabled = true; btn.textContent = 'Eliminando...';
+  try {
+    await apiFetch('DELETE', `/documentos/${pendingEliminar}`);
+    mostrarToast('Documento eliminado correctamente.', 'exito');
+    cerrarModalEliminar();
+    await cargarDocumentos();
+  } catch (e) {
+    document.getElementById('eliminar-error').textContent = e.data?.message || 'Error al eliminar.';
+    document.getElementById('eliminar-error').style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Eliminar';
+  }
+}
+
+// ── RESTAURAR DOCUMENTO (solo super_admin) ────────────────────
+async function restaurarDocumento(id, titulo) {
+  try {
+    await apiFetch('POST', `/documentos/${id}/restore`);
+    mostrarToast(`"${titulo}" restaurado correctamente.`, 'exito');
+    await cargarDocumentos();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'Error al restaurar.', 'error');
   }
 }
 

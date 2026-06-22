@@ -11,7 +11,7 @@ class Document extends Model
     protected $table = 'documents';
 
     public $timestamps = false;
-    protected $dates = ['created_at'];
+    protected $dates = ['created_at', 'deleted_at'];
 
     protected $fillable = [
         'empresa_id',
@@ -24,6 +24,8 @@ class Document extends Model
         'mime_type',
         'tamano_bytes',
         'visible_franquiciado',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected $casts = [
@@ -41,6 +43,12 @@ class Document extends Model
     public function subidoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'subido_por');
+    }
+
+    // Usuario que eliminó el documento (puede ser super_admin o franquiciante)
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     // NULL = documento general para toda la empresa
@@ -69,5 +77,22 @@ class Document extends Model
     public function scopeDeEmpresa($query, int $empresaId)
     {
         return $query->where('empresa_id', $empresaId);
+    }
+
+    // Excluir documentos eliminados (deleted_at NOT NULL)
+    public function scopeNoEliminados($query)
+    {
+        return $query->whereNull('deleted_at');
+    }
+
+    // Visibilidad para super_admin: ve todos los no-eliminados + los eliminados por franquiciantes
+    // (porque para super_admin el borrado del franquiciante no es definitivo).
+    // Los eliminados por super_admin sí quedan ocultos por defecto.
+    public function scopeVisiblesParaSuperAdmin($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('deleted_at')
+              ->orWhereHas('deletedBy', fn($du) => $du->where('rol', 'franquiciante'));
+        });
     }
 }
