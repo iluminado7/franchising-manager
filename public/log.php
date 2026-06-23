@@ -34,6 +34,22 @@ include 'layout/head.php';
 
       <!-- Filtros -->
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+
+        <!-- Combobox empresa — solo super_admin -->
+        <div id="grupo-filtro-empresa" style="display:none;align-items:center;gap:8px;position:relative">
+          <div id="empresa-combo-log" style="position:relative;width:240px">
+            <input type="text" id="inp-empresa-log" placeholder="Buscar empresa..." autocomplete="off" name="combo-empresa-log"
+                   class="buscar-input" style="width:100%;box-sizing:border-box;padding-right:30px"
+                   oninput="filtrarOpcionesEmpresaLog()" onfocus="filtrarOpcionesEmpresaLog()">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <button type="button" id="empresa-clear-log" onclick="limpiarEmpresaLog()" title="Mostrar todas las empresas"
+                    style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="empresa-opciones-log" class="combo-opciones"></div>
+          </div>
+        </div>
+
         <select id="filtro-accion" onchange="aplicarFiltros()" class="filtro-select">
           <option value="">Todas las acciones</option>
           <option value="login">Login</option>
@@ -169,6 +185,12 @@ include 'layout/head.php';
 }
 .buscar-input:focus { border-color: var(--dorado); }
 
+/* ── Combobox de empresa (mismo patrón que documentos.php) ── */
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Archivo Narrow',sans-serif;transition:background .12s; }
+.combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+
 .accion-pill {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 500;
@@ -243,17 +265,34 @@ let logsFiltrados  = [];
 let paginaActual   = 1;
 let todosUsuarios  = [];
 let vistaActual    = 'todos';
+let todasLasEmpresas = [];
+let empresaFiltroId  = ''; // filtro de empresa (solo super_admin)
+let miRol            = '';
 
 // ── INICIALIZAR ───────────────────────────────────────────────
 async function init() {
   try {
-    const [logs, usuarios] = await Promise.all([
+    // Primero traemos el usuario actual para saber qué rol es y si mostrar el filtro de empresa
+    const me = await apiFetch('GET', '/me');
+    miRol = me.rol || '';
+
+    // Cargas en paralelo: logs, usuarios y (solo super_admin) empresas
+    const reqs = [
       apiFetch('GET', '/activity-logs'),
       apiFetch('GET', '/usuarios'),
-    ]);
+    ];
+    if (miRol === 'super_admin') reqs.push(apiFetch('GET', '/empresas'));
+
+    const [logs, usuarios, empresas] = await Promise.all(reqs);
 
     todosLosLogs  = logs;
     todosUsuarios = usuarios;
+
+    // Combobox de empresa: solo super_admin
+    if (miRol === 'super_admin') {
+      todasLasEmpresas = empresas;
+      document.getElementById('grupo-filtro-empresa').style.display = '';
+    }
 
     // Poblar filtro de usuarios
     const sel = document.getElementById('filtro-usuario');
@@ -284,6 +323,74 @@ async function init() {
     document.getElementById('tabla-body').innerHTML =
       `<tr><td colspan="6"><div class="empty-state">Error al cargar el log.</div></td></tr>`;
   }
+}
+
+// Recarga los logs desde el servidor respetando el filtro de empresa activo.
+async function recargarLogs() {
+  const url = empresaFiltroId ? `/activity-logs?empresa_id=${empresaFiltroId}` : '/activity-logs';
+  try {
+    todosLosLogs = await apiFetch('GET', url);
+    paginaActual = 1;
+
+    // Re-calcular stats con la nueva lista
+    const hoy = new Date().toDateString();
+    document.getElementById('stat-total').textContent =
+      todosLosLogs.length.toLocaleString('es-AR');
+    document.getElementById('stat-logins').textContent =
+      todosLosLogs.filter(l => l.accion === 'login' && new Date(l.created_at).toDateString() === hoy).length;
+    document.getElementById('stat-publicados').textContent =
+      todosLosLogs.filter(l => l.accion === 'manual_publicado').length;
+    document.getElementById('stat-aceptaciones').textContent =
+      todosLosLogs.filter(l => l.accion === 'manual_aceptado').length;
+
+    aplicarFiltros();
+  } catch {
+    document.getElementById('tabla-body').innerHTML =
+      `<tr><td colspan="6"><div class="empty-state">Error al cargar el log.</div></td></tr>`;
+  }
+}
+
+// ── COMBOBOX DE EMPRESA (mismo patrón que documentos.php) ─────
+function filtrarOpcionesEmpresaLog() {
+  const input = document.getElementById('inp-empresa-log');
+  const cont  = document.getElementById('empresa-opciones-log');
+  const texto = input.value.toLowerCase().trim();
+
+  if (texto === '' && empresaFiltroId !== '') {
+    empresaFiltroId = '';
+    document.getElementById('empresa-clear-log').style.display = 'none';
+    recargarLogs();
+  }
+
+  const coincidencias = todasLasEmpresas.filter(e => e.nombre.toLowerCase().includes(texto));
+
+  if (!coincidencias.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    cont.style.display = 'block';
+    return;
+  }
+
+  cont.innerHTML = coincidencias.map(e => `
+    <div class="combo-opcion" onmousedown="seleccionarEmpresaLog(${e.id}, '${esc(e.nombre).replace(/'/g, "\\'")}')">
+      ${esc(e.nombre)}${e.activa ? '' : ' <span style="color:var(--gris4)">(suspendida)</span>'}
+    </div>`).join('');
+  cont.style.display = 'block';
+}
+
+function seleccionarEmpresaLog(id, nombre) {
+  empresaFiltroId = String(id);
+  document.getElementById('inp-empresa-log').value = nombre;
+  document.getElementById('empresa-clear-log').style.display = 'block';
+  document.getElementById('empresa-opciones-log').style.display = 'none';
+  recargarLogs();
+}
+
+function limpiarEmpresaLog() {
+  empresaFiltroId = '';
+  document.getElementById('inp-empresa-log').value = '';
+  document.getElementById('empresa-clear-log').style.display = 'none';
+  document.getElementById('empresa-opciones-log').style.display = 'none';
+  recargarLogs();
 }
 
 // ── FILTROS ───────────────────────────────────────────────────
@@ -324,7 +431,12 @@ function limpiarFiltros() {
   document.getElementById('filtro-desde').value   = '';
   document.getElementById('filtro-hasta').value   = '';
   document.getElementById('inp-buscar').value     = '';
-  aplicarFiltros();
+  // Si el filtro de empresa estaba puesto, recargamos los logs sin él
+  if (empresaFiltroId) {
+    limpiarEmpresaLog();
+  } else {
+    aplicarFiltros();
+  }
 }
 
 function cambiarVista(v) {
@@ -361,7 +473,7 @@ function renderTabla() {
       const d = l.detalle ? (typeof l.detalle === 'string' ? JSON.parse(l.detalle) : l.detalle) : {};
       const perfil = l.user?.franchise_staff || l.user?.system_admin;
       const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}` : (l.user?.email || `#${l.user_id}`);
-      const empresa = l.user?.empresa?.nombre || '—';
+      const empresa = l.empresa?.nombre || l.user?.empresa?.nombre || '—';
       return `<tr style="cursor:pointer" onclick="verDetalle(${inicio + i})" title="Ver detalle">
         <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">${formatFechaHora(l.created_at)}</td>
         <td>
@@ -567,6 +679,15 @@ function esc(str) {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') cerrarDetalle();
+});
+
+// Cerrar el desplegable del combobox de empresa al hacer clic afuera
+document.addEventListener('click', e => {
+  const combo = document.getElementById('empresa-combo-log');
+  const opc   = document.getElementById('empresa-opciones-log');
+  if (combo && opc && !combo.contains(e.target)) {
+    opc.style.display = 'none';
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => init());

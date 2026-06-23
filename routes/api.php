@@ -94,7 +94,7 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     // ── USUARIOS — super_admin, franquiciante y franquiciado ──────────
     // El franquiciado solo puede gestionar empleados de su propia sucursal;
     // el control fino (rol / empresa / franquicia) se aplica en UserController.
-    Route::middleware('role:super_admin,franquiciante,franquiciado')->group(function () {
+    Route::middleware('role:super_admin,franquiciante')->group(function () {
         Route::get('/usuarios',                     [UserController::class, 'index']);
         Route::post('/usuarios',                    [UserController::class, 'store']);
         Route::put('/usuarios/{id}',                [UserController::class, 'update']);
