@@ -123,10 +123,19 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::post('/manuales/{id}/borrador', [ManualController::class, 'guardarBorrador']);
         Route::post('/manuales/{id}/desarchivar', [ManualController::class, 'desarchivar']);
 
-        // Documentos — subir
-        Route::post('/documentos', [DocumentController::class, 'store']);
-        Route::delete('/documentos/{id}',         [DocumentController::class, 'destroy']);
-        Route::post('/documentos/{id}/restore',   [DocumentController::class, 'restore']);
+        // Documentos — subir, editar, eliminar/restaurar
+        Route::post('/documentos',                              [DocumentController::class, 'store']);
+        Route::put('/documentos/{id}',                          [DocumentController::class, 'update']);
+        Route::delete('/documentos/{id}',                       [DocumentController::class, 'destroy']);
+        Route::post('/documentos/{id}/restore',                 [DocumentController::class, 'restore']);
+
+        // Documentos — versiones (subir, listar, editar nota, ver historial)
+        Route::post('/documentos/{id}/version',                 [DocumentController::class, 'subirVersion']);
+        Route::get('/documentos/{id}/versiones',                [DocumentController::class, 'versiones']);
+        Route::put('/documentos/{id}/versiones/{vid}/nota',     [DocumentController::class, 'updateNota']);
+        // Acceso a versiones específicas del historial (NO para franquiciado/empleado)
+        Route::get('/documentos/{id}/versiones/{vid}/descargar', [DocumentController::class, 'descargarVersion']);
+        Route::get('/documentos/{id}/versiones/{vid}/preview',   [DocumentController::class, 'previewVersion']);
 
         // Aceptaciones — ver
         Route::get('/versiones/{versionId}/aceptaciones',  [AcceptanceController::class, 'porVersion']);

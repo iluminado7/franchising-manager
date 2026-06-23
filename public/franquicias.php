@@ -138,7 +138,7 @@ include 'layout/head.php';
 </div>
 
 <!-- ── MODAL CREAR / EDITAR ───────────────────────────────────── -->
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)cerrarModal()">
+<div class="modal-overlay" id="modal">
   <div class="modal-box">
     <div class="modal-header">
       <h3 id="modal-titulo">Nueva franquicia</h3>

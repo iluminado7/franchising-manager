@@ -24,15 +24,27 @@ include 'layout/head.php';
         </button>
       </div>
 
+      <!-- ══════════════════════════════════════════════════
+           VISTA LISTA (documentos padre)
+           ══════════════════════════════════════════════════ -->
+      <div id="vista-lista">
+
       <!-- Filtros -->
       <div id="filtros-wrap" style="display:none;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
 
-        <!-- Select empresa — solo super_admin -->
-        <div id="grupo-sel-empresa" style="display:none;align-items:center;gap:8px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gris4)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          <select id="sel-empresa" class="filtro-select-lg" onchange="onEmpresaChange()">
-            <option value="">— Todas las empresas —</option>
-          </select>
+        <!-- Combobox empresa — solo super_admin (mismo patrón que en manuales.php) -->
+        <div id="grupo-sel-empresa" style="display:none;align-items:center;gap:8px;position:relative">
+          <div id="empresa-combo" style="position:relative;width:240px">
+            <input type="text" id="inp-empresa" placeholder="Buscar empresa..." autocomplete="off" name="combo-empresa-doc"
+                   class="buscar-input" style="width:100%;box-sizing:border-box;padding-right:30px"
+                   oninput="filtrarOpcionesEmpresa()" onfocus="filtrarOpcionesEmpresa()">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <button type="button" id="empresa-clear" onclick="limpiarEmpresa()" title="Mostrar todas las empresas"
+                    style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="empresa-opciones" class="combo-opciones"></div>
+          </div>
         </div>
 
         <!-- Filtros de tipo y franquicia -->
@@ -45,7 +57,7 @@ include 'layout/head.php';
         </select>
 
         <select id="sel-franquicia" class="filtro-select" onchange="aplicarFiltros()">
-          <option value="">Todos</option>
+          <option value="">Todas las franquicias</option>
           <option value="global">Solo globales</option>
         </select>
 
@@ -69,6 +81,42 @@ include 'layout/head.php';
           </table>
         </div>
       </div>
+
+      </div><!-- /vista-lista -->
+
+      <!-- ══════════════════════════════════════════════════
+           VISTA DETALLE (versiones de un documento)
+           ══════════════════════════════════════════════════ -->
+      <div id="vista-detalle" style="display:none">
+        <div style="margin-bottom:20px">
+          <button class="btn btn-ghost" onclick="volverALista()" style="padding:6px 12px;font-size:12px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Volver a documentos
+          </button>
+        </div>
+
+        <!-- Header del documento -->
+        <div class="detalle-header">
+          <div style="flex:1">
+            <div class="detalle-titulo" id="detalle-titulo">—</div>
+            <div class="detalle-meta" id="detalle-meta">—</div>
+          </div>
+          <button class="btn btn-primary" id="btn-subir-version" style="display:none" onclick="abrirModalSubirVersion()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Subir nueva versión
+          </button>
+        </div>
+
+        <!-- Lista de versiones -->
+        <div class="tabla-wrap">
+          <div class="tabla-header">
+            <span id="versiones-titulo">Historial de versiones</span>
+          </div>
+          <div id="versiones-lista">
+            <div class="empty-state" style="padding:24px"><div class="spinner" style="display:block;margin:0 auto 8px"></div>Cargando versiones...</div>
+          </div>
+        </div>
+      </div><!-- /vista-detalle -->
 
     </main>
   </div>
@@ -175,6 +223,65 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL SUBIR NUEVA VERSIÓN
+     ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-subir-version">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Subir nueva versión</h3>
+      <button class="modal-close" onclick="cerrarModalSubirVersion()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gris4);margin-bottom:14px;font-family:'Archivo Narrow',sans-serif">
+        La nueva versión quedará como vigente. La anterior pasa al historial.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Archivo *</label>
+        <div class="drop-zone" id="drop-zone-v">
+          <input type="file" id="archivo-v" accept=".pdf,.doc,.docx" style="display:none" onchange="onArchivoVersionSel(event)">
+          <div id="drop-msg-v">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gris4);margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div style="font-size:13px;color:var(--gris5);margin-bottom:4px">Soltá el archivo acá o</div>
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('archivo-v').click()" style="font-size:12px;padding:6px 14px">
+              Seleccionar archivo
+            </button>
+            <div style="font-size:11px;color:var(--gris4);margin-top:10px;font-family:'Archivo Narrow',sans-serif">PDF, DOC o DOCX · máx. 20 MB</div>
+          </div>
+          <div id="drop-info-v" style="display:none">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;justify-content:center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dorado)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <div>
+                <div id="drop-nombre-v" style="color:var(--blanco);font-weight:500;font-size:13px"></div>
+                <div id="drop-tamano-v" style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif"></div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-ghost" onclick="resetDropZoneVersion()" style="font-size:12px;padding:4px 10px">Cambiar archivo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nota (opcional)</label>
+        <textarea id="version-nota" maxlength="500" rows="3" class="form-input" placeholder="Describí qué cambió en esta versión (opcional)..." style="resize:vertical;font-family:'Archivo Narrow',sans-serif"></textarea>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Podés agregar o editar la nota más tarde.</div>
+      </div>
+
+      <div class="form-error" id="version-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalSubirVersion()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-version" onclick="subirNuevaVersion()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Subir versión
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── TOAST ──────────────────────────────────────────────────── -->
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
@@ -204,6 +311,12 @@ include 'layout/head.php';
 }
 .buscar-input:focus { border-color: var(--dorado); }
 .buscar-input::placeholder { color: var(--gris3); }
+
+/* ── Combobox de empresa (igual a manuales.php) ─────────────── */
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Archivo Narrow',sans-serif;transition:background .12s; }
+.combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
 
 /* ── Tabla ────────────────────────────────────────────────── */
 .tabla-wrap { background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px; overflow: hidden; }
@@ -272,6 +385,93 @@ include 'layout/head.php';
 /* ── Toast ────────────────────────────────────────────────── */
 .toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
+/* ── Vista detalle ─────────────────────────────────────────── */
+.detalle-header {
+  display: flex; align-items: flex-start; gap: 16px;
+  margin-bottom: 20px; padding-bottom: 18px;
+  border-bottom: 1px solid var(--gris2);
+  flex-wrap: wrap;
+}
+.detalle-titulo {
+  font-size: 22px; font-weight: 600; color: var(--blanco);
+  font-family: 'Roboto', sans-serif; margin-bottom: 4px;
+}
+.detalle-meta {
+  font-size: 13px; color: var(--gris4);
+  font-family: 'Archivo Narrow', sans-serif;
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+}
+.detalle-meta .sep { color: var(--gris3); }
+
+/* ── Cards de versiones ────────────────────────────────────── */
+.version-card {
+  padding: 18px 20px; border-bottom: 1px solid var(--gris2);
+  display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center;
+}
+.version-card:last-child { border-bottom: none; }
+.version-card:hover { background: rgba(255,255,255,0.015); }
+
+.version-numero {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 56px; gap: 4px;
+}
+.version-numero .num {
+  font-size: 18px; font-weight: 600; color: var(--blanco);
+  font-family: 'Roboto', sans-serif;
+}
+.version-vigente-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 9px; font-weight: 600; letter-spacing: .04em;
+  background: rgba(166,200,132,.15); color: var(--exito);
+  border: 1px solid rgba(166,200,132,.3);
+  font-family: 'Archivo', sans-serif; text-transform: uppercase;
+}
+
+.version-info-autor {
+  font-size: 12px; color: var(--gris5);
+  font-family: 'Archivo Narrow', sans-serif; margin-bottom: 4px;
+}
+.version-info-meta {
+  font-size: 11px; color: var(--gris4);
+  font-family: 'Archivo Narrow', sans-serif;
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+
+.version-nota {
+  margin-top: 8px; padding: 8px 12px;
+  background: var(--gris1); border-left: 2px solid var(--gris3);
+  border-radius: 4px; font-size: 12px; color: var(--gris5);
+  font-family: 'Archivo Narrow', sans-serif; line-height: 1.5;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.version-nota.vacia { color: var(--gris3); font-style: italic; border-left-color: var(--gris2); }
+.version-nota .texto-nota { flex: 1; white-space: pre-wrap; word-break: break-word; }
+.version-nota .btn-editar-nota {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--gris4); padding: 2px; line-height: 0;
+  transition: color .15s; flex-shrink: 0;
+}
+.version-nota .btn-editar-nota:hover { color: var(--dorado); }
+
+.version-acciones {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+
+/* Textarea inline para editar nota */
+.nota-edit-area {
+  width: 100%; box-sizing: border-box;
+  background: var(--gris1); border: 1px solid var(--gris2);
+  border-radius: 6px; padding: 8px 10px;
+  font-size: 12px; color: var(--blanco);
+  font-family: 'Archivo Narrow', sans-serif;
+  resize: vertical; min-height: 60px; outline: none;
+  transition: border-color .15s;
+}
+.nota-edit-area:focus { border-color: var(--dorado); }
+
+/* ── Form inputs (modal subir versión) ─────────────────────── */
+.form-input, .form-label, .form-group { /* heredan del modal-subir si existen */ }
+
 </style>
 
 <script>
@@ -281,6 +481,9 @@ let todasLasFranquicias = [];
 let rolUsuario        = '';
 let miEmpresaId       = null;
 let pendingEliminar   = null;
+let empresaFiltroId   = ''; // filtro activo del combobox de empresa (super_admin)
+let documentoActivo   = null; // documento padre cargado en la vista detalle
+let archivoVersion    = null; // archivo seleccionado para subir nueva versión
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -303,16 +506,9 @@ async function init() {
     renderThead();
 
     if (rolUsuario === 'super_admin') {
-      // Cargar empresas para el selector
+      // Cargar empresas para el combobox del filtro y el modal de subida
       const empresas = await apiFetch('GET', '/empresas');
       todasLasEmpresas = empresas;
-      const selEmp = document.getElementById('sel-empresa');
-      empresas.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = e.id;
-        opt.textContent = e.nombre + (e.activa ? '' : ' (suspendida)');
-        selEmp.appendChild(opt);
-      });
       document.getElementById('grupo-sel-empresa').style.display = 'flex';
 
       // Select empresa en modal
@@ -361,11 +557,11 @@ async function cargarFranquicias(empresaId) {
 }
 
 async function onEmpresaChange() {
-  const empresaId = document.getElementById('sel-empresa').value;
+  const empresaId = empresaFiltroId;
 
   // Actualizar franquicias del filtro
   const selFiltro = document.getElementById('sel-franquicia');
-  selFiltro.innerHTML = '<option value="">Todos</option><option value="global">Solo globales</option>';
+  selFiltro.innerHTML = '<option value="">Todas las franquicias</option><option value="global">Solo globales</option>';
 
   if (empresaId) {
     try {
@@ -380,6 +576,50 @@ async function onEmpresaChange() {
   }
 
   await cargarDocumentos();
+}
+
+// ── AUTOCOMPLETADO DE EMPRESA (combobox) ──────────────────────
+function filtrarOpcionesEmpresa() {
+  const input = document.getElementById('inp-empresa');
+  const cont  = document.getElementById('empresa-opciones');
+  const texto = input.value.toLowerCase().trim();
+
+  // Si vació el campo y había una empresa elegida, vuelve a "todas".
+  if (texto === '' && empresaFiltroId !== '') {
+    empresaFiltroId = '';
+    document.getElementById('empresa-clear').style.display = 'none';
+    onEmpresaChange();
+  }
+
+  const coincidencias = todasLasEmpresas.filter(e => e.nombre.toLowerCase().includes(texto));
+
+  if (!coincidencias.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    cont.style.display = 'block';
+    return;
+  }
+
+  cont.innerHTML = coincidencias.map(e => `
+    <div class="combo-opcion" onmousedown="seleccionarEmpresa(${e.id}, '${esc(e.nombre).replace(/'/g, "\\'")}')">
+      ${esc(e.nombre)}${e.activa ? '' : ' <span style="color:var(--gris4)">(suspendida)</span>'}
+    </div>`).join('');
+  cont.style.display = 'block';
+}
+
+function seleccionarEmpresa(id, nombre) {
+  empresaFiltroId = String(id);
+  document.getElementById('inp-empresa').value = nombre;
+  document.getElementById('empresa-clear').style.display = 'block';
+  document.getElementById('empresa-opciones').style.display = 'none';
+  onEmpresaChange();
+}
+
+function limpiarEmpresa() {
+  empresaFiltroId = '';
+  document.getElementById('inp-empresa').value = '';
+  document.getElementById('empresa-clear').style.display = 'none';
+  document.getElementById('empresa-opciones').style.display = 'none';
+  onEmpresaChange();
 }
 
 async function onEmpresaDocChange() {
@@ -404,8 +644,7 @@ async function cargarDocumentos() {
   try {
     let url = '/documentos';
     if (rolUsuario === 'super_admin') {
-      const empresaId = document.getElementById('sel-empresa').value;
-      if (empresaId) url += `?empresa_id=${empresaId}`;
+      if (empresaFiltroId) url += `?empresa_id=${empresaFiltroId}`;
     }
     const docs = await apiFetch('GET', url);
     todosLosDocumentos = docs;
@@ -465,6 +704,13 @@ function renderTabla(lista) {
   };
 
   tbody.innerHTML = lista.map(d => {
+    // versionActiva viene del backend como HasMany → array.
+    // Tomamos la primera (debería haber sólo una con es_activa=1).
+    const va = Array.isArray(d.version_activa) ? d.version_activa[0] : d.version_activa;
+    const mime  = va?.mime_type     || '';
+    const bytes = va?.tamano_bytes  || 0;
+    const vNum  = va?.version_number;
+
     const empresaCol = rolUsuario === 'super_admin'
       ? `<td style="font-size:12px;color:var(--gris4)">${esc(d.empresa?.nombre || '—')}</td>` : '';
 
@@ -480,7 +726,7 @@ function renderTabla(lista) {
           : `<span style="color:var(--gris3);font-size:11px">● Oculto</span>`
         }</td>` : '';
 
-    const esPdf = (d.mime_type === 'application/pdf') || /\.pdf$/i.test(d.archivo_url || '');
+    const esPdf = (mime === 'application/pdf') || /\.pdf$/i.test(va?.archivo_url || '');
 
     // Estado de eliminación (solo relevante para super_admin: a los demás no les llega un eliminado)
     const eliminado          = !!d.deleted_at;
@@ -489,18 +735,29 @@ function renderTabla(lista) {
       ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Archivo',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado${eliminadoPorFranq ? ' por franquiciante' : ''}</span>`
       : '';
 
+    // El título de la fila es clickeable: lleva a la vista detalle
+    const tituloHTML = `
+      <div style="color:var(--blanco);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px"
+           onclick="verDocumento(${d.id})" title="Ver versiones del documento">
+        ${esc(d.titulo)}
+        ${vNum ? `<span style="font-size:10px;color:var(--gris4);font-weight:400">v${vNum}</span>` : ''}
+      </div>${badgeEliminado}
+      <div style="font-size:11px;color:var(--gris4);margin-top:2px">${esc(mime)}${bytes ? ' · ' + tamano(bytes) : ''}</div>`;
+
     return `<tr>
       ${empresaCol}
-      <td>
-        <div style="color:var(--blanco);font-weight:500">${esc(d.titulo)}${badgeEliminado}</div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:2px">${esc(d.mime_type || '')} · ${tamano(d.tamano_bytes)}</div>
-      </td>
+      <td>${tituloHTML}</td>
       <td>${tipoBadge(d.tipo)}</td>
       ${franquiciaCol}
       ${visibilidadCol}
       <td style="font-size:12px;color:var(--gris4);white-space:nowrap">${formatFecha(d.created_at)}</td>
       <td>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          ${(rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') ? `
+          <a href="#" onclick="event.preventDefault(); verDocumento(${d.id})" class="accion-btn" style="color:var(--gris5)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+            Versiones
+          </a>` : ''}
           ${esPdf ? `
           <a href="#" onclick="event.preventDefault(); previsualizarDocumento(${d.id})" class="accion-btn" style="color:var(--gris5)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -537,7 +794,7 @@ function abrirModalSubir() {
 
   // Si hay empresa seleccionada en filtro y es super_admin, preseleccionar
   if (rolUsuario === 'super_admin') {
-    const empId = document.getElementById('sel-empresa').value;
+    const empId = empresaFiltroId;
     document.getElementById('doc-empresa').value = empId || '';
     if (empId) onEmpresaDocChange();
   }
@@ -712,7 +969,7 @@ async function previsualizarDocumento(id) {
 // ── MODAL ELIMINAR DOCUMENTO ──────────────────────────────────
 function abrirModalEliminar(id, titulo) {
   pendingEliminar = id;
-  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible en caso de haber designado este documento a algun franquiciado.`;
+  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los franquiciados y empleados. El super_admin podrá restaurarlo si fue un error.`;
   document.getElementById('eliminar-error').textContent = '';
   document.getElementById('eliminar-error').style.display = 'none';
   document.getElementById('modal-eliminar').classList.add('open');
@@ -746,6 +1003,320 @@ async function restaurarDocumento(id, titulo) {
   }
 }
 
+// ══════════════════════════════════════════════════
+//   VISTA DETALLE — versiones del documento
+// ══════════════════════════════════════════════════
+
+async function verDocumento(id) {
+  // Buscar el documento padre en la lista ya cargada
+  const doc = todosLosDocumentos.find(d => d.id === id);
+  if (!doc) {
+    mostrarToast('Documento no encontrado.', 'error');
+    return;
+  }
+  documentoActivo = doc;
+
+  // Renderizar header del documento
+  const va     = Array.isArray(doc.version_activa) ? doc.version_activa[0] : doc.version_activa;
+  const vNum   = va?.version_number;
+  const tipo   = doc.tipo ? doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1) : '—';
+  const empOj  = doc.empresa?.nombre ? `<span>${esc(doc.empresa.nombre)}</span><span class="sep">·</span>` : '';
+  const franq  = doc.franquicia?.nombre
+    ? `<span>${esc(doc.franquicia.nombre)}</span>`
+    : `<span style="font-style:italic">Global</span>`;
+  const visib  = doc.visible_franquiciado
+    ? `<span style="color:var(--exito)">● Visible a franquiciados</span>`
+    : `<span style="color:var(--gris3)">● Oculto para franquiciados</span>`;
+
+  document.getElementById('detalle-titulo').textContent = doc.titulo;
+  document.getElementById('detalle-meta').innerHTML = `
+    <span>${tipo}</span><span class="sep">·</span>
+    ${empOj}
+    ${franq}<span class="sep">·</span>
+    ${visib}
+    ${vNum ? `<span class="sep">·</span><span>Vigente: v${vNum}</span>` : ''}
+  `;
+
+  // Mostrar botón "Subir nueva versión" para super_admin / franquiciante,
+  // siempre y cuando el documento no esté eliminado.
+  const puedeSubir = (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') && !doc.deleted_at;
+  document.getElementById('btn-subir-version').style.display = puedeSubir ? 'inline-flex' : 'none';
+
+  // Cambiar de vista
+  document.getElementById('vista-lista').style.display    = 'none';
+  document.getElementById('vista-detalle').style.display  = 'block';
+  document.getElementById('page-title').textContent       = 'Versiones del documento';
+  document.getElementById('page-sub').textContent         = doc.titulo;
+  document.getElementById('btn-subir').style.display      = 'none'; // ocultar "Subir documento" en detalle
+
+  // Cargar versiones
+  await cargarVersiones(id);
+}
+
+function volverALista() {
+  documentoActivo = null;
+  document.getElementById('vista-detalle').style.display = 'none';
+  document.getElementById('vista-lista').style.display   = '';
+  document.getElementById('page-title').textContent      = 'Documentos';
+  document.getElementById('page-sub').textContent        = 'Repositorio de documentos operativos';
+  // Reponer botón "Subir documento" según rol
+  if (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') {
+    document.getElementById('btn-subir').style.display = 'inline-flex';
+  }
+}
+
+async function cargarVersiones(docId) {
+  const cont = document.getElementById('versiones-lista');
+  cont.innerHTML = `<div class="empty-state" style="padding:24px"><div class="spinner" style="display:block;margin:0 auto 8px"></div>Cargando versiones...</div>`;
+
+  try {
+    const versiones = await apiFetch('GET', `/documentos/${docId}/versiones`);
+    document.getElementById('versiones-titulo').textContent = `${versiones.length} versión(es) en el historial`;
+    renderVersiones(versiones);
+  } catch (e) {
+    cont.innerHTML = `<div class="empty-state" style="padding:24px;color:var(--error)">Error al cargar las versiones.</div>`;
+  }
+}
+
+function renderVersiones(versiones) {
+  const cont = document.getElementById('versiones-lista');
+  if (!versiones.length) {
+    cont.innerHTML = `<div class="empty-state" style="padding:24px">Este documento no tiene versiones.</div>`;
+    return;
+  }
+
+  const tamano = (bytes) => {
+    if (!bytes) return '—';
+    if (bytes < 1024)    return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes/1024).toFixed(0)} KB`;
+    return `${(bytes/1048576).toFixed(1)} MB`;
+  };
+
+  const fechaHora = (str) => {
+    if (!str) return '—';
+    const d = new Date(str);
+    return d.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  };
+
+  // Nombre legible del autor según el perfil cargado
+  const nombreAutor = (v) => {
+    const u = v.subido_por_info || v.subido_por_user || v.subido_por_obj;
+    // El backend devuelve la relación cargada bajo "subido_por" como objeto (no como ID),
+    // gracias al with('subidoPor.systemAdmin', 'subidoPor.superAdmin', 'subidoPor.franchiseStaff')
+    const user = (typeof v.subido_por === 'object' && v.subido_por) ? v.subido_por : (v.subidoPor || null);
+    const p = user?.system_admin || user?.super_admin || user?.franchise_staff;
+    if (p?.nombre) return `${p.nombre} ${p.apellido}`;
+    return user?.email || '—';
+  };
+
+  cont.innerHTML = versiones.map(v => {
+    const esPdf  = (v.mime_type === 'application/pdf') || /\.pdf$/i.test(v.archivo_url || '');
+    const vigente = !!v.es_activa;
+
+    const notaHTML = v.nota
+      ? `<div class="version-nota" id="nota-${v.id}">
+          <div class="texto-nota">${esc(v.nota)}</div>
+          <button class="btn-editar-nota" onclick="editarNotaVersion(${v.id})" title="Editar nota">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>`
+      : `<div class="version-nota vacia" id="nota-${v.id}">
+          <div class="texto-nota">Sin nota</div>
+          <button class="btn-editar-nota" onclick="editarNotaVersion(${v.id})" title="Agregar nota">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>`;
+
+    return `<div class="version-card">
+      <div class="version-numero">
+        <div class="num">v${v.version_number}</div>
+        ${vigente ? `<div class="version-vigente-pill">Vigente</div>` : ''}
+      </div>
+      <div>
+        <div class="version-info-autor">Subido por <strong style="color:var(--blanco)">${esc(nombreAutor(v))}</strong></div>
+        <div class="version-info-meta">
+          <span>${fechaHora(v.subido_at)}</span>
+          <span>·</span>
+          <span>${esc(v.mime_type || '')}</span>
+          <span>·</span>
+          <span>${tamano(v.tamano_bytes)}</span>
+        </div>
+        ${notaHTML}
+      </div>
+      <div class="version-acciones">
+        ${esPdf ? `
+        <a href="#" onclick="event.preventDefault(); previsualizarVersion(${documentoActivo.id}, ${v.id})" class="accion-btn" style="color:var(--gris5)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Vista previa
+        </a>` : ''}
+        <a href="#" onclick="event.preventDefault(); descargarVersion(${documentoActivo.id}, ${v.id})" class="accion-btn" style="color:var(--dorado)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar
+        </a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── PREVIEW Y DESCARGA DE VERSIONES ESPECÍFICAS ───────────────
+async function previsualizarVersion(docId, versionId) {
+  const win = window.open('', '_blank');
+  if (win) win.document.write('<p style="font-family:sans-serif;color:#555;padding:24px">Cargando vista previa...</p>');
+  try {
+    const res = await fetch(API + `/documentos/${docId}/versiones/${versionId}/preview`, { credentials: 'include' });
+    if (!res.ok) { if (win) win.close(); mostrarToast('No se pudo abrir la vista previa.', 'error'); return; }
+    const blob = await res.blob();
+    const url  = window.URL.createObjectURL(blob);
+    if (win) win.location.href = url; else window.open(url, '_blank');
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+  } catch { if (win) win.close(); mostrarToast('Error al abrir la vista previa.', 'error'); }
+}
+
+async function descargarVersion(docId, versionId) {
+  try {
+    const res = await fetch(API + `/documentos/${docId}/versiones/${versionId}/descargar`, { credentials: 'include' });
+    if (!res.ok) { mostrarToast('No se pudo descargar.', 'error'); return; }
+    const blob = await res.blob();
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    // Tomar el filename del header si está, sino armarlo
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m  = cd.match(/filename="?([^"]+)"?/);
+    a.href = url; a.download = m ? m[1] : `documento_v${versionId}`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+  } catch { mostrarToast('Error al descargar.', 'error'); }
+}
+
+// ── EDITAR NOTA INLINE ────────────────────────────────────────
+function editarNotaVersion(versionId) {
+  const cont = document.getElementById(`nota-${versionId}`);
+  if (!cont) return;
+  const textoActual = cont.querySelector('.texto-nota')?.textContent || '';
+  const valorInicial = textoActual === 'Sin nota' ? '' : textoActual;
+
+  cont.classList.remove('vacia');
+  cont.innerHTML = `
+    <div style="flex:1">
+      <textarea class="nota-edit-area" id="nota-edit-${versionId}" maxlength="500" placeholder="Escribí una nota (opcional)...">${esc(valorInicial)}</textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="cancelarEditarNota(${versionId})" style="padding:4px 10px;font-size:11px">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarNotaVersion(${versionId})" style="padding:4px 10px;font-size:11px">Guardar</button>
+      </div>
+    </div>`;
+  document.getElementById(`nota-edit-${versionId}`).focus();
+}
+
+async function guardarNotaVersion(versionId) {
+  if (!documentoActivo) return;
+  const ta = document.getElementById(`nota-edit-${versionId}`);
+  const nota = ta.value.trim();
+  try {
+    await apiFetch('PUT', `/documentos/${documentoActivo.id}/versiones/${versionId}/nota`, { nota: nota || null });
+    mostrarToast('Nota actualizada.', 'exito');
+    await cargarVersiones(documentoActivo.id);
+  } catch (e) {
+    mostrarToast(e.data?.message || 'Error al guardar la nota.', 'error');
+  }
+}
+
+function cancelarEditarNota(versionId) {
+  // Recargar versiones para resetear UI al estado original
+  if (documentoActivo) cargarVersiones(documentoActivo.id);
+}
+
+// ══════════════════════════════════════════════════
+//   MODAL SUBIR NUEVA VERSIÓN
+// ══════════════════════════════════════════════════
+
+function abrirModalSubirVersion() {
+  if (!documentoActivo) return;
+  resetDropZoneVersion();
+  document.getElementById('version-nota').value = '';
+  document.getElementById('version-error').textContent = '';
+  document.getElementById('version-error').style.display = 'none';
+  document.getElementById('modal-subir-version').classList.add('open');
+}
+
+function cerrarModalSubirVersion() {
+  document.getElementById('modal-subir-version').classList.remove('open');
+  archivoVersion = null;
+}
+
+function resetDropZoneVersion() {
+  archivoVersion = null;
+  document.getElementById('drop-msg-v').style.display  = '';
+  document.getElementById('drop-info-v').style.display = 'none';
+  document.getElementById('archivo-v').value = '';
+}
+
+function onArchivoVersionSel(e) {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  archivoVersion = f;
+  document.getElementById('drop-nombre-v').textContent = f.name;
+  document.getElementById('drop-tamano-v').textContent = `${(f.size/1048576).toFixed(2)} MB · ${f.type || 'archivo'}`;
+  document.getElementById('drop-msg-v').style.display  = 'none';
+  document.getElementById('drop-info-v').style.display = '';
+}
+
+async function subirNuevaVersion() {
+  if (!documentoActivo) return;
+  const errBox = document.getElementById('version-error');
+  errBox.style.display = 'none';
+
+  if (!archivoVersion) {
+    errBox.textContent = 'Seleccioná un archivo.'; errBox.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('btn-confirmar-version');
+  btn.disabled = true; btn.innerHTML = 'Subiendo...';
+
+  const fd = new FormData();
+  fd.append('archivo', archivoVersion);
+  const nota = document.getElementById('version-nota').value.trim();
+  if (nota) fd.append('nota', nota);
+
+  try {
+    const res = await fetch(API + `/documentos/${documentoActivo.id}/version`, {
+      method: 'POST', credentials: 'include', body: fd,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw { data: body };
+    }
+    mostrarToast('Nueva versión subida correctamente.', 'exito');
+    cerrarModalSubirVersion();
+    // Refrescar versiones + recargar lista padre (para que se actualice versionActiva)
+    await cargarVersiones(documentoActivo.id);
+    const docs = await apiFetch('GET', '/documentos' + (empresaFiltroId ? `?empresa_id=${empresaFiltroId}` : ''));
+    todosLosDocumentos = docs;
+    // Actualizar el documento activo en memoria con los nuevos datos
+    const fresh = docs.find(d => d.id === documentoActivo.id);
+    if (fresh) documentoActivo = fresh;
+  } catch (e) {
+    errBox.textContent = e.data?.message || 'Error al subir la versión.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Subir versión`;
+  }
+}
+
+// Drag & drop en zona de subir versión
+(() => {
+  const dz = document.getElementById('drop-zone-v');
+  if (!dz) return;
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
+  dz.addEventListener('drop', e => {
+    const f = e.dataTransfer?.files?.[0];
+    if (!f) return;
+    document.getElementById('archivo-v').files = e.dataTransfer.files;
+    onArchivoVersionSel({ target: { files: [f] } });
+  });
+})();
+
 // ── HELPERS ───────────────────────────────────────────────────
 function formatFecha(str) {
   if (!str) return '—';
@@ -773,6 +1344,14 @@ function mostrarToast(msg, tipo = 'exito') {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') cerrarModalSubir();
+});
+
+// Cerrar el desplegable del combobox de empresa al hacer clic afuera
+document.addEventListener('click', e => {
+  const combo = document.getElementById('empresa-combo');
+  if (combo && !combo.contains(e.target)) {
+    document.getElementById('empresa-opciones').style.display = 'none';
+  }
 });
 
 init();

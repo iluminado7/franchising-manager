@@ -19,10 +19,6 @@ class Document extends Model
         'tipo',
         'subido_por',
         'franquicia_id',
-        'archivo_url',
-        'archivo_hash',
-        'mime_type',
-        'tamano_bytes',
         'visible_franquiciado',
         'deleted_by',
         'deleted_at',
@@ -30,7 +26,6 @@ class Document extends Model
 
     protected $casts = [
         'visible_franquiciado' => 'boolean',
-        'tamano_bytes'         => 'integer',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -55,6 +50,20 @@ class Document extends Model
     public function franquicia(): BelongsTo
     {
         return $this->belongsTo(Franquicia::class, 'franquicia_id');
+    }
+
+    // Todas las versiones del documento (incluye históricas)
+    public function versiones(): HasMany
+    {
+        return $this->hasMany(DocumentVersion::class, 'document_id');
+    }
+
+    // Versión actualmente vigente — solo una con es_activa = 1 a la vez.
+    // Espejo del patrón usado en Manual::versionActiva().
+    public function versionActiva(): HasMany
+    {
+        return $this->hasMany(DocumentVersion::class, 'document_id')
+                    ->where('es_activa', 1);
     }
 
     public function notifications(): HasMany

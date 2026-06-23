@@ -406,12 +406,19 @@ async function init() {
     }
 
     // Select franquicias del formulario
+    // Para super_admin queda vacío hasta que elija una empresa; para franquiciante
+    // se pre-popula con las franquicias de su propia empresa (las únicas que ve).
     const selFranqForm = document.getElementById('form-franquicia');
-    franquicias.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f.id; opt.textContent = f.nombre;
-      selFranqForm.appendChild(opt);
-    });
+    if (miRol === 'super_admin') {
+      selFranqForm.innerHTML = '<option value="">Elegí primero una empresa</option>';
+      selFranqForm.disabled  = true;
+    } else {
+      franquicias.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id; opt.textContent = f.nombre;
+        selFranqForm.appendChild(opt);
+      });
+    }
 
     // Filtros de rol: franquiciante no ve "Franquiciantes" ni "Super Admin"
     if (miRol === 'franquiciante') {
@@ -665,24 +672,45 @@ function onRolChange() {
   const grupoEmp    = document.getElementById('grupo-empresa');
   const grupoFranq  = document.getElementById('grupo-franquicia');
 
-  grupoEmp.style.display = rol === 'franquiciante' ? 'block' : 'none';
+  // Empresa: el super_admin elige empresa para CUALQUIER rol que tenga empresa asignada
+  // (franquiciante, franquiciado, empleado). El franquiciante no la elige: usa la suya.
+  const necesitaEmpresa = miRol === 'super_admin'
+    && ['franquiciante','franquiciado','empleado'].includes(rol);
+  grupoEmp.style.display = necesitaEmpresa ? 'block' : 'none';
+
+  // Franquicia: solo para franquiciado/empleado.
   // El franquiciado crea empleados en su propia sucursal (forzada en el server),
-  // por eso no mostramos el selector de franquicia.
+  // por eso no mostramos el selector de franquicia en ese caso.
   const mostrarFranq = (rol === 'franquiciado' || rol === 'empleado') && miRol !== 'franquiciado';
   grupoFranq.style.display = mostrarFranq ? 'block' : 'none';
 
-  // Al cambiar a franquiciante, filtrar franquicias por empresa seleccionada
-  if (rol === 'franquiciante') onEmpresaChange();
+  // Si el super_admin va a elegir franquicia, el select arranca dependiente
+  // de la empresa actual: vacío si no eligió, filtrado si ya eligió.
+  if (mostrarFranq && miRol === 'super_admin') {
+    onEmpresaChange();
+  }
+
+  // Al cambiar a franquiciante (super_admin), refrescar también por si había
+  // franquicias en pantalla de un cambio anterior.
+  if (rol === 'franquiciante' && miRol === 'super_admin') {
+    onEmpresaChange();
+  }
 }
 
 function onEmpresaChange() {
   const empresaId = document.getElementById('form-empresa').value;
   const sel       = document.getElementById('form-franquicia');
 
-  // Filtrar franquicias del select por empresa
-  const franqsFiltradas = empresaId
-    ? todasLasFranquicias.filter(f => String(f.empresa_id) === empresaId)
-    : todasLasFranquicias;
+  // Sin empresa: el select queda deshabilitado con un placeholder.
+  if (!empresaId) {
+    sel.innerHTML = '<option value="">Elegí primero una empresa</option>';
+    sel.disabled  = true;
+    return;
+  }
+
+  // Con empresa: filtrar franquicias y habilitar
+  sel.disabled = false;
+  const franqsFiltradas = todasLasFranquicias.filter(f => String(f.empresa_id) === empresaId);
 
   sel.innerHTML = '<option value="">Seleccioná una franquicia</option>';
   franqsFiltradas.forEach(f => {
@@ -690,6 +718,11 @@ function onEmpresaChange() {
     opt.value = f.id; opt.textContent = f.nombre;
     sel.appendChild(opt);
   });
+
+  // Hint útil cuando la empresa elegida no tiene sucursales cargadas todavía
+  if (franqsFiltradas.length === 0) {
+    sel.innerHTML += '<option value="" disabled>(esta empresa no tiene sucursales registradas)</option>';
+  }
 }
 
 function togglePassModal() {
@@ -725,6 +758,9 @@ async function guardar() {
   if (rol === 'franquiciante' && !modoEdicion && miRol === 'super_admin' && !empresaId) {
     mostrarFormError('Seleccioná una empresa para el franquiciante.'); return;
   }
+  if ((rol === 'franquiciado' || rol === 'empleado') && !modoEdicion && miRol === 'super_admin' && !empresaId) {
+    mostrarFormError('Seleccioná una empresa.'); return;
+  }
   if ((rol === 'franquiciado' || rol === 'empleado') && !franqId && miRol !== 'franquiciado') {
     mostrarFormError('Seleccioná una franquicia.'); return;
   }
@@ -746,7 +782,9 @@ async function guardar() {
 
     if (password)  body.password      = password;
     if (franqId)   body.franquicia_id = franqId;
-    // empresa_id solo la manda super_admin al crear un franquiciante
+    // empresa_id la manda super_admin al crear cualquier rol con empresa
+    // (franquiciante, franquiciado o empleado). El franquiciante no la manda:
+    // el backend toma la empresa del actor.
     if (!modoEdicion && miRol === 'super_admin' && empresaId) body.empresa_id = empresaId;
 
     if (modoEdicion) {

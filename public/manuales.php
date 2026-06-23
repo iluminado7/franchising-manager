@@ -80,7 +80,7 @@ include 'layout/head.php';
 <!-- ══════════════════════════════════════════
      MODAL NUEVO MANUAL
 ══════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-nuevo" onclick="if(event.target===this)cerrarModalNuevo()">
+<div class="modal-overlay" id="modal-nuevo">
   <div class="modal-box" style="max-width:520px">
 
     <div class="modal-header">

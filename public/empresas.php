@@ -63,7 +63,7 @@ include 'layout/head.php';
 <!-- ══════════════════════════════════════════════════
      MODAL CREAR / EDITAR EMPRESA
 ══════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)cerrarModal()">
+<div class="modal-overlay" id="modal">
   <div class="modal-box" style="max-width:620px;max-height:90vh;overflow-y:auto">
 
     <div class="modal-header" style="position:sticky;top:0;background:var(--gris1);z-index:1">
