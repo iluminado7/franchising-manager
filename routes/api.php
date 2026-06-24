@@ -133,6 +133,8 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::post('/documentos/{id}/version',                 [DocumentController::class, 'subirVersion']);
         Route::get('/documentos/{id}/versiones',                [DocumentController::class, 'versiones']);
         Route::put('/documentos/{id}/versiones/{vid}/nota',     [DocumentController::class, 'updateNota']);
+        Route::delete('/documentos/{id}/versiones/{versionId}',[DocumentController::class,'destroyVersion']);
+        Route::post('/documentos/{id}/versiones/{versionId}/restore',[DocumentController::class,'restoreVersion']);
         // Acceso a versiones específicas del historial (NO para franquiciado/empleado)
         Route::get('/documentos/{id}/versiones/{vid}/descargar', [DocumentController::class, 'descargarVersion']);
         Route::get('/documentos/{id}/versiones/{vid}/preview',   [DocumentController::class, 'previewVersion']);
@@ -145,6 +147,10 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
         // Versiones de manuales
         Route::get('/manuales/{id}/versiones', [ManualController::class, 'versiones']);
+
+        // Edición posterior de la nota de publicación (release note) de una versión
+        Route::put('/manuales/{manualId}/versiones/{versionId}/nota-publicacion',
+            [ManualController::class, 'updateNotaPublicacion']);
 
         // Activity Log
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);

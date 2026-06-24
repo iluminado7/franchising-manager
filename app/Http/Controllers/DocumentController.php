@@ -200,7 +200,14 @@ class DocumentController extends Controller
                            ->update(['es_activa' => 0]);
 
             // Siguiente número de versión: MAX(existente) + 1.
-            $next = (int) DocumentVersion::where('document_id', $documento->id)->max('version_number') + 1;
+            // Importante: contamos también las eliminadas para no reutilizar
+            // un version_number ya usado (rompería el UNIQUE de document_id, version_number).
+            // El modelo no usa el trait SoftDeletes, así que un where directo
+            // ya devuelve TODAS las versiones (incluso las que tienen deleted_at).
+            $next = (
+                DocumentVersion::where('document_id', $documento->id)
+                    ->max('version_number')
+            ) + 1;
 
             return DocumentVersion::create([
                 'document_id'    => $documento->id,
@@ -248,11 +255,23 @@ class DocumentController extends Controller
             return response()->json(['error' => 'Sin acceso a este documento.'], 403);
         }
 
-        $versiones = DocumentVersion::with(['subidoPor.systemAdmin', 'subidoPor.superAdmin', 'subidoPor.franchiseStaff'])
-                                    ->where('document_id', $id)
-                                    ->orderByDesc('version_number')
-                                    ->get();
+        $includeDeleted = (bool) $request->query('include_deleted', false);
 
+        $versiones = DocumentVersion::with([
+            'subidoPor.systemAdmin',
+            'subidoPor.superAdmin',
+            'subidoPor.franchiseStaff',
+            'deletedBy.systemAdmin',
+            'deletedBy.superAdmin',
+            'deletedBy.franchiseStaff'
+        ])
+        ->where('document_id', $id);
+        if (!$includeDeleted) {
+            $versiones->whereNull('deleted_at');
+        }
+        $versiones = $versiones
+            ->orderByDesc('version_number')
+            ->get();
         return response()->json($versiones);
     }
 
@@ -369,6 +388,89 @@ class DocumentController extends Controller
         return response()->json(['message' => 'Documento eliminado correctamente.']);
     }
 
+    // DELETE /api/documentos/{id}/versiones/{versionId}
+        public function destroyVersion(Request $request, int $id, int $versionId): JsonResponse
+        {
+            $user = $request->user();
+
+            $version = DocumentVersion::where('document_id', $id)
+                ->findOrFail($versionId);
+
+            $documento = $version->document;
+
+            if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+                return response()->json(['error' => 'Sin permisos.'], 403);
+            }
+
+            if ($user->esFranquiciante() &&
+                $documento->empresa_id !== $user->empresa_id) {
+                return response()->json(['error' => 'Sin acceso.'], 403);
+            }
+
+            if ($version->deleted_at) {
+                return response()->json([
+                    'error' => 'La versión ya fue eliminada.'
+                ], 409);
+            }
+
+            // Si es la única versión disponible (no eliminada), no permitir borrar:
+            // hay que eliminar el documento completo en su lugar.
+            $disponibles = DocumentVersion::where('document_id', $id)
+                ->whereNull('deleted_at')
+                ->count();
+            if ($disponibles <= 1) {
+                return response()->json([
+                    'error' => 'No podés eliminar la única versión disponible. Eliminá el documento completo.'
+                ], 409);
+            }
+
+            // Si es la versión activa, promovemos a activa la más reciente
+            // (por version_number desc) que no esté eliminada y no sea ésta.
+            $promovida = null;
+            if ($version->es_activa) {
+                $promovida = DocumentVersion::where('document_id', $id)
+                    ->where('id', '!=', $version->id)
+                    ->whereNull('deleted_at')
+                    ->orderByDesc('version_number')
+                    ->first();
+            }
+
+            DB::transaction(function () use ($version, $promovida, $user) {
+                $version->update([
+                    'es_activa'  => 0,
+                    'deleted_by' => $user->id,
+                    'deleted_at' => now(),
+                ]);
+
+                if ($promovida) {
+                    // Por las dudas, garantizar que no quede ninguna otra activa.
+                    DocumentVersion::where('document_id', $promovida->document_id)
+                        ->where('id', '!=', $promovida->id)
+                        ->where('es_activa', 1)
+                        ->update(['es_activa' => 0]);
+
+                    $promovida->update(['es_activa' => 1]);
+                }
+            });
+
+            try {
+                ActivityLog::registrar(
+                    userId: $user->id,
+                    accion: 'version_documento_eliminada',
+                    ip: $request->ip(),
+                    empresaId: $documento->empresa_id,
+                    entidadTipo: 'document_versions',
+                    entidadId: $version->id,
+                    userAgent: $request->userAgent()
+                );
+            } catch (\Throwable $e) { /* best-effort: no romper la respuesta si el log falla */ }
+
+            return response()->json([
+                'message'        => 'Versión eliminada.',
+                'nueva_activa_id'=> $promovida?->id,
+            ]);
+        }
+
     // POST /api/documentos/{id}/restore
     public function restore(Request $request, int $id): JsonResponse
     {
@@ -398,6 +500,92 @@ class DocumentController extends Controller
 
         return response()->json(['message' => 'Documento restaurado correctamente.']);
     }
+
+    public function restoreVersion(
+        Request $request,
+        int $id,
+        int $versionId
+    ): JsonResponse {
+
+        $version = DocumentVersion::where(
+            'document_id',
+            $id
+        )->findOrFail($versionId);
+
+        $documento = $version->document;
+        $user      = $request->user();
+
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        if ($user->esFranquiciante() &&
+            $documento->empresa_id !== $user->empresa_id) {
+            return response()->json(['error' => 'Sin acceso.'], 403);
+        }
+
+        if ($version->deleted_at === null) {
+            return response()->json([
+                'error' => 'La versión no está eliminada.'
+            ], 409);
+        }
+
+        // Restaurar dentro de una transacción.
+        // Lógica de re-promoción: si la versión restaurada tiene el mayor
+        // version_number entre las disponibles, vuelve a ser la vigente
+        // y se desactiva la que estaba marcada como activa.
+        $promovida = false;
+
+        DB::transaction(function () use ($version, $documento, &$promovida) {
+            $version->update([
+                'deleted_by' => null,
+                'deleted_at' => null,
+                'es_activa'  => 0,
+            ]);
+
+            // Refrescamos por las dudas
+            $version->refresh();
+
+            // Vigente actual entre las NO eliminadas (incluyendo la recién restaurada)
+            $vigenteActual = DocumentVersion::where('document_id', $documento->id)
+                ->where('id', '!=', $version->id)
+                ->where('es_activa', 1)
+                ->whereNull('deleted_at')
+                ->first();
+
+            // Si no hay vigente, o la restaurada es más nueva → promoverla
+            if (!$vigenteActual || $version->version_number > $vigenteActual->version_number) {
+                // Desactivar cualquier otra que estuviera activa
+                DocumentVersion::where('document_id', $documento->id)
+                    ->where('id', '!=', $version->id)
+                    ->where('es_activa', 1)
+                    ->update(['es_activa' => 0]);
+
+                $version->update(['es_activa' => 1]);
+                $promovida = true;
+            }
+        });
+
+        try {
+            ActivityLog::registrar(
+                userId: $user->id,
+                accion: 'version_documento_restaurada',
+                ip: $request->ip(),
+                empresaId: $documento->empresa_id,
+                entidadTipo: 'document_versions',
+                entidadId: $version->id,
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort: no romper la respuesta si el log falla */ }
+
+        return response()->json([
+            'message'   => $promovida
+                ? 'Versión restaurada y promovida a vigente.'
+                : 'Versión restaurada (queda en el historial como inactiva).',
+            'promovida' => $promovida,
+        ]);
+    }
+
 
     // ── PRIVADOS ──────────────────────────────────────────────────────
 
@@ -429,6 +617,9 @@ class DocumentController extends Controller
             abort(403, 'Sin acceso a versiones anteriores.');
         }
 
+        if ($version->deleted_at !== null) {
+            abort(404,'Versión eliminada.');
+        }
         $disk = config('filesystems.default');
         if (!Storage::disk($disk)->exists($version->archivo_url)) {
             abort(404, 'Archivo no encontrado.');

@@ -23,12 +23,16 @@ class DocumentVersion extends Model
         'es_activa',
         'subido_por',
         'subido_at',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected $casts = [
         'es_activa'     => 'boolean',
         'tamano_bytes'  => 'integer',
         'version_number'=> 'integer',
+        'subido_at'      => 'datetime',
+        'deleted_at'     => 'datetime',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -45,6 +49,11 @@ class DocumentVersion extends Model
         return $this->belongsTo(User::class, 'subido_por');
     }
 
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────
 
     // DocumentVersion::activas()->...  → versiones actualmente vigentes
@@ -53,10 +62,21 @@ class DocumentVersion extends Model
         return $query->where('es_activa', 1);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────
-
-    public function esActiva(): bool
+    public function scopeNoEliminadas($query)
     {
-        return (bool) $this->es_activa;
+        return $query->whereNull('deleted_at');
     }
+    // ── Helpers ──────────────────────────────────────────────────────
+    public function estaEliminada(): bool
+    {
+        return !is_null($this->deleted_at);
+    }
+
+    public function esActiva($query): bool
+    {
+        return $query
+        ->where('es_activa', 1)
+        ->whereNull('deleted_at');
+    }
+    
 }

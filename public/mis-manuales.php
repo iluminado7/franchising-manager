@@ -150,6 +150,16 @@ include 'layout/head.php';
 .nota-card:last-child { margin-bottom:0; }
 .nota-card-top { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px; }
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+
+/* Release notes: anuncios del publicador, estilo destacado */
+.nota-card.nota-release { background:rgba(196,162,107,.05);border-color:rgba(196,162,107,.3);border-left:3px solid var(--dorado); }
+.nota-release-tag {
+  display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  background:rgba(196,162,107,.18);color:var(--dorado);
+  border:1px solid rgba(196,162,107,.4);
+  font-family:'Archivo',sans-serif;
+}
 .nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
 .nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
@@ -333,12 +343,30 @@ async function cargarNotas(manualId) {
 function renderNotas(notas) {
   const body = document.getElementById('notas-body');
   if (!notas.length) {
-    body.innerHTML = `<div class="empty-state">Todavía no enviaste notas para este manual.</div>`;
+    body.innerHTML = `<div class="empty-state">Todavía no hay notas ni mensajes para este manual.</div>`;
     return;
   }
   const estadoLabel = { pendiente: 'Pendiente', leida: 'Leída', resuelta: 'Resuelta' };
   body.innerHTML = notas.map(n => {
     const version = n.version ? `v${n.version.version_number}` : 'Sin versión publicada';
+
+    // Release note: anuncio del publicador (super_admin/franquiciante) al subir una versión.
+    // Estilo destacado, sin badge de estado (no se gestiona como feedback).
+    if (n.tipo === 'release') {
+      const autor = autorReleaseLabel(n);
+      return `
+        <div class="nota-card nota-release">
+          <div class="nota-card-top">
+            <div>
+              <span class="nota-release-tag">Mensaje del publicador · ${version}</span>
+              <span class="nota-meta" style="display:block;margin-top:4px">${esc(autor)} · ${formatFechaHora(n.created_at)}</span>
+            </div>
+          </div>
+          <div class="nota-contenido">${esc(n.contenido)}</div>
+        </div>`;
+    }
+
+    // Feedback (nota propia del franquiciado)
     return `
       <div class="nota-card">
         <div class="nota-card-top">
@@ -348,6 +376,15 @@ function renderNotas(notas) {
         <div class="nota-contenido">${esc(n.contenido)}</div>
       </div>`;
   }).join('');
+}
+
+// Nombre legible del autor de una release note (el que publicó la versión)
+function autorReleaseLabel(n) {
+  const u = n.autor;
+  if (!u) return 'Publicador';
+  const p = u.system_admin || u.super_admin || u.franchise_staff;
+  if (p?.nombre) return `${p.nombre} ${p.apellido}`;
+  return u.email || 'Publicador';
 }
 
 async function enviarNota() {

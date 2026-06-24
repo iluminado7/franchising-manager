@@ -109,8 +109,12 @@ include 'layout/head.php';
 
         <!-- Lista de versiones -->
         <div class="tabla-wrap">
-          <div class="tabla-header">
+          <div class="tabla-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <span id="versiones-titulo">Historial de versiones</span>
+            <button id="btn-mostrar-eliminadas-ver" class="filtro-btn" style="display:none" onclick="toggleMostrarEliminadasVer(this)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Mostrar eliminadas
+            </button>
           </div>
           <div id="versiones-lista">
             <div class="empty-state" style="padding:24px"><div class="spinner" style="display:block;margin:0 auto 8px"></div>Cargando versiones...</div>
@@ -224,6 +228,31 @@ include 'layout/head.php';
 </div>
 
 <!-- ══════════════════════════════════════════════════
+     MODAL ELIMINAR VERSIÓN
+     ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-eliminar-version">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Eliminar versión</h3>
+      <button class="modal-close" onclick="cerrarModalEliminarVersion()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="eliminar-ver-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="eliminar-ver-aviso" style="font-size:12px;color:var(--dorado);line-height:1.5;font-family:'Archivo Narrow',sans-serif;margin-top:10px;display:none">
+        <strong>Atención:</strong> esta es la versión vigente. Al eliminarla, la versión inmediatamente anterior pasará a ser la vigente.
+      </p>
+      <div class="form-error" id="eliminar-ver-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEliminarVersion()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-eliminar-ver-confirmar" onclick="ejecutarEliminarVersion()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      MODAL SUBIR NUEVA VERSIÓN
      ══════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-subir-version">
@@ -278,6 +307,66 @@ include 'layout/head.php';
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Subir versión
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL EDITAR DOCUMENTO (padre)
+     ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-editar-doc">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Editar documento</h3>
+      <button class="modal-close" onclick="cerrarModalEditarDoc()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gris4);margin-bottom:14px;font-family:'Archivo Narrow',sans-serif">
+        Estos datos se aplican a todas las versiones del documento.
+      </p>
+
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" id="edit-doc-titulo" maxlength="200" placeholder="Título del documento">
+      </div>
+
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="edit-doc-tipo" class="form-select">
+          <option value="contrato">Contrato</option>
+          <option value="anexo">Anexo</option>
+          <option value="acta">Acta</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Franquicia destino</label>
+        <select id="edit-doc-franquicia" class="form-select">
+          <option value="">Toda la empresa (global)</option>
+        </select>
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+          Si elegís una franquicia específica, solo los franquiciados/empleados de esa sucursal verán este documento.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="edit-doc-visible" style="margin-right:6px;accent-color:var(--dorado)">
+          Visible para franquiciados
+        </label>
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+          Si está desactivado, solo los franquiciantes y super admins verán el documento.
+        </div>
+      </div>
+
+      <div class="form-error" id="edit-doc-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEditarDoc()">Cancelar</button>
+      <button class="btn btn-success" id="btn-guardar-doc" onclick="guardarEdicionDocumento()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -411,6 +500,28 @@ include 'layout/head.php';
 .version-card:last-child { border-bottom: none; }
 .version-card:hover { background: rgba(255,255,255,0.015); }
 
+/* Versión eliminada: opaca, sin acciones (salvo restaurar) */
+.version-card.eliminada { opacity: .55; background: rgba(226,92,92,.04); }
+.version-card.eliminada:hover { background: rgba(226,92,92,.07); }
+.version-eliminada-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 9px; font-weight: 600; letter-spacing: .04em;
+  background: rgba(226,92,92,.15); color: var(--error);
+  border: 1px solid rgba(226,92,92,.3);
+  font-family: 'Archivo', sans-serif; text-transform: uppercase;
+}
+
+/* Botón pequeño tipo pill para toggles del header */
+.filtro-btn {
+  background: transparent; border: 1px solid var(--gris2);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; color: var(--gris5);
+  font-family: 'Archivo Narrow', sans-serif;
+  cursor: pointer; transition: all .15s; outline: none;
+}
+.filtro-btn:hover { border-color: var(--dorado); color: var(--blanco); }
+.filtro-btn.active { background: var(--dorado); color: var(--negro); border-color: var(--dorado); }
+
 .version-numero {
   display: flex; flex-direction: column; align-items: center;
   min-width: 56px; gap: 4px;
@@ -470,7 +581,7 @@ include 'layout/head.php';
 .nota-edit-area:focus { border-color: var(--dorado); }
 
 /* ── Form inputs (modal subir versión) ─────────────────────── */
-.form-input, .form-label, .form-group { /* heredan del modal-subir si existen */ }
+
 
 </style>
 
@@ -481,6 +592,8 @@ let todasLasFranquicias = [];
 let rolUsuario        = '';
 let miEmpresaId       = null;
 let pendingEliminar   = null;
+let pendingEliminarVer = null;  // { docId, versionId, vigente }
+let mostrarVersionesEliminadas = false;
 let empresaFiltroId   = ''; // filtro activo del combobox de empresa (super_admin)
 let documentoActivo   = null; // documento padre cargado en la vista detalle
 let archivoVersion    = null; // archivo seleccionado para subir nueva versión
@@ -682,6 +795,8 @@ function renderThead() {
     `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
 }
 
+
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   const cols = rolUsuario === 'super_admin' ? 7 : rolUsuario === 'franquiciante' ? 6 : 4;
@@ -753,29 +868,59 @@ function renderTabla(lista) {
       <td style="font-size:12px;color:var(--gris4);white-space:nowrap">${formatFecha(d.created_at)}</td>
       <td>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+
           ${(rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') ? `
-          <a href="#" onclick="event.preventDefault(); verDocumento(${d.id})" class="accion-btn" style="color:var(--gris5)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+          <a href="#" onclick="event.preventDefault(); verDocumento(${d.id})"
+            class="accion-btn"
+            style="color:var(--gris5)">
             Versiones
           </a>` : ''}
+
           ${esPdf ? `
-          <a href="#" onclick="event.preventDefault(); previsualizarDocumento(${d.id})" class="accion-btn" style="color:var(--gris5)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <a href="#"
+            onclick="event.preventDefault(); previsualizarDocumento(${d.id})"
+            class="accion-btn"
+            style="color:var(--gris5)">
             Vista previa
           </a>` : ''}
-          <a href="#" onclick="event.preventDefault(); descargarDocumento(${d.id})" class="accion-btn" style="color:var(--dorado)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+
+          <a href="#"
+            onclick="event.preventDefault(); descargarDocumento(${d.id})"
+            class="accion-btn"
+            style="color:var(--dorado)">
             Descargar
           </a>
-          ${eliminado ? `
-          <a href="#" onclick="event.preventDefault(); restaurarDocumento(${d.id}, '${esc(d.titulo)}')" class="accion-btn" style="color:var(--dorado)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            Restaurar
-          </a>` : `
-          <a href="#" onclick="event.preventDefault(); abrirModalEliminar(${d.id}, '${esc(d.titulo)}')" class="accion-btn" style="color:var(--gris5)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            Eliminar
-          </a>`}
+
+          ${(rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') && !eliminado
+            ? `
+              <a href="#"
+                onclick="event.preventDefault(); abrirModalEditarDoc(${d.id})"
+                class="accion-btn"
+                style="color:var(--gris5)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Editar
+              </a>` : ''}
+
+          ${(rolUsuario === 'super_admin' || rolUsuario === 'franquiciante')
+            ? (
+                eliminado
+                  ? `
+                  <a href="#"
+                    onclick="event.preventDefault(); restaurarDocumento(${d.id}, '${esc(d.titulo)}')"
+                    class="accion-btn"
+                    style="color:var(--dorado)">
+                    Restaurar
+                  </a>`
+                  : `
+                  <a href="#"
+                    onclick="event.preventDefault(); abrirModalEliminar(${d.id}, '${esc(d.titulo)}')"
+                    class="accion-btn"
+                    style="color:var(--gris5)">
+                    Eliminar
+                  </a>`
+              )
+            : ''}
+
         </div>
       </td>
     </tr>`;
@@ -1004,6 +1149,112 @@ async function restaurarDocumento(id, titulo) {
 }
 
 // ══════════════════════════════════════════════════
+//   EDITAR DATOS DEL DOCUMENTO PADRE
+// ══════════════════════════════════════════════════
+
+let documentoEditandoId = null;
+
+async function abrirModalEditarDoc(id) {
+  const doc = todosLosDocumentos.find(d => d.id === id);
+  if (!doc) {
+    mostrarToast('Documento no encontrado.', 'error');
+    return;
+  }
+  documentoEditandoId = id;
+
+  // Precargar campos
+  document.getElementById('edit-doc-titulo').value   = doc.titulo || '';
+  document.getElementById('edit-doc-tipo').value     = doc.tipo || 'contrato';
+  document.getElementById('edit-doc-visible').checked = !!doc.visible_franquiciado;
+  document.getElementById('edit-doc-error').textContent = '';
+  document.getElementById('edit-doc-error').style.display = 'none';
+
+  // Cargar franquicias de la empresa del documento (no es editable la empresa)
+  const sel = document.getElementById('edit-doc-franquicia');
+  sel.innerHTML = '<option value="">Toda la empresa (global)</option>';
+  try {
+    const franquicias = await apiFetch('GET', `/franquicias?empresa_id=${doc.empresa_id}`);
+    franquicias.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.id; opt.textContent = f.nombre;
+      sel.appendChild(opt);
+    });
+    // Preseleccionar la actual
+    sel.value = doc.franquicia_id ? String(doc.franquicia_id) : '';
+  } catch {
+    // Si falla la carga de franquicias, igual mostramos el modal para poder editar título/tipo/visibilidad
+  }
+
+  document.getElementById('modal-editar-doc').classList.add('open');
+  setTimeout(() => document.getElementById('edit-doc-titulo').focus(), 100);
+}
+
+function cerrarModalEditarDoc() {
+  document.getElementById('modal-editar-doc').classList.remove('open');
+  documentoEditandoId = null;
+}
+
+async function guardarEdicionDocumento() {
+  if (!documentoEditandoId) return;
+  const btn    = document.getElementById('btn-guardar-doc');
+  const errBox = document.getElementById('edit-doc-error');
+  errBox.style.display = 'none';
+
+  const titulo    = document.getElementById('edit-doc-titulo').value.trim();
+  const tipo      = document.getElementById('edit-doc-tipo').value;
+  const franqId   = document.getElementById('edit-doc-franquicia').value;
+  const visible   = document.getElementById('edit-doc-visible').checked;
+
+  if (!titulo) {
+    errBox.textContent = 'El título es obligatorio.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if (!tipo) {
+    errBox.textContent = 'El tipo es obligatorio.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const body = {
+    titulo,
+    tipo,
+    visible_franquiciado: visible,
+    franquicia_id: franqId ? parseInt(franqId, 10) : null,
+  };
+
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const updated = await apiFetch('PUT', `/documentos/${documentoEditandoId}`, body);
+    mostrarToast('Documento actualizado.', 'exito');
+    cerrarModalEditarDoc();
+
+    // Refrescar la lista en memoria + UI
+    const url = '/documentos' + (empresaFiltroId ? `?empresa_id=${empresaFiltroId}` : '');
+    const docs = await apiFetch('GET', url);
+    todosLosDocumentos = docs;
+    renderTabla(docs);
+
+    // Si estoy en vista detalle de este documento, actualizar el header
+    if (documentoActivo && documentoActivo.id === updated.id) {
+      const fresh = docs.find(d => d.id === updated.id);
+      if (fresh) {
+        documentoActivo = fresh;
+        // Re-pintar header de detalle si está visible
+        if (document.getElementById('vista-detalle').style.display !== 'none') {
+          verDocumento(fresh.id);
+        }
+      }
+    }
+  } catch (e) {
+    errBox.textContent = e.data?.message || e.data?.error || 'Error al guardar los cambios.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+}
+
+// ══════════════════════════════════════════════════
 //   VISTA DETALLE — versiones del documento
 // ══════════════════════════════════════════════════
 
@@ -1069,13 +1320,33 @@ async function cargarVersiones(docId) {
   const cont = document.getElementById('versiones-lista');
   cont.innerHTML = `<div class="empty-state" style="padding:24px"><div class="spinner" style="display:block;margin:0 auto 8px"></div>Cargando versiones...</div>`;
 
+  // Mostrar el toggle "Mostrar eliminadas" solo para super_admin
+  const btnToggle = document.getElementById('btn-mostrar-eliminadas-ver');
+  if (btnToggle) btnToggle.style.display = (rolUsuario === 'super_admin') ? 'inline-flex' : 'none';
+
   try {
-    const versiones = await apiFetch('GET', `/documentos/${docId}/versiones`);
-    document.getElementById('versiones-titulo').textContent = `${versiones.length} versión(es) en el historial`;
+    const url = mostrarVersionesEliminadas
+      ? `/documentos/${docId}/versiones?include_deleted=1`
+      : `/documentos/${docId}/versiones`;
+    const versiones = await apiFetch('GET', url);
+    const activas = versiones.filter(v => !v.deleted_at).length;
+    const elim    = versiones.length - activas;
+    document.getElementById('versiones-titulo').textContent =
+      mostrarVersionesEliminadas && elim > 0
+        ? `${activas} versión(es) activa(s) + ${elim} eliminada(s)`
+        : `${versiones.length} versión(es) en el historial`;
     renderVersiones(versiones);
   } catch (e) {
     cont.innerHTML = `<div class="empty-state" style="padding:24px;color:var(--error)">Error al cargar las versiones.</div>`;
   }
+}
+
+// Toggle para mostrar/ocultar versiones eliminadas (solo super_admin)
+async function toggleMostrarEliminadasVer(btn) {
+  if (!documentoActivo) return;
+  mostrarVersionesEliminadas = !mostrarVersionesEliminadas;
+  btn.classList.toggle('active', mostrarVersionesEliminadas);
+  await cargarVersiones(documentoActivo.id);
 }
 
 function renderVersiones(versiones) {
@@ -1099,20 +1370,54 @@ function renderVersiones(versiones) {
   };
 
   // Nombre legible del autor según el perfil cargado
-  const nombreAutor = (v) => {
-    const u = v.subido_por_info || v.subido_por_user || v.subido_por_obj;
-    // El backend devuelve la relación cargada bajo "subido_por" como objeto (no como ID),
-    // gracias al with('subidoPor.systemAdmin', 'subidoPor.superAdmin', 'subidoPor.franchiseStaff')
-    const user = (typeof v.subido_por === 'object' && v.subido_por) ? v.subido_por : (v.subidoPor || null);
+  const nombreAutor = (rel) => {
+    const user = rel || null;
     const p = user?.system_admin || user?.super_admin || user?.franchise_staff;
     if (p?.nombre) return `${p.nombre} ${p.apellido}`;
     return user?.email || '—';
   };
 
-  cont.innerHTML = versiones.map(v => {
-    const esPdf  = (v.mime_type === 'application/pdf') || /\.pdf$/i.test(v.archivo_url || '');
-    const vigente = !!v.es_activa;
+  // Cuántas versiones disponibles (no eliminadas) hay
+  const disponibles = versiones.filter(v => !v.deleted_at).length;
 
+  // ¿El usuario actual tiene permisos para eliminar/restaurar versiones?
+  const puedeAdministrar = (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') && !documentoActivo.deleted_at;
+
+  cont.innerHTML = versiones.map(v => {
+    const esEliminada = !!v.deleted_at;
+    const vigente     = !!v.es_activa && !esEliminada;
+    const esPdf       = (v.mime_type === 'application/pdf') || /\.pdf$/i.test(v.archivo_url || '');
+
+    // ── VERSIÓN ELIMINADA: card opaca, badge, sin acciones de archivo, solo restaurar ──
+    if (esEliminada) {
+      const autorBorrado = nombreAutor(v.deleted_by);
+      return `<div class="version-card eliminada">
+        <div class="version-numero">
+          <div class="num">v${v.version_number}</div>
+          <div class="version-eliminada-pill">Eliminada</div>
+        </div>
+        <div>
+          <div class="version-info-autor">Eliminada por <strong style="color:var(--blanco)">${esc(autorBorrado)}</strong></div>
+          <div class="version-info-meta">
+            <span>${fechaHora(v.deleted_at)}</span>
+            <span>·</span>
+            <span>${esc(v.mime_type || '')}</span>
+            <span>·</span>
+            <span>${tamano(v.tamano_bytes)}</span>
+          </div>
+          ${v.nota ? `<div class="version-nota" style="margin-top:8px"><div class="texto-nota">${esc(v.nota)}</div></div>` : ''}
+        </div>
+        <div class="version-acciones">
+          ${puedeAdministrar ? `
+          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}')" class="accion-btn" style="color:var(--dorado)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar
+          </a>` : ''}
+        </div>
+      </div>`;
+    }
+
+    // ── VERSIÓN ACTIVA O HISTÓRICA NO ELIMINADA: render normal ──
     const notaHTML = v.nota
       ? `<div class="version-nota" id="nota-${v.id}">
           <div class="texto-nota">${esc(v.nota)}</div>
@@ -1127,13 +1432,16 @@ function renderVersiones(versiones) {
           </button>
         </div>`;
 
+    // Eliminar disponible siempre que haya >1 versión disponible (el backend bloquea borrar la única).
+    const puedeEliminar = puedeAdministrar && disponibles > 1;
+
     return `<div class="version-card">
       <div class="version-numero">
         <div class="num">v${v.version_number}</div>
         ${vigente ? `<div class="version-vigente-pill">Vigente</div>` : ''}
       </div>
       <div>
-        <div class="version-info-autor">Subido por <strong style="color:var(--blanco)">${esc(nombreAutor(v))}</strong></div>
+        <div class="version-info-autor">Subido por <strong style="color:var(--blanco)">${esc(nombreAutor(v.subido_por))}</strong></div>
         <div class="version-info-meta">
           <span>${fechaHora(v.subido_at)}</span>
           <span>·</span>
@@ -1153,6 +1461,17 @@ function renderVersiones(versiones) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Descargar
         </a>
+        ${puedeEliminar ? `
+        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+          Eliminar
+        </a>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1186,6 +1505,88 @@ async function descargarVersion(docId, versionId) {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => window.URL.revokeObjectURL(url), 10000);
   } catch { mostrarToast('Error al descargar.', 'error'); }
+}
+
+// ── ELIMINAR VERSIÓN ──────────────────────────────────────────
+function abrirModalEliminarVersion(docId, versionId, label, esVigente) {
+  pendingEliminarVer = { docId, versionId, vigente: !!esVigente };
+
+  const titulo = documentoActivo?.titulo || 'este documento';
+  document.getElementById('eliminar-ver-msg').innerHTML =
+    `¿Eliminar <strong>${esc(label)}</strong> de "<em>${esc(titulo)}</em>"?<br><br>
+     Esta acción se puede deshacer desde el toggle <strong>Mostrar eliminadas</strong> (solo super_admin).`;
+
+  // Aviso especial si es la vigente
+  document.getElementById('eliminar-ver-aviso').style.display = esVigente ? 'block' : 'none';
+  document.getElementById('eliminar-ver-error').textContent   = '';
+  document.getElementById('eliminar-ver-error').style.display = 'none';
+
+  document.getElementById('modal-eliminar-version').classList.add('open');
+}
+
+function cerrarModalEliminarVersion() {
+  document.getElementById('modal-eliminar-version').classList.remove('open');
+  pendingEliminarVer = null;
+}
+
+async function ejecutarEliminarVersion() {
+  if (!pendingEliminarVer) return;
+  const { docId, versionId } = pendingEliminarVer;
+  const btn = document.getElementById('btn-eliminar-ver-confirmar');
+  const errBox = document.getElementById('eliminar-ver-error');
+  errBox.style.display = 'none';
+
+  btn.disabled = true; btn.textContent = 'Eliminando...';
+  try {
+    const resp = await apiFetch('DELETE', `/documentos/${docId}/versiones/${versionId}`);
+    cerrarModalEliminarVersion();
+
+    let msg = 'Versión eliminada.';
+    if (resp?.nueva_activa_id) msg += ' La versión anterior pasó a ser la vigente.';
+    mostrarToast(msg, 'exito');
+
+    // Refrescar versiones y la lista padre (cambió version_activa)
+    await cargarVersiones(docId);
+    try {
+      const url = '/documentos' + (empresaFiltroId ? `?empresa_id=${empresaFiltroId}` : '');
+      const docs = await apiFetch('GET', url);
+      todosLosDocumentos = docs;
+      const fresh = docs.find(d => d.id === docId);
+      if (fresh) documentoActivo = fresh;
+    } catch { /* no rompe el flujo */ }
+  } catch (e) {
+    errBox.textContent = e.data?.error || e.data?.message || 'Error al eliminar la versión.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Eliminar';
+  }
+}
+
+async function restaurarVersion(docId, versionId, label) {
+  try {
+    const resp = await apiFetch('POST', `/documentos/${docId}/versiones/${versionId}/restore`);
+
+    const msg = resp?.promovida
+      ? `${label} restaurada y promovida a vigente.`
+      : `${label} restaurada (queda en el historial como inactiva).`;
+    mostrarToast(msg, 'exito');
+
+    // Refrescar versiones siempre
+    await cargarVersiones(docId);
+
+    // Si hubo promoción, también refrescar la lista padre porque cambió version_activa
+    if (resp?.promovida) {
+      try {
+        const url = '/documentos' + (empresaFiltroId ? `?empresa_id=${empresaFiltroId}` : '');
+        const docs = await apiFetch('GET', url);
+        todosLosDocumentos = docs;
+        const fresh = docs.find(d => d.id === docId);
+        if (fresh) documentoActivo = fresh;
+      } catch { /* no rompe el flujo */ }
+    }
+  } catch (e) {
+    mostrarToast(e.data?.error || e.data?.message || 'Error al restaurar la versión.', 'error');
+  }
 }
 
 // ── EDITAR NOTA INLINE ────────────────────────────────────────
@@ -1316,6 +1717,47 @@ async function subirNuevaVersion() {
     onArchivoVersionSel({ target: { files: [f] } });
   });
 })();
+async function eliminarVersion(documentId, versionId, versionLabel) {
+
+  const ok = confirm(
+    `¿Eliminar ${versionLabel}?\n\nEl documento seguirá existiendo.`
+  );
+
+  if (!ok) return;
+
+  try {
+
+    const res = await fetch(
+      `/api/documentos/${documentId}/versiones/${versionId}`,
+      {
+        method: 'DELETE',
+        headers: {
+  'Accept': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`
+}
+      }
+    );
+
+    const text = await res.text();
+console.log(text);
+
+const data = text ? JSON.parse(text) : {};
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al eliminar');
+    }
+
+    alert('Versión eliminada correctamente');
+
+    await verDocumento(documentId);
+
+  } catch (e) {
+
+    alert(e.message);
+
+  }
+
+}
 
 // ── HELPERS ───────────────────────────────────────────────────
 function formatFecha(str) {

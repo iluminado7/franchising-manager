@@ -56,19 +56,20 @@ include 'layout/head.php';
           </div>
 
           <!-- Tarjeta cambiar email -->
-          <div class="card-perfil" id="card-email">
+          <div class="card-perfil" id="card-email" autocomplete="off">
             <div class="card-perfil-titulo">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
               Cambiar email
             </div>
             <div class="form-group">
               <label>Nuevo email</label>
-              <input type="email" id="nuevo-email" placeholder="nuevo@email.com" maxlength="200">
+              <input type="email" id="nuevo-email" placeholder="nuevo@email.com" maxlength="200"  autocomplete="new-email" autocorrect="off" autocapitalize="off" spellcheck="false">
             </div>
             <div class="form-group">
               <label>Contraseña actual (para confirmar)</label>
               <div class="pass-wrap">
-                <input type="password" id="confirm-pass-email" placeholder="Tu contraseña actual" maxlength="100">
+                <input type="password" id="confirm-pass-email" placeholder="Tu contraseña actual" maxlength="100" readonly
+  onfocus="this.removeAttribute('readonly')">
                 <button type="button" class="eye-btn" onclick="togglePass('confirm-pass-email', 'eye-email')">
                   <svg id="eye-email" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -88,7 +89,8 @@ include 'layout/head.php';
             <div class="form-group">
               <label>Contraseña actual</label>
               <div class="pass-wrap">
-                <input type="password" id="pass-actual" placeholder="Tu contraseña actual" maxlength="100">
+                <input type="password" id="pass-actual" placeholder="Tu contraseña actual" maxlength="100"  readonly
+  onfocus="this.removeAttribute('readonly')">
                 <button type="button" class="eye-btn" onclick="togglePass('pass-actual', 'eye-actual')">
                   <svg id="eye-actual" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -97,7 +99,8 @@ include 'layout/head.php';
             <div class="form-group">
               <label>Nueva contraseña</label>
               <div class="pass-wrap">
-                <input type="password" id="pass-nueva" placeholder="Mínimo 8 caracteres" maxlength="100">
+                <input type="password" id="pass-nueva" placeholder="Mínimo 8 caracteres" maxlength="100"  readonly
+  onfocus="this.removeAttribute('readonly')">
                 <button type="button" class="eye-btn" onclick="togglePass('pass-nueva', 'eye-nueva')">
                   <svg id="eye-nueva" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -106,7 +109,8 @@ include 'layout/head.php';
             <div class="form-group">
               <label>Repetir nueva contraseña</label>
               <div class="pass-wrap">
-                <input type="password" id="pass-repetir" placeholder="Repetí la nueva contraseña" maxlength="100">
+                <input type="password" id="pass-repetir" placeholder="Repetí la nueva contraseña" maxlength="100"  readonly
+  onfocus="this.removeAttribute('readonly')">
                 <button type="button" class="eye-btn" onclick="togglePass('pass-repetir', 'eye-repetir')">
                   <svg id="eye-repetir" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>

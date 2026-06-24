@@ -280,13 +280,18 @@ class ManualController extends Controller
     public function publicar(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'contenido_html' => 'required|string|max:5000000',
+            'contenido_html'   => 'required|string|max:5000000',
+            'nota_publicacion' => 'nullable|string|max:2000',
         ]);
 
         $manual = Manual::findOrFail($id);
         $user   = $request->user();
         $html   = $this->sanitizarHtml($request->contenido_html);
         $hash   = hash('sha256', $html);
+
+        // Nota del publicador: si viene vacía o solo whitespace, guardamos NULL.
+        $notaPub = trim($request->nota_publicacion ?? '');
+        $notaPub = $notaPub === '' ? null : $notaPub;
 
         if ($user->esFranquiciante()) {
             $asignado = ManualEmpresaAssignment::where('manual_id', $id)
@@ -297,7 +302,7 @@ class ManualController extends Controller
             }
         }
 
-        DB::transaction(function () use ($manual, $user, $html, $hash, $request) {
+        DB::transaction(function () use ($manual, $user, $html, $hash, $request, $notaPub) {
 
             ManualVersion::where('manual_id', $manual->id)
                          ->where('es_activa', 1)
@@ -307,13 +312,14 @@ class ManualController extends Controller
                                           ->max('version_number') ?? 0;
 
             $version = ManualVersion::create([
-                'manual_id'      => $manual->id,
-                'version_number' => $ultimaVersion + 1,
-                'contenido_html' => $html,
-                'contenido_hash' => $hash,
-                'publicado_por'  => $user->id,
-                'publicado_at'   => now(),
-                'es_activa'      => 1,
+                'manual_id'        => $manual->id,
+                'version_number'   => $ultimaVersion + 1,
+                'contenido_html'   => $html,
+                'contenido_hash'   => $hash,
+                'publicado_por'    => $user->id,
+                'publicado_at'     => now(),
+                'es_activa'        => 1,
+                'nota_publicacion' => $notaPub,
             ]);
 
             $manual->update(['estado' => 'publicado']);
@@ -394,6 +400,60 @@ class ManualController extends Controller
         return response()->json([
             'message' => 'Manual publicado correctamente.',
             'manual'  => $manual->fresh('versionActiva'),
+        ]);
+    }
+
+    // PUT /api/manuales/{manualId}/versiones/{versionId}/nota-publicacion
+    // Permite editar (o limpiar) la nota de publicación de una versión específica.
+    // Solo super_admin y franquiciantes con acceso al manual.
+    public function updateNotaPublicacion(Request $request, int $manualId, int $versionId): JsonResponse
+    {
+        $request->validate([
+            'nota_publicacion' => 'nullable|string|max:2000',
+        ]);
+
+        $version = ManualVersion::where('manual_id', $manualId)->findOrFail($versionId);
+        $manual  = $version->manual;
+        $user    = $request->user();
+
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        if ($user->esFranquiciante()) {
+            $asignado = ManualEmpresaAssignment::where('manual_id', $manualId)
+                                            ->where('empresa_id', $user->empresa_id)
+                                            ->exists();
+            if (!$asignado) {
+                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
+            }
+        }
+
+        // Normalizar: vacío o solo whitespace → NULL
+        $nota = trim($request->nota_publicacion ?? '');
+        $nota = $nota === '' ? null : $nota;
+
+        $version->update(['nota_publicacion' => $nota]);
+
+        try {
+            ActivityLog::registrar(
+                userId:      $user->id,
+                accion:      'nota_publicacion_editada',
+                ip:          $request->ip(),
+                empresaId:   $user->empresa_id,
+                entidadTipo: 'manual_versions',
+                entidadId:   $version->id,
+                detalle:     [
+                    'manual_titulo' => $manual->titulo,
+                    'version'       => $version->version_number,
+                ],
+                userAgent:   $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort */ }
+
+        return response()->json([
+            'message' => 'Nota de publicación actualizada.',
+            'version' => $version,
         ]);
     }
 

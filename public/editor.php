@@ -265,6 +265,20 @@ include 'layout/head.php';
           </span>
         </label>
       </div>
+
+      <!-- Nota de publicación (opcional, común a super_admin y franquiciante) -->
+      <div style="margin-top:16px">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);margin-bottom:6px;font-family:'Archivo',sans-serif">
+          Mensaje al publicar <span style="text-transform:none;font-weight:400;color:var(--gris4);letter-spacing:0">(opcional)</span>
+        </label>
+        <textarea id="pub-nota" maxlength="2000" rows="3"
+          placeholder="Ej: Actualizamos las cláusulas 3 y 5 según el nuevo decreto. Revisar antes del 30/06."
+          style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--blanco);font-family:'Archivo Narrow',sans-serif;resize:vertical;outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--dorado)'" onblur="this.style.borderColor='var(--gris2)'"></textarea>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+          Este mensaje aparecerá en el hilo de notas del manual para todos los que tengan acceso. Podés editarlo después.
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
@@ -955,6 +969,10 @@ function abrirModalPublicar() {
     btn.style.cursor  = '';
   }
 
+  // Resetear el textarea de la nota de publicación
+  const notaInput = document.getElementById('pub-nota');
+  if (notaInput) notaInput.value = '';
+
   document.getElementById('modal-publicar').classList.add('open');
 }
 
@@ -979,9 +997,13 @@ async function publicar() {
   btn.textContent = 'Publicando...';
 
   try {
-    const res = await apiFetch('POST', `/manuales/${MANUAL_ID}/publicar`, {
-      contenido_html: html,
-    });
+    const notaInput = document.getElementById('pub-nota');
+    const nota = notaInput ? notaInput.value.trim() : '';
+
+    const body = { contenido_html: html };
+    if (nota) body.nota_publicacion = nota;
+
+    const res = await apiFetch('POST', `/manuales/${MANUAL_ID}/publicar`, body);
 
     cerrarModal();
     mostrarToast('¡Manual publicado! Los franquiciados fueron notificados.', 'exito');

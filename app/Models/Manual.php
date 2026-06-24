@@ -49,6 +49,15 @@ class Manual extends Model
                     ->where('es_activa', 1);
     }
 
+    // Versiones con nota del publicador — usadas para armar el hilo de notas
+    // (se mergean con ManualNote en ManualNoteController::porManual).
+    public function versionesConNota(): HasMany
+    {
+        return $this->hasMany(ManualVersion::class, 'manual_id')
+                    ->whereNotNull('nota_publicacion')
+                    ->where('nota_publicacion', '!=', '');
+    }
+
     // Empresas a las que fue asignado
     public function empresasAsignadas(): BelongsToMany
     {

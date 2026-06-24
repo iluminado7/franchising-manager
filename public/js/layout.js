@@ -42,11 +42,12 @@ function renderSidebar(rol) {
       { id: 'manuales',    label: 'Manuales',    href: 'manuales-mi-empresa.php',    icon: 'file-text' },
       { id: 'franquicias', label: 'Franquicias', href: 'franquicias.php', icon: 'store'  },
       { id: 'usuarios',    label: 'Usuarios',    href: 'usuarios.php',    icon: 'users'     },
-      { id: 'documentos',  label: 'Documentos',  href: 'documentos.php',  icon: 'folder'    },
+      { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'},
       { id: 'perfil',      label: 'Mi perfil',   href: 'perfil.php',      icon: 'user'      },
     ],
     franquiciado: [
       { id: 'manuales',   label: 'Mis manuales', href: 'mis-manuales.php',   icon: 'file-text' },
+      { id: 'documentos',  label: 'Mis documentos',       href: 'documentos.php',  icon: 'folder'      },
       { id: 'perfil',     label: 'Mi perfil',    href: 'perfil.php',     icon: 'user'      },
     ],
     empleado: [

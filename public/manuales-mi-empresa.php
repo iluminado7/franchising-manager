@@ -288,6 +288,22 @@ include 'layout/head.php';
 .nota-card { background:var(--negro);border:1px solid var(--gris2);border-radius:10px;padding:12px 14px;margin-bottom:10px; }
 .nota-card:last-child { margin-bottom:0; }
 .nota-card-top { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px; }
+
+/* Release notes: anuncios del publicador, estilo destacado */
+.nota-card.nota-release { background:rgba(196,162,107,.05);border-color:rgba(196,162,107,.3);border-left:3px solid var(--dorado); }
+.nota-release-tag {
+  display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  background:rgba(196,162,107,.18);color:var(--dorado);
+  border:1px solid rgba(196,162,107,.4);
+  font-family:'Archivo',sans-serif;
+}
+.btn-editar-release {
+  background:transparent;border:none;cursor:pointer;
+  color:var(--gris4);padding:4px;line-height:0;
+  transition:color .15s;flex-shrink:0;
+}
+.btn-editar-release:hover { color:var(--dorado); }
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
 .nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
@@ -306,10 +322,17 @@ let modoImport       = 'scratch';
 let htmlImportado    = '';
 let pendingArchivar  = null;
 let pendingEliminar = null;
+let rolUsuario       = ''; // rol del usuario actual — para mostrar botón Editar en release notes
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
+    // Cargar rol del usuario actual (para los permisos de edición de release notes)
+    try {
+      const me = await apiFetch('GET', '/me');
+      rolUsuario = me.rol || '';
+    } catch { /* si falla, queda vacío y se ocultan acciones */ }
+
     await cargarManuales();
   } catch (e) {
     document.getElementById('tabla-body').innerHTML =
@@ -633,9 +656,35 @@ function renderNotas(notas) {
   }
 
   const estadoLabel = { pendiente: 'Pendiente', leida: 'Leída', resuelta: 'Resuelta' };
+  const puedeEditarRelease = (typeof rolUsuario !== 'undefined') &&
+                             (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante');
 
   body.innerHTML = notas.map(n => {
     const version = n.version ? `v${n.version.version_number}` : 'Sin versión publicada';
+
+    // Release note: mensaje del publicador (super_admin/franquiciante) al subir una versión.
+    if (n.tipo === 'release') {
+      const autor = autorReleaseLabel(n);
+      const versionId = n.manual_version_id;
+      return `
+        <div class="nota-card nota-release" id="release-${versionId}">
+          <div class="nota-card-top">
+            <div style="flex:1">
+              <span class="nota-release-tag">Mensaje del publicador · ${version}</span>
+              <span style="display:block;font-size:13px;font-weight:600;color:var(--blanco);margin-top:4px">${esc(autor)}</span>
+              <span class="nota-meta">${formatFechaHora(n.created_at)}</span>
+            </div>
+            ${puedeEditarRelease ? `
+              <button class="btn-editar-release" onclick="editarReleaseInline(${versionId})" title="Editar mensaje">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            ` : ''}
+          </div>
+          <div class="nota-contenido" id="release-contenido-${versionId}">${esc(n.contenido)}</div>
+        </div>`;
+    }
+
+    // Feedback (nota normal)
     return `
       <div class="nota-card">
         <div class="nota-card-top">
@@ -648,6 +697,53 @@ function renderNotas(notas) {
         <div class="nota-contenido">${esc(n.contenido)}</div>
       </div>`;
   }).join('');
+}
+
+// Nombre del publicador de una release note
+function autorReleaseLabel(n) {
+  const u = n.autor;
+  if (!u) return 'Publicador';
+  const p = u.system_admin || u.super_admin || u.franchise_staff;
+  if (p?.nombre) return `${p.nombre} ${p.apellido}`;
+  return u.email || 'Publicador';
+}
+
+// Edición inline de release note (super_admin / franquiciante)
+function editarReleaseInline(versionId) {
+  const cont = document.getElementById(`release-contenido-${versionId}`);
+  if (!cont) return;
+  const textoActual = cont.textContent;
+
+  cont.innerHTML = `
+    <textarea id="release-edit-${versionId}" maxlength="2000" rows="4"
+      style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--blanco);font-family:'Archivo Narrow',sans-serif;resize:vertical;outline:none;transition:border-color .15s;min-height:80px"
+      onfocus="this.style.borderColor='var(--dorado)'" onblur="this.style.borderColor='var(--gris2)'">${esc(textoActual)}</textarea>
+    <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="cancelarEditarRelease(${versionId})" style="padding:5px 12px;font-size:11px">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarReleaseInline(${versionId})" style="padding:5px 12px;font-size:11px">Guardar</button>
+    </div>`;
+  document.getElementById(`release-edit-${versionId}`).focus();
+}
+
+async function guardarReleaseInline(versionId) {
+  if (!notaManualActual) return;
+  const ta = document.getElementById(`release-edit-${versionId}`);
+  if (!ta) return;
+  const nota = ta.value.trim();
+  try {
+    await apiFetch('PUT',
+      `/manuales/${notaManualActual}/versiones/${versionId}/nota-publicacion`,
+      { nota_publicacion: nota || null }
+    );
+    mostrarToast('Mensaje actualizado.', 'exito');
+    await cargarNotas(notaManualActual);
+  } catch (e) {
+    mostrarToast(e.data?.error || e.data?.message || 'No se pudo actualizar el mensaje.', 'error');
+  }
+}
+
+function cancelarEditarRelease(versionId) {
+  if (notaManualActual) cargarNotas(notaManualActual);
 }
 
 async function enviarNota() {

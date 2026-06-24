@@ -22,6 +22,7 @@ class ManualVersion extends Model
         'publicado_por',
         'publicado_at',
         'es_activa',
+        'nota_publicacion',   // mensaje opcional del publicador al subir la versión
     ];
 
     protected $casts = [
@@ -61,6 +62,16 @@ class ManualVersion extends Model
         return $this->hasMany(Notification::class, 'manual_version_id');
     }
 
+    // ── Scopes ───────────────────────────────────────────────────────
+
+    // Versiones que tienen un mensaje del publicador (release note).
+    // Se usa para armar el hilo de notas del manual junto con las ManualNote.
+    public function scopeConNotaPublicacion($query)
+    {
+        return $query->whereNotNull('nota_publicacion')
+                     ->where('nota_publicacion', '!=', '');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
 
     // Verifica si un franquiciado ya aceptó esta versión
@@ -73,5 +84,10 @@ class ManualVersion extends Model
     public function tieneFirmaFisicaDe(int $franquiciaId): bool
     {
         return $this->firmasFisicas()->where('franquicia_id', $franquiciaId)->exists();
+    }
+
+    public function tieneNotaPublicacion(): bool
+    {
+        return !empty($this->nota_publicacion);
     }
 }

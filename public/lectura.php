@@ -465,6 +465,34 @@ async function agregarNota() {
   }
 }
 
+document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    // Opcional: mostrar un toast diciendo "Acción no permitida por confidencialidad"
+});
+
+
+document.addEventListener('keydown', (e) => {
+    // Bloquear Ctrl + P (Imprimir)
+    if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        alert('La impresión de este documento está deshabilitada.');
+    }
+    // Bloquear Ctrl + S (Guardar página)
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+    }
+    if (e.ctrlKey && e.key === 'c') {
+        e.preventDefault();
+    }
+    if (e.ctrlKey && e.key === 'v') {
+        e.preventDefault();
+    }
+
+    // Bloquear F12 o Ctrl+Shift+I (Inspeccionar elemento)
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+    }
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 document.addEventListener('DOMContentLoaded', () => init());
 </script>
