@@ -177,8 +177,7 @@ async function mostrarPopupNotificaciones() {
             </div>
             <div style="padding:8px 20px;max-height:280px;overflow-y:auto" id="popup-notif-lista"></div>
             <div style="padding:12px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px">
-              <button onclick="cerrarPopupNotif()" style="padding:7px 16px;border-radius:7px;border:1px solid var(--gris2);background:transparent;font-size:13px;font-family:'Archivo',sans-serif;color:var(--gris5);cursor:pointer">Cerrar</button>
-              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--dorado);color:var(--negro);font-size:13px;font-weight:600;font-family:'Archivo',sans-serif;cursor:pointer">Marcar todo como leído</button>
+              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--dorado);color:var(--negro);font-size:13px;font-weight:600;font-family:'Archivo',sans-serif;cursor:pointer">Cerrar</button>
             </div>
           </div>
         </div>`;

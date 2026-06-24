@@ -31,12 +31,36 @@ include 'layout/head.php';
         <button class="filtro-btn" onclick="filtrarRol('franquiciado', this)">Franquiciados</button>
         <button class="filtro-btn" onclick="filtrarRol('empleado', this)">Empleados</button>
         <div class="filtro-sep"></div>
-        <select id="sel-empresa" onchange="aplicarFiltros()" class="filtro-select" style="display:none">
-          <option value="">Todas las empresas</option>
-        </select>
-        <select id="sel-franquicia" onchange="aplicarFiltros()" class="filtro-select">
-          <option value="">Todas las franquicias</option>
-        </select>
+        <!-- Combobox empresa — solo super_admin -->
+        <div id="grupo-empresa-filtro" style="display:none;position:relative">
+          <div id="empresa-combo-usr" style="position:relative;width:220px">
+            <input type="text" id="inp-empresa-usr" placeholder="Buscar empresa..." autocomplete="off" name="combo-empresa-usr"
+                   class="filtro-select" style="width:100%;box-sizing:border-box;padding-left:30px;padding-right:30px"
+                   oninput="filtrarOpcionesEmpresaUsr()" onfocus="filtrarOpcionesEmpresaUsr()">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <button type="button" id="empresa-clear-usr" onclick="limpiarEmpresaUsr()" title="Quitar filtro de empresa"
+                    style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="empresa-opciones-usr" class="combo-opciones"></div>
+          </div>
+        </div>
+
+        <!-- Combobox franquicia — super_admin y franquiciante -->
+        <div id="grupo-franquicia-filtro" style="position:relative">
+          <div id="franquicia-combo-usr" style="position:relative;width:220px">
+            <input readonly type="text" id="inp-franquicia-usr" placeholder="Buscar franquicia..." autocomplete="off" name="combo-franquicia-usr"
+                   class="filtro-select" style="width:100%;box-sizing:border-box;padding-left:30px;padding-right:30px"
+                   oninput="filtrarOpcionesFranquiciaUsr()" onfocus="filtrarOpcionesFranquiciaUsr()">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <button type="button" id="franquicia-clear-usr" onclick="limpiarFranquiciaUsr()" title="Quitar filtro de franquicia"
+                    style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="franquicia-opciones-usr" class="combo-opciones"></div>
+          </div>
+        </div>
+
         <button id="btn-mostrar-eliminados" class="filtro-btn" style="display:none;margin-left:auto" onclick="toggleMostrarEliminados(this)">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Mostrar eliminados
@@ -276,6 +300,12 @@ include 'layout/head.php';
 }
 .buscar-input:focus { border-color:var(--dorado); }
 
+/* ── Combobox de empresa/franquicia (mismo patrón que documentos/manuales/log) ── */
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Archivo Narrow',sans-serif;transition:background .12s; }
+.combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
 .modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto; }
@@ -322,6 +352,8 @@ let miRol               = localStorage.getItem('cl_rol') || '';
 let miEmpresaId         = null; // se completa en init() para franquiciante
 let pendingEliminar     = null;
 let mostrarEliminados   = false;
+let empresaFiltroId     = ''; // ID activo del combobox de empresa (super_admin)
+let franquiciaFiltroId  = ''; // ID activo del combobox de franquicia (super_admin y franquiciante)
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -374,26 +406,18 @@ async function init() {
     todasLasFranquicias = franquicias;
     todosLosManuales    = (manuales || []).filter(m => m.estado === 'publicado');
 
-    // Filtros: empresa solo visible para super_admin
-    const selEmpFiltro = document.getElementById('sel-empresa');
+    // Filtros: combobox de empresa solo visible para super_admin
     if (miRol === 'super_admin') {
-      selEmpFiltro.style.display = '';
-      empresas.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = e.id; opt.textContent = e.nombre;
-        selEmpFiltro.appendChild(opt);
-      });
+      document.getElementById('grupo-empresa-filtro').style.display = '';
       // Mostrar el toggle de "Mostrar eliminados" solo a super_admin
       document.getElementById('btn-mostrar-eliminados').style.display = '';
     }
 
-    // Filtro franquicias
-    const selFranqFiltro = document.getElementById('sel-franquicia');
-    franquicias.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f.id; opt.textContent = f.nombre;
-      selFranqFiltro.appendChild(opt);
-    });
+    // Combobox de franquicia: oculto para franquiciado (que no filtra por sucursal porque
+    // ya ve solo los empleados de la suya) y oculto para empleado.
+    if (miRol === 'franquiciado' || miRol === 'empleado') {
+      document.getElementById('grupo-franquicia-filtro').style.display = 'none';
+    }
 
     // Select empresa del formulario (solo super_admin, para rol franquiciante)
     if (miRol === 'super_admin') {
@@ -429,7 +453,7 @@ async function init() {
     if (miRol === 'franquiciado') {
       document.querySelector(".filtro-btn[onclick*=\"filtrarRol('franquiciante'\"]")?.remove();
       document.querySelector(".filtro-btn[onclick*=\"filtrarRol('franquiciado'\"]")?.remove();
-      document.getElementById('sel-franquicia').style.display = 'none';
+      // grupo-franquicia-filtro ya quedó oculto antes en el init
     }
 
     renderTabla(usuarios);
@@ -550,8 +574,8 @@ function filtrarRol(rol, btn) {
 function aplicarFiltros() {
   let lista      = [...todosLosUsuarios];
   const texto    = document.getElementById('inp-buscar')?.value.toLowerCase().trim() || '';
-  const empId    = document.getElementById('sel-empresa')?.value || '';
-  const franqId  = document.getElementById('sel-franquicia')?.value || '';
+  const empId    = empresaFiltroId;
+  const franqId  = franquiciaFiltroId;
 
   if (filtroRolActual !== 'todos')
     lista = lista.filter(u => u.rol === filtroRolActual);
@@ -572,6 +596,116 @@ function aplicarFiltros() {
 
   renderTabla(lista);
 }
+
+// ── COMBOBOX EMPRESA (super_admin) ────────────────────────────
+function filtrarOpcionesEmpresaUsr() {
+  const input = document.getElementById('inp-empresa-usr');
+  const cont  = document.getElementById('empresa-opciones-usr');
+  const texto = input.value.toLowerCase().trim();
+
+  // Si vació el input y había una empresa elegida, limpia el filtro
+  if (texto === '' && empresaFiltroId !== '') {
+    empresaFiltroId = '';
+    document.getElementById('empresa-clear-usr').style.display = 'none';
+    aplicarFiltros();
+  }
+
+  const coincidencias = todasLasEmpresas.filter(e => e.nombre.toLowerCase().includes(texto));
+
+  if (!coincidencias.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    cont.style.display = 'block';
+    return;
+  }
+
+  cont.innerHTML = coincidencias.map(e => `
+    <div class="combo-opcion" onmousedown="seleccionarEmpresaUsr(${e.id}, '${escAttr(e.nombre)}')">
+      ${esc(e.nombre)}${e.activa ? '' : ' <span style="color:var(--gris4)">(suspendida)</span>'}
+    </div>`).join('');
+  cont.style.display = 'block';
+}
+
+function seleccionarEmpresaUsr(id, nombre) {
+  empresaFiltroId = String(id);
+  document.getElementById('inp-empresa-usr').value = nombre;
+  document.getElementById('empresa-clear-usr').style.display = 'block';
+  document.getElementById('empresa-opciones-usr').style.display = 'none';
+  aplicarFiltros();
+}
+
+function limpiarEmpresaUsr() {
+  empresaFiltroId = '';
+  document.getElementById('inp-empresa-usr').value = '';
+  document.getElementById('empresa-clear-usr').style.display = 'none';
+  document.getElementById('empresa-opciones-usr').style.display = 'none';
+  aplicarFiltros();
+}
+
+// ── COMBOBOX FRANQUICIA (super_admin y franquiciante) ─────────
+function filtrarOpcionesFranquiciaUsr() {
+  const input = document.getElementById('inp-franquicia-usr');
+  const cont  = document.getElementById('franquicia-opciones-usr');
+  const texto = input.value.toLowerCase().trim();
+
+  if (texto === '' && franquiciaFiltroId !== '') {
+    franquiciaFiltroId = '';
+    document.getElementById('franquicia-clear-usr').style.display = 'none';
+    aplicarFiltros();
+  }
+
+  // Si el super_admin tiene una empresa filtrada, mostrar solo las franquicias de esa empresa.
+  // Para franquiciante, todasLasFranquicias ya viene filtrada a su empresa por el backend.
+  let pool = todasLasFranquicias;
+  if (empresaFiltroId) {
+    pool = pool.filter(f => String(f.empresa_id) === empresaFiltroId);
+  }
+
+  const coincidencias = pool.filter(f => f.nombre.toLowerCase().includes(texto));
+
+  if (!coincidencias.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    cont.style.display = 'block';
+    return;
+  }
+
+  cont.innerHTML = coincidencias.map(f => `
+    <div class="combo-opcion" onmousedown="seleccionarFranquiciaUsr(${f.id}, '${escAttr(f.nombre)}')">
+      ${esc(f.nombre)}
+    </div>`).join('');
+  cont.style.display = 'block';
+}
+
+function seleccionarFranquiciaUsr(id, nombre) {
+  franquiciaFiltroId = String(id);
+  document.getElementById('inp-franquicia-usr').value = nombre;
+  document.getElementById('franquicia-clear-usr').style.display = 'block';
+  document.getElementById('franquicia-opciones-usr').style.display = 'none';
+  aplicarFiltros();
+}
+
+function limpiarFranquiciaUsr() {
+  franquiciaFiltroId = '';
+  document.getElementById('inp-franquicia-usr').value = '';
+  document.getElementById('franquicia-clear-usr').style.display = 'none';
+  document.getElementById('franquicia-opciones-usr').style.display = 'none';
+  aplicarFiltros();
+}
+
+// Escape para usar dentro de onmousedown="...('${valor}')"
+function escAttr(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// Cerrar los comboboxes al hacer click afuera
+document.addEventListener('click', e => {
+  const combo1 = document.getElementById('empresa-combo-usr');
+  const opc1   = document.getElementById('empresa-opciones-usr');
+  if (combo1 && opc1 && !combo1.contains(e.target)) opc1.style.display = 'none';
+
+  const combo2 = document.getElementById('franquicia-combo-usr');
+  const opc2   = document.getElementById('franquicia-opciones-usr');
+  if (combo2 && opc2 && !combo2.contains(e.target)) opc2.style.display = 'none';
+});
 
 // ── MODAL CREAR ───────────────────────────────────────────────
 function abrirModalCrear() {

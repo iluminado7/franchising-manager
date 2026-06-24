@@ -51,7 +51,7 @@ function verificarSesion(?string $rol_requerido = null): void
     }
 
     $stmt = $pdo->prepare("
-        SELECT u.id, u.rol, u.activo
+        SELECT u.id, u.rol, u.activo, u.empresa_id
         FROM personal_access_tokens pat
         JOIN users u ON u.id = pat.tokenable_id
         WHERE pat.id = ?
@@ -105,7 +105,65 @@ function verificarSesion(?string $rol_requerido = null): void
         exit;
     }
 
+    // Gate de aceptaciones: si el usuario es franquiciado y tiene manuales pendientes
+    // de aceptar, se lo redirige a lectura.php del primer pendiente. La función
+    // solo redirige cuando NO está ya en la página de lectura del manual pendiente.
+    verificarAceptacionesPendientes($pdo, $usuario);
+
     $GLOBALS['usuario_actual'] = $usuario;
+}
+
+/**
+ * Si el usuario es franquiciado con manuales asignados sin aceptar, lo manda
+ * a lectura.php del primer pendiente. Si ya está viendo uno de esos manuales,
+ * lo deja pasar (para que pueda aceptarlo).
+ */
+function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
+{
+    if (($usuario['rol'] ?? '') !== 'franquiciado') return;
+    if (empty($usuario['empresa_id'])) return;
+
+    $stmt = $pdo->prepare("
+        SELECT m.id AS manual_id
+        FROM manual_empresa_assignments mea
+        JOIN manuals m
+          ON m.id = mea.manual_id
+        JOIN manual_versions mv
+          ON mv.manual_id = m.id
+         AND mv.es_activa = 1
+        LEFT JOIN acceptances a
+          ON a.manual_version_id = mv.id
+         AND a.user_id = :uid
+        WHERE mea.empresa_id = :emp
+          AND m.estado = 'publicado'
+          AND a.id IS NULL
+        ORDER BY m.created_at ASC
+    ");
+    $stmt->execute([
+        ':uid' => $usuario['id'],
+        ':emp' => $usuario['empresa_id'],
+    ]);
+    $pendientes = $stmt->fetchAll();
+
+    if (!$pendientes) return;
+
+    // Si ya está en lectura.php viendo uno de los manuales pendientes, lo dejamos pasar
+    // (esa es justamente la página donde tiene que aceptarlo).
+    $scriptName    = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    $manualIdEnUrl = (int) ($_GET['id'] ?? 0);
+
+    if ($scriptName === 'lectura.php' && $manualIdEnUrl > 0) {
+        foreach ($pendientes as $p) {
+            if ((int) $p['manual_id'] === $manualIdEnUrl) {
+                return; // está en el lugar correcto, dejarlo
+            }
+        }
+    }
+
+    // Redirigir al primer manual pendiente
+    $primero = (int) $pendientes[0]['manual_id'];
+    header('Location: ' . BASE_URL_PHP . '/lectura.php?id=' . $primero);
+    exit;
 }
 
 function _redirigirLogin(): never
