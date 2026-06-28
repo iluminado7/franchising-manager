@@ -31,7 +31,6 @@ include 'layout/head.php';
               <div class="avatar" id="avatar-iniciales"></div>
               <div>
                 <div class="perfil-nombre" id="perfil-nombre">—</div>
-                <div class="perfil-rol" id="perfil-rol-badge"></div>
               </div>
             </div>
 
@@ -376,16 +375,19 @@ async function init() {
 
 // ── RENDER PERFIL ─────────────────────────────────────────────
 function renderPerfil(u) {
-  const perfil   = u.perfil;  // /me devuelve { perfil: {...}, rol, email, empresa_id }
-  const nombre   = perfil ? `${perfil.nombre} ${perfil.apellido}` : u.email;
-  const iniciales = perfil
-    ? `${perfil.nombre[0]}${perfil.apellido[0]}`.toUpperCase()
-    : u.email[0].toUpperCase();
+  // v2.3: nombre/apellido/dni viven en users (toplevel de /me). El campo `perfil`
+  // sigue trayendo la franquicia para franquiciado/empleado.
+  const perfil    = u.perfil;
+  const nombreFull= [u.nombre, u.apellido].filter(Boolean).join(' ').trim();
+  const nombre    = nombreFull || u.email;
+  const iniciales = (u.nombre && u.apellido)
+    ? `${u.nombre[0]}${u.apellido[0]}`.toUpperCase()
+    : (u.email ? u.email[0].toUpperCase() : '?');
 
   document.getElementById('avatar-iniciales').textContent = iniciales;
   document.getElementById('perfil-nombre').textContent    = nombre;
   document.getElementById('dato-email').textContent       = u.email;
-  document.getElementById('dato-dni').textContent         = perfil?.dni || '—';
+  document.getElementById('dato-dni').textContent         = u.dni || '—';
 
   // Badge de rol
   const labels = { super_admin: 'Super Admin', franquiciante: 'Franquiciante', franquiciado: 'Franquiciado', empleado: 'Empleado' };

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DocumentVersion extends Model
 {
@@ -15,6 +16,7 @@ class DocumentVersion extends Model
     protected $fillable = [
         'document_id',
         'version_number',
+        'previous_version_id',
         'archivo_url',
         'archivo_hash',
         'mime_type',
@@ -28,9 +30,9 @@ class DocumentVersion extends Model
     ];
 
     protected $casts = [
-        'es_activa'     => 'boolean',
-        'tamano_bytes'  => 'integer',
-        'version_number'=> 'integer',
+        'es_activa'      => 'boolean',
+        'tamano_bytes'   => 'integer',
+        'version_number' => 'integer',
         'subido_at'      => 'datetime',
         'deleted_at'     => 'datetime',
     ];
@@ -54,6 +56,22 @@ class DocumentVersion extends Model
         return $this->belongsTo(User::class, 'deleted_by');
     }
 
+    // v2.3: Versión anterior en la cadena de versiones (FK auto-referencial).
+    // Puede ser NULL si es la primera versión o si la anterior fue eliminada
+    // físicamente (ON DELETE SET NULL).
+    public function previousVersion(): BelongsTo
+    {
+        return $this->belongsTo(DocumentVersion::class, 'previous_version_id');
+    }
+
+    // Inverso: versiones que apuntan a esta como su anterior.
+    // Útil para reconstruir el árbol completo. Normalmente debería tener
+    // 0 o 1 fila — más de una indicaría una bifurcación rara.
+    public function nextVersions(): HasMany
+    {
+        return $this->hasMany(DocumentVersion::class, 'previous_version_id');
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────
 
     // DocumentVersion::activas()->...  → versiones actualmente vigentes
@@ -66,17 +84,21 @@ class DocumentVersion extends Model
     {
         return $query->whereNull('deleted_at');
     }
+
     // ── Helpers ──────────────────────────────────────────────────────
+
     public function estaEliminada(): bool
     {
         return !is_null($this->deleted_at);
     }
 
+    // NOTA: este método tiene un bug pre-existente — la firma mezcla
+    // scope y helper. Considerar refactorizar a scopeActivaNoEliminada
+    // o eliminar si no se usa.
     public function esActiva($query): bool
     {
         return $query
         ->where('es_activa', 1)
         ->whereNull('deleted_at');
     }
-    
 }

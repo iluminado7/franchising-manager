@@ -12,11 +12,10 @@ class SuperAdmin extends Model
     public $timestamps = false;
     protected $dates = ['created_at'];
 
+    // Tras v2.3 nombre/apellido/dni viven en users. Esta tabla queda como
+    // marcador de rol (id, user_id, created_at).
     protected $fillable = [
         'user_id',
-        'nombre',
-        'apellido',
-        'dni',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -28,8 +27,10 @@ class SuperAdmin extends Model
 
     // ── Helpers ──────────────────────────────────────────────────────
 
+    // Delegado a User para no romper código existente que llamara
+    // $superAdmin->nombreCompleto().
     public function nombreCompleto(): string
     {
-        return "{$this->nombre} {$this->apellido}";
+        return $this->user?->nombreCompleto() ?? '';
     }
 }

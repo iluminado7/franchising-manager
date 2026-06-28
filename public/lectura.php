@@ -303,8 +303,8 @@ async function init() {
     yaAceptado      = manual.mi_aceptacion || false;
 
     document.title = `${manual.titulo} — Cerrajería Leonardo`;
-    document.getElementById('doc-empresa').textContent  = me.perfil
-      ? (me.empresa?.nombre || '—') : '—';
+    // v2.3: me.perfil ya no existe; empresa.nombre viene anidado en /me
+    document.getElementById('doc-empresa').textContent = me.empresa?.nombre || '—';
     document.getElementById('doc-version').textContent  = `v${version.version_number}`;
     document.getElementById('doc-fecha').textContent    = formatFecha(version.publicado_at);
 

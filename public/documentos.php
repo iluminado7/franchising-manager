@@ -164,12 +164,34 @@ include 'layout/head.php';
       </div>
 
       <div class="form-group">
-        <label>
-        <input type="checkbox" id="doc-visible" style="margin-right:6px;accent-color:var(--dorado)">
-         Marque si quiere permitir que los franquiciados vean este documento
+        <label style="cursor:pointer">
+          <input type="checkbox" id="doc-visible" style="margin-right:6px;accent-color:var(--dorado)" onchange="onToggleVisibilidadCategorias('doc')">
+          ¿Permitir que sea visible para Socios comerciales?
         </label>
-        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Si está activado, los franquiciados podrán ver y descargar este documento. Si no quiere que ocurra, dejar desactivado</div>
-      </div>      
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+          Si está activado, elegí qué categorías de Socios comerciales podrán ver y descargar este documento.
+        </div>
+
+        <!-- Sub-bloque: lista de categorías (visible solo cuando el toggle está ON) -->
+        <div id="doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4)">Categorías visibles</span>
+            <button type="button" id="doc-btn-sel-todas" onclick="toggleSeleccionarTodasCategorias('doc')"
+                    style="background:transparent;border:none;color:var(--dorado);font-size:12px;cursor:pointer;font-family:'Archivo Narrow',sans-serif;padding:0;text-decoration:underline">
+              Seleccionar todos
+            </button>
+          </div>
+          <div id="doc-categorias-lista">
+            <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">
+              ${''}
+            </div>
+          </div>
+          <div id="doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Sin categorías marcadas: ningún socio comercial verá este documento.
+          </div>
+        </div>
+      </div>
 
       <!-- Empresa — solo super_admin -->
       <div class="form-group">
@@ -353,12 +375,31 @@ include 'layout/head.php';
       </div>
 
       <div class="form-group">
-        <label>
-          <input type="checkbox" id="edit-doc-visible" style="margin-right:6px;accent-color:var(--dorado)">
-          Visible para franquiciados
+        <label style="cursor:pointer">
+          <input type="checkbox" id="edit-doc-visible" style="margin-right:6px;accent-color:var(--dorado)" onchange="onToggleVisibilidadCategorias('edit-doc')">
+          ¿Permitir que sea visible para Socios comerciales?
         </label>
         <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
-          Si está desactivado, solo los franquiciantes y super admins verán el documento.
+          Si está desactivado, solo los franquiciantes y super admins verán este documento. Las categorías marcadas se preservan para cuando vuelvas a activarlo.
+        </div>
+
+        <div id="edit-doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4)">Categorías visibles</span>
+            <button type="button" id="edit-doc-btn-sel-todas" onclick="toggleSeleccionarTodasCategorias('edit-doc')"
+                    style="background:transparent;border:none;color:var(--dorado);font-size:12px;cursor:pointer;font-family:'Archivo Narrow',sans-serif;padding:0;text-decoration:underline">
+              Seleccionar todos
+            </button>
+          </div>
+          <div id="edit-doc-categorias-lista">
+            <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">
+              Cargando categorías...
+            </div>
+          </div>
+          <div id="edit-doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Sin categorías marcadas: ningún socio comercial verá este documento.
+          </div>
         </div>
       </div>
 
@@ -598,6 +639,9 @@ let empresaFiltroId   = ''; // filtro activo del combobox de empresa (super_admi
 let documentoActivo   = null; // documento padre cargado en la vista detalle
 let archivoVersion    = null; // archivo seleccionado para subir nueva versión
 
+// v2.3 — categorías activas de la empresa actual (para los modales de subir/editar)
+let categoriasEmpresa = []; // [{ id, name, description, is_active, empresa_id }]
+
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
@@ -633,8 +677,9 @@ async function init() {
       });
       document.getElementById('grupo-empresa-doc').style.display = 'block';
     } else {
-      // Franquiciante: cargar sus franquicias
+      // Franquiciante: cargar sus franquicias y sus categorías activas
       await cargarFranquicias(miEmpresaId);
+      await cargarCategoriasDeEmpresa(miEmpresaId);
     }
 
     await cargarDocumentos();
@@ -667,6 +712,89 @@ async function cargarFranquicias(empresaId) {
       selDoc.appendChild(opt);
     });
   } catch {}
+}
+
+// v2.3 — Helpers para el bloque de categorías visibles en los modales
+async function cargarCategoriasDeEmpresa(empresaId) {
+  if (!empresaId) { categoriasEmpresa = []; return; }
+  try {
+    const url = (rolUsuario === 'super_admin')
+      ? `/categorias?empresa_id=${empresaId}&activa=1`
+      : `/categorias?activa=1`;
+    const cats = await apiFetch('GET', url);
+    categoriasEmpresa = (cats || []).filter(c => c.is_active);
+  } catch {
+    categoriasEmpresa = [];
+  }
+}
+
+function renderListaCategoriasModal(prefix, idsMarcadas) {
+  // prefix: 'doc' o 'edit-doc'
+  const cont = document.getElementById(`${prefix}-categorias-lista`);
+  if (!cont) return;
+
+  if (!categoriasEmpresa.length) {
+    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">
+      No hay categorías activas en esta empresa. <a href="${BASE_URL}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una</a>.
+    </div>`;
+    document.getElementById(`${prefix}-categorias-warning`).style.display = 'none';
+    return;
+  }
+
+  cont.innerHTML = categoriasEmpresa.map(c => `
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;cursor:pointer;border-radius:5px;transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
+      <input type="checkbox" data-cat-id="${c.id}" ${idsMarcadas.has(c.id) ? 'checked' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onCambioCheckboxCategoria('${prefix}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
+        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+      </div>
+    </label>
+  `).join('');
+
+  actualizarBotonSelTodas(prefix);
+  actualizarWarningCategorias(prefix);
+}
+
+function onToggleVisibilidadCategorias(prefix) {
+  const checked = document.getElementById(`${prefix}-visible`).checked;
+  document.getElementById(`${prefix}-categorias-wrap`).style.display = checked ? 'block' : 'none';
+  if (checked) actualizarWarningCategorias(prefix);
+}
+
+function onCambioCheckboxCategoria(prefix) {
+  actualizarWarningCategorias(prefix);
+  actualizarBotonSelTodas(prefix);
+}
+
+function toggleSeleccionarTodasCategorias(prefix) {
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]`);
+  if (!checkboxes.length) return;
+  const todosMarcados = Array.from(checkboxes).every(cb => cb.checked);
+  checkboxes.forEach(cb => { cb.checked = !todosMarcados; });
+  actualizarBotonSelTodas(prefix);
+  actualizarWarningCategorias(prefix);
+}
+
+function actualizarBotonSelTodas(prefix) {
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]`);
+  const btn = document.getElementById(`${prefix}-btn-sel-todas`);
+  if (!btn) return;
+  if (!checkboxes.length) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  const todosMarcados = Array.from(checkboxes).every(cb => cb.checked);
+  btn.textContent = todosMarcados ? 'Deseleccionar todos' : 'Seleccionar todos';
+}
+
+function actualizarWarningCategorias(prefix) {
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]`);
+  const algunaMarcada = Array.from(checkboxes).some(cb => cb.checked);
+  const warn = document.getElementById(`${prefix}-categorias-warning`);
+  if (warn) warn.style.display = (checkboxes.length && !algunaMarcada) ? 'block' : 'none';
+}
+
+function leerCategoriasSeleccionadas(prefix) {
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]:checked`);
+  return Array.from(checkboxes).map(cb => parseInt(cb.dataset.catId, 10));
 }
 
 async function onEmpresaChange() {
@@ -739,7 +867,11 @@ async function onEmpresaDocChange() {
   const empresaId = document.getElementById('doc-empresa').value;
   const selDoc    = document.getElementById('doc-franquicia');
   selDoc.innerHTML = '<option value="">Toda la empresa (global)</option>';
-  if (!empresaId) return;
+  if (!empresaId) {
+    categoriasEmpresa = [];
+    renderListaCategoriasModal('doc', new Set());
+    return;
+  }
   try {
     const franquicias = await apiFetch('GET', `/franquicias?empresa_id=${empresaId}`);
     franquicias.forEach(f => {
@@ -748,6 +880,9 @@ async function onEmpresaDocChange() {
       selDoc.appendChild(opt);
     });
   } catch {}
+  // Cargar también las categorías activas de esta empresa para el bloque de visibilidad
+  await cargarCategoriasDeEmpresa(empresaId);
+  renderListaCategoriasModal('doc', new Set());
 }
 
 async function cargarDocumentos() {
@@ -937,11 +1072,18 @@ function abrirModalSubir() {
   document.getElementById('doc-error').style.display = 'none';
   resetDropZone();
 
+  // Resetear bloque de categorías: oculto + lista limpia
+  document.getElementById('doc-categorias-wrap').style.display = 'none';
+
   // Si hay empresa seleccionada en filtro y es super_admin, preseleccionar
   if (rolUsuario === 'super_admin') {
     const empId = empresaFiltroId;
     document.getElementById('doc-empresa').value = empId || '';
-    if (empId) onEmpresaDocChange();
+    if (empId) onEmpresaDocChange(); // esto carga categorías + render lista
+    else renderListaCategoriasModal('doc', new Set()); // lista vacía hasta que elija empresa
+  } else {
+    // Franquiciante: las categorías ya están cargadas en init, solo render con set vacío
+    renderListaCategoriasModal('doc', new Set());
   }
 
   document.getElementById('modal-subir').classList.add('open');
@@ -1022,6 +1164,23 @@ async function subirDocumento() {
 
     // apiFetch no sirve para multipart, usamos fetch directo
     const res = await fetchMultipart('/documentos', form);
+
+    // v2.3: si el toggle de visibilidad está ON, sync de categorías visibles.
+    // Si está OFF no tocamos nada (las categorías quedan en su estado por defecto vacío).
+    if (visible) {
+      const catsSeleccionadas = leerCategoriasSeleccionadas('doc');
+      try {
+        await apiFetch('PUT', `/documentos/${res.id}/categorias`, { category_ids: catsSeleccionadas });
+      } catch (errCat) {
+        // Si falla el sync, el documento ya está creado: avisamos pero no abortamos.
+        mostrarToast('Documento subido, pero falló la asignación de categorías. Editalo para reintentar.', 'error');
+        todosLosDocumentos.unshift(res);
+        aplicarFiltros();
+        cerrarModalSubir();
+        return;
+      }
+    }
+
     todosLosDocumentos.unshift(res);
     aplicarFiltros();
     cerrarModalSubir();
@@ -1114,7 +1273,7 @@ async function previsualizarDocumento(id) {
 // ── MODAL ELIMINAR DOCUMENTO ──────────────────────────────────
 function abrirModalEliminar(id, titulo) {
   pendingEliminar = id;
-  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los franquiciados y empleados. El super_admin podrá restaurarlo si fue un error.`;
+  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los Socios comerciales y empleados. El super_admin podrá restaurarlo si fue un error.`;
   document.getElementById('eliminar-error').textContent = '';
   document.getElementById('eliminar-error').style.display = 'none';
   document.getElementById('modal-eliminar').classList.add('open');
@@ -1185,6 +1344,20 @@ async function abrirModalEditarDoc(id) {
     // Si falla la carga de franquicias, igual mostramos el modal para poder editar título/tipo/visibilidad
   }
 
+  // v2.3: cargar categorías de la empresa del doc + las asignadas actualmente
+  await cargarCategoriasDeEmpresa(doc.empresa_id);
+  let idsAsignadas = new Set();
+  try {
+    const asignadas = await apiFetch('GET', `/documentos/${id}/categorias`);
+    idsAsignadas = new Set((asignadas || []).map(c => c.id));
+  } catch {
+    // Si el endpoint falla (ej. no existe), seguimos con set vacío — el usuario puede asignar de cero.
+  }
+  renderListaCategoriasModal('edit-doc', idsAsignadas);
+  // Mostrar/ocultar wrap según el toggle actual
+  document.getElementById('edit-doc-categorias-wrap').style.display =
+    document.getElementById('edit-doc-visible').checked ? 'block' : 'none';
+
   document.getElementById('modal-editar-doc').classList.add('open');
   setTimeout(() => document.getElementById('edit-doc-titulo').focus(), 100);
 }
@@ -1226,6 +1399,19 @@ async function guardarEdicionDocumento() {
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     const updated = await apiFetch('PUT', `/documentos/${documentoEditandoId}`, body);
+
+    // v2.3: sync de categorías si el toggle está ON.
+    // Si está OFF, NO tocamos las cats: preservamos la selección anterior en DB
+    // para que el usuario la recupere si vuelve a activarlo.
+    if (visible) {
+      const catsSeleccionadas = leerCategoriasSeleccionadas('edit-doc');
+      try {
+        await apiFetch('PUT', `/documentos/${documentoEditandoId}/categorias`, { category_ids: catsSeleccionadas });
+      } catch (errCat) {
+        mostrarToast('Cambios guardados, pero falló la sincronización de categorías.', 'error');
+      }
+    }
+
     mostrarToast('Documento actualizado.', 'exito');
     cerrarModalEditarDoc();
 
@@ -1276,8 +1462,8 @@ async function verDocumento(id) {
     ? `<span>${esc(doc.franquicia.nombre)}</span>`
     : `<span style="font-style:italic">Global</span>`;
   const visib  = doc.visible_franquiciado
-    ? `<span style="color:var(--exito)">● Visible a franquiciados</span>`
-    : `<span style="color:var(--gris3)">● Oculto para franquiciados</span>`;
+    ? `<span style="color:var(--exito)">● Visible a Socios comerciales</span>`
+    : `<span style="color:var(--gris3)">● Oculto para Socios comerciales</span>`;
 
   document.getElementById('detalle-titulo').textContent = doc.titulo;
   document.getElementById('detalle-meta').innerHTML = `

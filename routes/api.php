@@ -15,6 +15,9 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EmpresaEmailController;
+use App\Http\Controllers\FranchiseCategoryController;
+use App\Http\Controllers\ManualCategoryAssignmentController;
+use App\Http\Controllers\DocumentAssignmentController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Middleware\EnsureActiveTenant;
@@ -42,7 +45,9 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     Route::get('/manuales/{id}', [ManualController::class, 'show']);
 
     // Documentos — lectura para todos
-    Route::get('/documentos', [DocumentController::class, 'index']);
+    Route::get('/documentos',                [DocumentController::class, 'index']);
+    Route::get('/documentos/{id}/descargar', [DocumentController::class, 'descargar']);
+    Route::get('/documentos/{id}/preview',   [DocumentController::class, 'preview']);
 
     // Aceptaciones — franquiciado acepta
     Route::post('/versiones/{versionId}/aceptar', [AcceptanceController::class, 'aceptar']);
@@ -50,8 +55,13 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     // Firmas físicas — franquiciado sube
     Route::post('/versiones/{versionId}/firma-fisica', [PhysicalSignatureController::class, 'subir']);
 
-    // Asignaciones de empleados — lectura para todos
+    // Asignaciones individuales de manuales — lectura para todos
     Route::get('/empleados/{userId}/asignaciones', [ManualAssignmentController::class, 'porEmpleado']);
+
+    // Categorías — lectura para todos los roles (cada uno con su scope)
+    Route::get('/categorias',                [FranchiseCategoryController::class, 'index']);
+    Route::get('/categorias/{id}',           [FranchiseCategoryController::class, 'show']);
+    Route::get('/usuarios/{id}/categorias',  [UserController::class, 'listarCategorias']);
 
     // ── SOLO SUPER ADMIN ──────────────────────────────────────────────
     Route::middleware('role:super_admin')->group(function () {
@@ -91,20 +101,18 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::put('/notas/{id}/estado', [ManualNoteController::class, 'updateEstado']);
     });
 
-    // ── USUARIOS — super_admin, franquiciante y franquiciado ──────────
-    // El franquiciado solo puede gestionar empleados de su propia sucursal;
-    // el control fino (rol / empresa / franquicia) se aplica en UserController.
+    // ── SUPER ADMIN + FRANQUICIANTE ───────────────────────────────────
+    // Operaciones que sólo super_admin y franquiciante pueden hacer.
+    // Franquiciado NO entra acá (ver bloque siguiente para las cosas que sí puede hacer).
     Route::middleware('role:super_admin,franquiciante')->group(function () {
+
+        // Usuarios — CRUD (el franquiciado NO crea/elimina usuarios)
         Route::get('/usuarios',                     [UserController::class, 'index']);
         Route::post('/usuarios',                    [UserController::class, 'store']);
         Route::put('/usuarios/{id}',                [UserController::class, 'update']);
         Route::post('/usuarios/{id}/toggle-activo', [UserController::class, 'toggleActivo']);
         Route::delete('/usuarios/{id}',             [UserController::class, 'destroy']);
         Route::post('/usuarios/{id}/restore',       [UserController::class, 'restore']);
-    });
-
-    // ── SUPER ADMIN + FRANQUICIANTE ───────────────────────────────────
-    Route::middleware('role:super_admin,franquiciante')->group(function () {
 
         // Franquicias
         Route::get('/franquicias',                [FranquiciaController::class, 'index']);
@@ -113,42 +121,44 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::put('/franquicias/{id}',           [FranquiciaController::class, 'update']);
         Route::get('/franquicias/{id}/dashboard', [FranquiciaController::class, 'dashboard']);
 
+        // Categorías del franquiciado — escritura
+        Route::post('/categorias',                    [FranchiseCategoryController::class, 'store']);
+        Route::put('/categorias/{id}',                [FranchiseCategoryController::class, 'update']);
+        Route::post('/categorias/{id}/toggle-activa', [FranchiseCategoryController::class, 'toggleActiva']);
+        Route::delete('/categorias/{id}',             [FranchiseCategoryController::class, 'destroy']);
+
         // Manuales — escritura
-        Route::post('/manuales',               [ManualController::class, 'store']);
-        Route::put('/manuales/{id}',           [ManualController::class, 'update']);
-        Route::delete('/manuales/{id}',         [ManualController::class, 'destroy']);
-        Route::post('/manuales/{id}/restore',   [ManualController::class, 'restore']);
-        Route::post('/manuales/{id}/publicar', [ManualController::class, 'publicar']);
-        Route::post('/manuales/{id}/archivar', [ManualController::class, 'archivar']);
-        Route::post('/manuales/{id}/borrador', [ManualController::class, 'guardarBorrador']);
+        Route::post('/manuales',                  [ManualController::class, 'store']);
+        Route::put('/manuales/{id}',              [ManualController::class, 'update']);
+        Route::delete('/manuales/{id}',           [ManualController::class, 'destroy']);
+        Route::post('/manuales/{id}/restore',     [ManualController::class, 'restore']);
+        Route::post('/manuales/{id}/publicar',    [ManualController::class, 'publicar']);
+        Route::post('/manuales/{id}/archivar',    [ManualController::class, 'archivar']);
+        Route::post('/manuales/{id}/borrador',    [ManualController::class, 'guardarBorrador']);
         Route::post('/manuales/{id}/desarchivar', [ManualController::class, 'desarchivar']);
 
         // Documentos — subir, editar, eliminar/restaurar
-        Route::post('/documentos',                              [DocumentController::class, 'store']);
-        Route::put('/documentos/{id}',                          [DocumentController::class, 'update']);
-        Route::delete('/documentos/{id}',                       [DocumentController::class, 'destroy']);
-        Route::post('/documentos/{id}/restore',                 [DocumentController::class, 'restore']);
+        Route::post('/documentos',              [DocumentController::class, 'store']);
+        Route::put('/documentos/{id}',          [DocumentController::class, 'update']);
+        Route::delete('/documentos/{id}',       [DocumentController::class, 'destroy']);
+        Route::post('/documentos/{id}/restore', [DocumentController::class, 'restore']);
 
         // Documentos — versiones (subir, listar, editar nota, ver historial)
-        Route::post('/documentos/{id}/version',                 [DocumentController::class, 'subirVersion']);
-        Route::get('/documentos/{id}/versiones',                [DocumentController::class, 'versiones']);
-        Route::put('/documentos/{id}/versiones/{vid}/nota',     [DocumentController::class, 'updateNota']);
-        Route::delete('/documentos/{id}/versiones/{versionId}',[DocumentController::class,'destroyVersion']);
-        Route::post('/documentos/{id}/versiones/{versionId}/restore',[DocumentController::class,'restoreVersion']);
+        Route::post('/documentos/{id}/version',                       [DocumentController::class, 'subirVersion']);
+        Route::get('/documentos/{id}/versiones',                      [DocumentController::class, 'versiones']);
+        Route::put('/documentos/{id}/versiones/{vid}/nota',           [DocumentController::class, 'updateNota']);
+        Route::delete('/documentos/{id}/versiones/{versionId}',       [DocumentController::class, 'destroyVersion']);
+        Route::post('/documentos/{id}/versiones/{versionId}/restore', [DocumentController::class, 'restoreVersion']);
         // Acceso a versiones específicas del historial (NO para franquiciado/empleado)
         Route::get('/documentos/{id}/versiones/{vid}/descargar', [DocumentController::class, 'descargarVersion']);
         Route::get('/documentos/{id}/versiones/{vid}/preview',   [DocumentController::class, 'previewVersion']);
 
-        // Aceptaciones — ver
-        Route::get('/versiones/{versionId}/aceptaciones',  [AcceptanceController::class, 'porVersion']);
-
-        // Firmas físicas — ver
+        // Aceptaciones / firmas físicas — lectura
+        Route::get('/versiones/{versionId}/aceptaciones',   [AcceptanceController::class, 'porVersion']);
         Route::get('/versiones/{versionId}/firmas-fisicas', [PhysicalSignatureController::class, 'porVersion']);
 
         // Versiones de manuales
         Route::get('/manuales/{id}/versiones', [ManualController::class, 'versiones']);
-
-        // Edición posterior de la nota de publicación (release note) de una versión
         Route::put('/manuales/{manualId}/versiones/{versionId}/nota-publicacion',
             [ManualController::class, 'updateNotaPublicacion']);
 
@@ -158,22 +168,52 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // Invoices — franquiciante solo lectura
         Route::get('/invoices',      [InvoiceController::class, 'index']);
         Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
+
+        // ── Asignación de manuales a categorías ─────────────────────
+        Route::get('/manuales/{manualId}/categorias',                 [ManualCategoryAssignmentController::class, 'porManual']);
+        Route::get('/categorias/{categoryId}/manuales',               [ManualCategoryAssignmentController::class, 'porCategoria']);
+        Route::post('/manuales/{manualId}/categorias',                [ManualCategoryAssignmentController::class, 'asignar']);
+        Route::put('/manuales/{manualId}/categorias',                 [ManualCategoryAssignmentController::class, 'sincronizar']);
+        Route::delete('/manuales/{manualId}/categorias/{categoryId}', [ManualCategoryAssignmentController::class, 'desasignar']);
+
+        // ── Asignación de documentos a categorías ───────────────────
+        Route::get('/documentos/{documentId}/categorias',                 [DocumentAssignmentController::class, 'listarCategorias']);
+        Route::post('/documentos/{documentId}/categorias',                [DocumentAssignmentController::class, 'asignarCategoria']);
+        Route::put('/documentos/{documentId}/categorias',                 [DocumentAssignmentController::class, 'sincronizarCategorias']);
+        Route::delete('/documentos/{documentId}/categorias/{categoryId}', [DocumentAssignmentController::class, 'desasignarCategoria']);
+        Route::get('/categorias/{categoryId}/documentos',                 [DocumentAssignmentController::class, 'porCategoria']);
+
+        // ── Asignación de documentos a usuarios individuales ────────
+        Route::get('/documentos/{documentId}/usuarios',             [DocumentAssignmentController::class, 'listarUsuarios']);
+        Route::post('/documentos/{documentId}/usuarios',            [DocumentAssignmentController::class, 'asignarUsuario']);
+        Route::put('/documentos/{documentId}/usuarios',             [DocumentAssignmentController::class, 'sincronizarUsuarios']);
+        Route::delete('/documentos/{documentId}/usuarios/{userId}', [DocumentAssignmentController::class, 'desasignarUsuario']);
+    });
+
+    // ── SUPER ADMIN + FRANQUICIANTE + FRANQUICIADO ────────────────────
+    // Operaciones que el franquiciado también puede hacer (sobre empleados de su
+    // misma sucursal). El control fino (rol / empresa / franquicia) se aplica en
+    // cada controller via su helper actorPuedeGestionar*.
+    Route::middleware('role:super_admin,franquiciante,franquiciado')->group(function () {
+
+        // Categorías de un usuario — escritura (franquiciado gestiona a sus empleados)
+        Route::put('/usuarios/{id}/categorias',                 [UserController::class, 'sincronizarCategorias']);
+        Route::post('/usuarios/{id}/categorias',                [UserController::class, 'agregarCategoria']);
+        Route::delete('/usuarios/{id}/categorias/{categoryId}', [UserController::class, 'quitarCategoria']);
+
+        // Asignaciones individuales de manuales (franquiciante o franquiciado asigna
+        // un manual a un empleado/franquiciado específico de su scope)
+        Route::post('/empleados/{userId}/asignaciones',              [ManualAssignmentController::class, 'asignar']);
+        Route::delete('/empleados/{userId}/asignaciones/{manualId}', [ManualAssignmentController::class, 'desasignar']);
+
+        // Notas de manuales — lectura
+        // (super_admin ve todas, franquiciante las de su empresa, franquiciado las suyas)
+        Route::get('/manuales/{manualId}/notas', [ManualNoteController::class, 'porManual']);
     });
 
     // ── FRANQUICIANTE + FRANQUICIADO ──────────────────────────────────
+    // Escribir notas de manuales — el empleado no puede.
     Route::middleware('role:franquiciante,franquiciado')->group(function () {
-        Route::post('/empleados/{userId}/asignaciones',              [ManualAssignmentController::class, 'asignar']);
-        Route::delete('/empleados/{userId}/asignaciones/{manualId}', [ManualAssignmentController::class, 'desasignar']);
+        Route::post('/manuales/{manualId}/notas', [ManualNoteController::class, 'store']);
     });
-
-    Route::get('/documentos/{id}/descargar', [DocumentController::class, 'descargar']);
-    Route::get('/documentos/{id}/preview',   [DocumentController::class, 'preview']);
-
-    // Notas de manuales
-    // Leer el hilo: super_admin (todas), franquiciante (su empresa), franquiciado (las suyas).
-    Route::get('/manuales/{manualId}/notas', [ManualNoteController::class, 'porManual'])
-        ->middleware('role:super_admin,franquiciante,franquiciado');
-    // Escribir: franquiciante y franquiciado (el empleado no).
-    Route::post('/manuales/{manualId}/notas', [ManualNoteController::class, 'store'])
-        ->middleware('role:franquiciante,franquiciado');
 });

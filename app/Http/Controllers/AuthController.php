@@ -105,34 +105,41 @@ class AuthController extends Controller
                                          ->noLeidas()
                                          ->count();
 
-
         $empresa = null;
         if ($user->rol === 'franquiciante' && $user->empresa_id) {
             $empresa = \App\Models\Empresa::with('plan')->find($user->empresa_id);
         }
+
+        // v2.3: nombre/apellido/dni/celular ahora viven en users — exponerlos al toplevel.
+        // El campo `perfil` se mantiene por compat (incluye franquicia para franq/empleado).
         return response()->json([
             'id'                        => $user->id,
             'email'                     => $user->email,
             'rol'                       => $user->rol,
+            'nombre'                    => $user->nombre,
+            'apellido'                  => $user->apellido,
+            'dni'                       => $user->dni,
+            'celular'                   => $user->celular,
             'empresa_id'                => $user->empresa_id,
-            'empresa'                   => $empresa, 
+            'empresa'                   => $empresa,
             'perfil'                    => $perfil,
             'notificaciones_pendientes' => $notificacionesPendientes,
         ]);
     }
+
     public function updateEmail(Request $request)
     {
         $request->validate([
             'email'    => 'required|email|max:200|unique:users,email,' . $request->user()->id,
             'password' => 'required|string',
         ]);
-    
+
         if (!Hash::check($request->password, $request->user()->password_hash)) {
             return response()->json(['message' => 'La contraseña actual es incorrecta.'], 422);
         }
-    
+
         $request->user()->update(['email' => $request->email]);
-    
+
         return response()->json(['message' => 'Email actualizado correctamente.']);
     }
 
@@ -143,15 +150,15 @@ class AuthController extends Controller
             'password'              => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string',
         ]);
-    
+
         if (!Hash::check($request->current_password, $request->user()->password_hash)) {
             return response()->json(['message' => 'La contraseña actual es incorrecta.'], 422);
         }
-    
+
         $request->user()->update([
             'password_hash' => Hash::make($request->password),
         ]);
-    
+
         return response()->json(['message' => 'Contraseña actualizada correctamente.']);
     }
 

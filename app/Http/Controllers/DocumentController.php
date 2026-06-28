@@ -24,14 +24,14 @@ class DocumentController extends Controller
         $includeDeleted = (bool) $request->query('include_deleted', false);
 
         if ($user->esFranquiciante()) {
-            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva'])
+            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor'])
                                   ->where('empresa_id', $user->empresa_id)
                                   ->noEliminados()
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
         } elseif ($user->esSuperAdmin()) {
-            $query = Document::with(['franquicia', 'empresa', 'versionActiva', 'deletedBy:id,rol'])
+            $query = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'deletedBy:id,rol,nombre,apellido'])
                              ->orderBy('created_at', 'desc');
             if ($request->filled('empresa_id')) {
                 $query->where('empresa_id', $request->empresa_id);
@@ -44,10 +44,14 @@ class DocumentController extends Controller
             $documentos = $query->get();
 
         } else {
+            // Franquiciado / empleado.
+            // v2.3: además de los filtros legacy (empresa, franquicia, visible_franquiciado),
+            // el documento debe estar asignado al usuario por categoría activa O individualmente.
             $franquiciaId = $user->franchiseStaff->franquicia_id;
             $empresaId    = $user->empresa_id;
+            $userId       = $user->id;
 
-            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva'])
+            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor'])
                                   ->where('empresa_id', $empresaId)
                                   ->where(function ($q) use ($franquiciaId) {
                                       $q->whereNull('franquicia_id')
@@ -55,6 +59,27 @@ class DocumentController extends Controller
                                   })
                                   ->visiblesParaFranquiciado()
                                   ->noEliminados()
+                                  // v2.3: filtro por asignaciones (categoría activa O individual)
+                                  ->where(function ($q) use ($userId, $empresaId) {
+                                      $q->whereExists(function ($sub) use ($userId, $empresaId) {
+                                          $sub->select(DB::raw(1))
+                                              ->from('document_category_assignments as dca')
+                                              ->join('user_categories as uc', 'uc.category_id', '=', 'dca.category_id')
+                                              ->join('franchise_categories as fc', function ($j) {
+                                                  $j->on('fc.id', '=', 'dca.category_id')
+                                                    ->where('fc.is_active', 1);
+                                              })
+                                              ->whereColumn('dca.document_id', 'documents.id')
+                                              ->where('dca.empresa_id', $empresaId)
+                                              ->where('uc.user_id', $userId);
+                                      })->orWhereExists(function ($sub) use ($userId, $empresaId) {
+                                          $sub->select(DB::raw(1))
+                                              ->from('document_user_assignments as dua')
+                                              ->whereColumn('dua.document_id', 'documents.id')
+                                              ->where('dua.user_id', $userId)
+                                              ->where('dua.empresa_id', $empresaId);
+                                      });
+                                  })
                                   ->orderBy('created_at', 'desc')
                                   ->get();
         }
@@ -64,6 +89,9 @@ class DocumentController extends Controller
 
     // POST /api/documentos
     // Crea el documento padre + su versión 1 (es_activa = 1).
+    // v2.3: no auto-asigna a ninguna categoría. La asignación a categorías/usuarios
+    // se hace en un endpoint separado (DocumentAssignment). Por ese motivo,
+    // notificarDocumento() no notifica a nadie en este punto (no hay asignaciones).
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -98,21 +126,24 @@ class DocumentController extends Controller
             ]);
 
             DocumentVersion::create([
-                'document_id'    => $doc->id,
-                'version_number' => 1,
-                'archivo_url'    => $path,
-                'archivo_hash'   => $hash,
-                'mime_type'      => $archivo->getMimeType(),
-                'tamano_bytes'   => $archivo->getSize(),
-                'nota'           => $request->nota,
-                'es_activa'      => 1,
-                'subido_por'     => $user->id,
-                'subido_at'      => now(),
+                'document_id'         => $doc->id,
+                'version_number'      => 1,
+                'previous_version_id' => null,   // v2.3: primera versión, sin antecesora
+                'archivo_url'         => $path,
+                'archivo_hash'        => $hash,
+                'mime_type'           => $archivo->getMimeType(),
+                'tamano_bytes'        => $archivo->getSize(),
+                'nota'                => $request->nota,
+                'es_activa'           => 1,
+                'subido_por'          => $user->id,
+                'subido_at'           => now(),
             ]);
 
             return $doc;
         });
 
+        // v2.3: si el documento ya tiene asignaciones (raro al crear, pero posible),
+        // notifica. Si no, este método no hace nada — esperado.
         $this->notificarDocumento($documento, "Nuevo documento disponible: {$documento->titulo}");
 
         ActivityLog::registrar(
@@ -125,7 +156,7 @@ class DocumentController extends Controller
             userAgent:   $request->userAgent()
         );
 
-        return response()->json($documento->load(['franquicia', 'empresa', 'versionActiva']), 201);
+        return response()->json($documento->load(['franquicia', 'empresa', 'versionActiva', 'subidoPor']), 201);
     }
 
     // PUT /api/documentos/{id}
@@ -162,12 +193,17 @@ class DocumentController extends Controller
             userAgent:   $request->userAgent()
         );
 
-        return response()->json($documento->load(['franquicia', 'empresa', 'versionActiva']));
+        return response()->json($documento->load(['franquicia', 'empresa', 'versionActiva', 'subidoPor']));
     }
 
     // POST /api/documentos/{id}/version
     // Sube una versión nueva. La anterior queda como "histórica" (es_activa = 0).
     // Solo super_admin o franquiciante con acceso.
+    //
+    // v2.3:
+    //  - lockForUpdate() para evitar race conditions con uploads concurrentes
+    //  - previous_version_id se completa con el ID de la versión que estaba activa
+    //  - notifica con tipo nueva_version_documento (en vez de nuevo_documento)
     public function subirVersion(Request $request, int $id): JsonResponse
     {
         $documento = Document::findOrFail($id);
@@ -194,10 +230,19 @@ class DocumentController extends Controller
         $path    = Storage::disk($disk)->putFile('documentos', $archivo);
 
         $nuevaVersion = DB::transaction(function () use ($documento, $user, $request, $archivo, $hash, $path) {
-            // Desactivar la versión activa actual (solo debería haber una).
-            DocumentVersion::where('document_id', $documento->id)
-                           ->where('es_activa', 1)
-                           ->update(['es_activa' => 0]);
+            // v2.3: lock pesimista sobre la versión activa actual.
+            // Evita race conditions cuando dos uploads concurrentes leerían
+            // el mismo es_activa = 1 y romperían el UNIQUE generado uq_dv_es_activa.
+            $activaAnterior = DocumentVersion::where('document_id', $documento->id)
+                                             ->where('es_activa', 1)
+                                             ->lockForUpdate()
+                                             ->first();
+
+            // Desactivar la anterior (si existe). El UNIQUE generado pasa a NULL
+            // en esa fila al cambiar es_activa a 0.
+            if ($activaAnterior) {
+                $activaAnterior->update(['es_activa' => 0]);
+            }
 
             // Siguiente número de versión: MAX(existente) + 1.
             // Importante: contamos también las eliminadas para no reutilizar
@@ -210,22 +255,25 @@ class DocumentController extends Controller
             ) + 1;
 
             return DocumentVersion::create([
-                'document_id'    => $documento->id,
-                'version_number' => $next,
-                'archivo_url'    => $path,
-                'archivo_hash'   => $hash,
-                'mime_type'      => $archivo->getMimeType(),
-                'tamano_bytes'   => $archivo->getSize(),
-                'nota'           => $request->nota,
-                'es_activa'      => 1,
-                'subido_por'     => $user->id,
-                'subido_at'      => now(),
+                'document_id'         => $documento->id,
+                'version_number'      => $next,
+                'previous_version_id' => $activaAnterior?->id,   // v2.3: cadena de versiones
+                'archivo_url'         => $path,
+                'archivo_hash'        => $hash,
+                'mime_type'           => $archivo->getMimeType(),
+                'tamano_bytes'        => $archivo->getSize(),
+                'nota'                => $request->nota,
+                'es_activa'           => 1,
+                'subido_por'          => $user->id,
+                'subido_at'           => now(),
             ]);
         });
 
+        // v2.3: notifica con tipo nueva_version_documento (con document_version_id)
         $this->notificarDocumento(
             $documento,
-            "Nueva versión disponible: {$documento->titulo} (v{$nuevaVersion->version_number})"
+            "Nueva versión disponible: {$documento->titulo} (v{$nuevaVersion->version_number})",
+            $nuevaVersion
         );
 
         ActivityLog::registrar(
@@ -238,7 +286,7 @@ class DocumentController extends Controller
             userAgent:   $request->userAgent()
         );
 
-        return response()->json($nuevaVersion->load('subidoPor.systemAdmin', 'subidoPor.superAdmin'), 201);
+        return response()->json($nuevaVersion->load('subidoPor'), 201);
     }
 
     // GET /api/documentos/{id}/versiones
@@ -257,21 +305,14 @@ class DocumentController extends Controller
 
         $includeDeleted = (bool) $request->query('include_deleted', false);
 
-        $versiones = DocumentVersion::with([
-            'subidoPor.systemAdmin',
-            'subidoPor.superAdmin',
-            'subidoPor.franchiseStaff',
-            'deletedBy.systemAdmin',
-            'deletedBy.superAdmin',
-            'deletedBy.franchiseStaff'
-        ])
-        ->where('document_id', $id);
+        // v2.3: subidoPor y deletedBy se simplifican — nombre/apellido viven en users.
+        $versiones = DocumentVersion::with(['subidoPor', 'deletedBy', 'previousVersion'])
+                                    ->where('document_id', $id);
         if (!$includeDeleted) {
             $versiones->whereNull('deleted_at');
         }
-        $versiones = $versiones
-            ->orderByDesc('version_number')
-            ->get();
+        $versiones = $versiones->orderByDesc('version_number')->get();
+
         return response()->json($versiones);
     }
 
@@ -353,21 +394,26 @@ class DocumentController extends Controller
         ]);
 
         // Si quien elimina es franquiciante: avisar a los super_admin.
+        // v2.3: nombre/apellido viven en users — usamos nombreCompleto() del User
+        // (antes el código buscaba en franchiseStaff, que para un franquiciante
+        // siempre era NULL, ese era un bug pre-existente).
         if ($user->esFranquiciante()) {
-            $nombreAutor = trim(($user->franchiseStaff?->nombre ?? '') . ' ' . ($user->franchiseStaff?->apellido ?? ''));
+            $nombreAutor = $user->nombreCompleto();
             if ($nombreAutor === '') {
                 $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
             }
 
             $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
             $notifSuper  = $superadmins->map(fn($uid) => [
-                'user_id'           => $uid,
-                'tipo'              => 'nuevo_documento',
-                'manual_id'         => null,
-                'manual_version_id' => null,
-                'document_id'       => $documento->id,
-                'titulo'            => "El franquiciante {$nombreAutor} eliminó el documento \"{$documento->titulo}\"",
-                'created_at'        => now(),
+                'user_id'             => $uid,
+                'tipo'                => 'nuevo_documento',
+                'manual_id'           => null,
+                'manual_version_id'   => null,
+                'document_id'         => $documento->id,
+                'document_version_id' => null,
+                'category_id'         => null,
+                'titulo'              => "El franquiciante {$nombreAutor} eliminó el documento \"{$documento->titulo}\"",
+                'created_at'          => now(),
             ])->toArray();
 
             try {
@@ -389,87 +435,87 @@ class DocumentController extends Controller
     }
 
     // DELETE /api/documentos/{id}/versiones/{versionId}
-        public function destroyVersion(Request $request, int $id, int $versionId): JsonResponse
-        {
-            $user = $request->user();
+    public function destroyVersion(Request $request, int $id, int $versionId): JsonResponse
+    {
+        $user = $request->user();
 
-            $version = DocumentVersion::where('document_id', $id)
-                ->findOrFail($versionId);
+        $version = DocumentVersion::where('document_id', $id)
+            ->findOrFail($versionId);
 
-            $documento = $version->document;
+        $documento = $version->document;
 
-            if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-                return response()->json(['error' => 'Sin permisos.'], 403);
-            }
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
 
-            if ($user->esFranquiciante() &&
-                $documento->empresa_id !== $user->empresa_id) {
-                return response()->json(['error' => 'Sin acceso.'], 403);
-            }
+        if ($user->esFranquiciante() &&
+            $documento->empresa_id !== $user->empresa_id) {
+            return response()->json(['error' => 'Sin acceso.'], 403);
+        }
 
-            if ($version->deleted_at) {
-                return response()->json([
-                    'error' => 'La versión ya fue eliminada.'
-                ], 409);
-            }
+        if ($version->deleted_at) {
+            return response()->json([
+                'error' => 'La versión ya fue eliminada.'
+            ], 409);
+        }
 
-            // Si es la única versión disponible (no eliminada), no permitir borrar:
-            // hay que eliminar el documento completo en su lugar.
-            $disponibles = DocumentVersion::where('document_id', $id)
-                ->whereNull('deleted_at')
-                ->count();
-            if ($disponibles <= 1) {
-                return response()->json([
-                    'error' => 'No podés eliminar la única versión disponible. Eliminá el documento completo.'
-                ], 409);
-            }
+        // Si es la única versión disponible (no eliminada), no permitir borrar:
+        // hay que eliminar el documento completo en su lugar.
+        $disponibles = DocumentVersion::where('document_id', $id)
+            ->whereNull('deleted_at')
+            ->count();
+        if ($disponibles <= 1) {
+            return response()->json([
+                'error' => 'No podés eliminar la única versión disponible. Eliminá el documento completo.'
+            ], 409);
+        }
 
-            // Si es la versión activa, promovemos a activa la más reciente
-            // (por version_number desc) que no esté eliminada y no sea ésta.
+        DB::transaction(function () use ($version, $id, $user) {
+            // v2.3: lockForUpdate sobre todas las versiones del documento para
+            // evitar carreras con uploads/restores concurrentes.
+            $version->lockForUpdate()->refresh();
+
+            // Si la versión a eliminar es la activa, promover la más reciente
+            // (por version_number desc) entre las disponibles, distinta a ésta.
             $promovida = null;
             if ($version->es_activa) {
                 $promovida = DocumentVersion::where('document_id', $id)
                     ->where('id', '!=', $version->id)
                     ->whereNull('deleted_at')
                     ->orderByDesc('version_number')
+                    ->lockForUpdate()
                     ->first();
             }
 
-            DB::transaction(function () use ($version, $promovida, $user) {
-                $version->update([
-                    'es_activa'  => 0,
-                    'deleted_by' => $user->id,
-                    'deleted_at' => now(),
-                ]);
-
-                if ($promovida) {
-                    // Por las dudas, garantizar que no quede ninguna otra activa.
-                    DocumentVersion::where('document_id', $promovida->document_id)
-                        ->where('id', '!=', $promovida->id)
-                        ->where('es_activa', 1)
-                        ->update(['es_activa' => 0]);
-
-                    $promovida->update(['es_activa' => 1]);
-                }
-            });
-
-            try {
-                ActivityLog::registrar(
-                    userId: $user->id,
-                    accion: 'version_documento_eliminada',
-                    ip: $request->ip(),
-                    empresaId: $documento->empresa_id,
-                    entidadTipo: 'document_versions',
-                    entidadId: $version->id,
-                    userAgent: $request->userAgent()
-                );
-            } catch (\Throwable $e) { /* best-effort: no romper la respuesta si el log falla */ }
-
-            return response()->json([
-                'message'        => 'Versión eliminada.',
-                'nueva_activa_id'=> $promovida?->id,
+            // Primero desactivar y marcar como eliminada (libera el UNIQUE generado)
+            $version->update([
+                'es_activa'  => 0,
+                'deleted_by' => $user->id,
+                'deleted_at' => now(),
             ]);
-        }
+
+            // Después promover la nueva activa, si corresponde
+            if ($promovida) {
+                $promovida->update(['es_activa' => 1]);
+            }
+        });
+
+        try {
+            ActivityLog::registrar(
+                userId: $user->id,
+                accion: 'version_documento_eliminada',
+                ip: $request->ip(),
+                empresaId: $documento->empresa_id,
+                entidadTipo: 'document_versions',
+                entidadId: $version->id,
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort: no romper la respuesta si el log falla */ }
+
+        return response()->json([
+            'message' => 'Versión eliminada.',
+        ]);
+    }
 
     // POST /api/documentos/{id}/restore
     public function restore(Request $request, int $id): JsonResponse
@@ -534,33 +580,35 @@ class DocumentController extends Controller
         // Lógica de re-promoción: si la versión restaurada tiene el mayor
         // version_number entre las disponibles, vuelve a ser la vigente
         // y se desactiva la que estaba marcada como activa.
+        //
+        // v2.3: lockForUpdate para evitar carreras con uploads/destroyVersion concurrentes.
         $promovida = false;
 
         DB::transaction(function () use ($version, $documento, &$promovida) {
+            // Lock sobre la versión a restaurar
+            $version->lockForUpdate()->refresh();
+
+            // Restaurar inactiva primero (no choca con UNIQUE generado)
             $version->update([
                 'deleted_by' => null,
                 'deleted_at' => null,
                 'es_activa'  => 0,
             ]);
-
-            // Refrescamos por las dudas
             $version->refresh();
 
-            // Vigente actual entre las NO eliminadas (incluyendo la recién restaurada)
+            // Vigente actual entre las NO eliminadas (lockeada también)
             $vigenteActual = DocumentVersion::where('document_id', $documento->id)
                 ->where('id', '!=', $version->id)
                 ->where('es_activa', 1)
                 ->whereNull('deleted_at')
+                ->lockForUpdate()
                 ->first();
 
             // Si no hay vigente, o la restaurada es más nueva → promoverla
             if (!$vigenteActual || $version->version_number > $vigenteActual->version_number) {
-                // Desactivar cualquier otra que estuviera activa
-                DocumentVersion::where('document_id', $documento->id)
-                    ->where('id', '!=', $version->id)
-                    ->where('es_activa', 1)
-                    ->update(['es_activa' => 0]);
-
+                if ($vigenteActual) {
+                    $vigenteActual->update(['es_activa' => 0]);
+                }
                 $version->update(['es_activa' => 1]);
                 $promovida = true;
             }
@@ -592,6 +640,10 @@ class DocumentController extends Controller
     /**
      * Stream común para descargar/preview de cualquier versión.
      * Aplica todos los controles de acceso (eliminado, empresa, visibilidad, rol).
+     *
+     * v2.3: agrega chequeo de asignación (categoría activa o individual) para
+     * franquiciado/empleado. Sin esto, podrían descargar URL directa de un
+     * documento al que no les corresponde acceso.
      */
     private function streamDocumento(Request $request, Document $documento, DocumentVersion $version, string $disposition): StreamedResponse
     {
@@ -612,9 +664,27 @@ class DocumentController extends Controller
             }
         }
 
-        // Franquiciado/empleado solo accede a la versión vigente — nunca al historial
-        if (($user->esFranquiciado() || $user->esEmpleado()) && !$version->es_activa) {
-            abort(403, 'Sin acceso a versiones anteriores.');
+        // Franquiciado/empleado: chequeos extra
+        if ($user->esFranquiciado() || $user->esEmpleado()) {
+            // Solo accede a la versión vigente — nunca al historial
+            if (!$version->es_activa) {
+                abort(403, 'Sin acceso a versiones anteriores.');
+            }
+
+            // Franquicia legacy: si el documento está acotado a una franquicia,
+            // solo usuarios de esa franquicia pueden acceder.
+            if ($documento->franquicia_id !== null) {
+                if ($documento->franquicia_id !== $user->franchiseStaff?->franquicia_id) {
+                    abort(403, 'Sin acceso a este documento.');
+                }
+            }
+
+            // v2.3: el documento debe estar asignado al usuario por categoría
+            // activa o individualmente. Sin asignación, no hay acceso.
+            $tieneAcceso = $this->usuarioTieneAccesoAlDocumento($user->id, $documento);
+            if (!$tieneAcceso) {
+                abort(403, 'Sin acceso a este documento.');
+            }
         }
 
         if ($version->deleted_at !== null) {
@@ -645,15 +715,91 @@ class DocumentController extends Controller
     }
 
     /**
-     * Notifica a los franquiciados de la empresa (o de la franquicia, si está
-     * acotado) cuando se sube un documento nuevo o una versión nueva.
-     * Reusa el tipo 'nuevo_documento' (compatible con chk_notif_fk).
+     * v2.3: Verifica si un usuario (franquiciado/empleado) tiene acceso al documento
+     * según las asignaciones por categoría activa o individuales.
+     * Reutilizado por streamDocumento y por notificarDocumento.
      */
-    private function notificarDocumento(Document $documento, string $titulo): void
+    private function usuarioTieneAccesoAlDocumento(int $userId, Document $documento): bool
+    {
+        // Asignación por categoría activa
+        $porCategoria = DB::table('document_category_assignments as dca')
+            ->join('user_categories as uc', 'uc.category_id', '=', 'dca.category_id')
+            ->join('franchise_categories as fc', function ($j) {
+                $j->on('fc.id', '=', 'dca.category_id')
+                  ->where('fc.is_active', 1);
+            })
+            ->where('dca.document_id', $documento->id)
+            ->where('dca.empresa_id', $documento->empresa_id)
+            ->where('uc.user_id', $userId)
+            ->exists();
+
+        if ($porCategoria) return true;
+
+        // Asignación individual
+        return DB::table('document_user_assignments')
+            ->where('document_id', $documento->id)
+            ->where('empresa_id', $documento->empresa_id)
+            ->where('user_id', $userId)
+            ->exists();
+    }
+
+    /**
+     * Notifica a los usuarios asignados al documento (por categoría o individual)
+     * cuando se sube un documento nuevo o una versión nueva.
+     *
+     * v2.3:
+     *  - Acepta opcionalmente $version. Si se pasa, dispara tipo nueva_version_documento
+     *    con document_version_id (en vez de nuevo_documento con document_id).
+     *  - Incluye empleados además de franquiciados.
+     *  - Solo notifica a usuarios con asignación efectiva al documento. Si el
+     *    documento no tiene asignaciones todavía, NO notifica a nadie — coherente
+     *    con la decisión 10.2 (sin categoría = no ve nada).
+     */
+    private function notificarDocumento(
+        Document $documento,
+        string $titulo,
+        ?DocumentVersion $version = null
+    ): void
     {
         if (!$documento->visible_franquiciado) return;
 
-        $query = User::where('rol', 'franquiciado')
+        // Determinar tipo y FK según contexto
+        if ($version) {
+            $tipo                = 'nueva_version_documento';
+            $documentIdNotif     = null;
+            $documentVersionId   = $version->id;
+        } else {
+            $tipo                = 'nuevo_documento';
+            $documentIdNotif     = $documento->id;
+            $documentVersionId   = null;
+        }
+
+        // 1. Recolectar IDs de usuarios con el documento asignado
+        $idsPorCategoria = DB::table('document_category_assignments as dca')
+            ->join('user_categories as uc', 'uc.category_id', '=', 'dca.category_id')
+            ->join('franchise_categories as fc', function ($j) {
+                $j->on('fc.id', '=', 'dca.category_id')
+                  ->where('fc.is_active', 1);
+            })
+            ->where('dca.document_id', $documento->id)
+            ->where('dca.empresa_id', $documento->empresa_id)
+            ->pluck('uc.user_id');
+
+        $idsIndividuales = DB::table('document_user_assignments')
+            ->where('document_id', $documento->id)
+            ->where('empresa_id', $documento->empresa_id)
+            ->pluck('user_id');
+
+        $candidateIds = $idsPorCategoria->merge($idsIndividuales)->unique();
+
+        if ($candidateIds->isEmpty()) {
+            return; // documento sin asignaciones → no notifica
+        }
+
+        // 2. Filtrar candidatos: activos, franquiciado/empleado, misma empresa,
+        //    y si el documento está acotado a una franquicia, misma franquicia.
+        $query = User::whereIn('id', $candidateIds)
+                     ->whereIn('rol', ['franquiciado', 'empleado'])
                      ->where('activo', 1)
                      ->whereNull('deleted_at')
                      ->where('empresa_id', $documento->empresa_id);
@@ -664,22 +810,25 @@ class DocumentController extends Controller
             );
         }
 
-        $ids = $query->pluck('id');
+        $userIds = $query->pluck('id');
 
-        $notificaciones = $ids->map(fn($uid) => [
-            'user_id'           => $uid,
-            'tipo'              => 'nuevo_documento',
-            'manual_id'         => null,
-            'manual_version_id' => null,
-            'document_id'       => $documento->id,
-            'titulo'            => $titulo,
-            'created_at'        => now(),
+        if ($userIds->isEmpty()) return;
+
+        // 3. Insertar notificaciones en bulk
+        $notificaciones = $userIds->map(fn($uid) => [
+            'user_id'             => $uid,
+            'tipo'                => $tipo,
+            'manual_id'           => null,
+            'manual_version_id'   => null,
+            'document_id'         => $documentIdNotif,
+            'document_version_id' => $documentVersionId,
+            'category_id'         => null,
+            'titulo'              => $titulo,
+            'created_at'          => now(),
         ])->toArray();
 
-        if (!empty($notificaciones)) {
-            try {
-                Notification::insert($notificaciones);
-            } catch (\Throwable $e) { /* best-effort */ }
-        }
+        try {
+            Notification::insert($notificaciones);
+        } catch (\Throwable $e) { /* best-effort */ }
     }
 }

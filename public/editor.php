@@ -169,6 +169,21 @@ include 'layout/head.php';
         <div id="import-warnings" style="display:none;margin-top:6px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
       </div>
 
+      <!-- v2.3: Visible para qué categorías de Socios comerciales -->
+      <div class="panel-section">
+        <div class="panel-section-title">Visible para</div>
+        <button class="btn btn-ghost" onclick="abrirModalVisible()" id="btn-visible" style="width:100%;justify-content:space-between;text-align:left">
+          <span style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span id="visible-resumen" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cargando...</span>
+          </span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gris4)"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <div style="margin-top:8px;font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+          Definí qué categorías de Socios comerciales pueden ver este manual.
+        </div>
+      </div>
+
       <!-- Acciones -->
       <div class="panel-section">
         <div class="panel-section-title">Acciones</div>
@@ -293,6 +308,34 @@ include 'layout/head.php';
 <!-- ══════════════════════════════════════════════════
      MODAL EDITAR DATOS DEL MANUAL
      ══════════════════════════════════════════════════ -->
+<!-- v2.3: Modal "Visible para" — gestiona categorías del manual -->
+<div class="modal-overlay" id="modal-visible" onclick="if(event.target===this)cerrarModalVisible()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>¿Para quién es visible este manual?</h3>
+      <button class="modal-close" onclick="cerrarModalVisible()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--gris5);font-family:'Archivo Narrow',sans-serif;line-height:1.5;margin-bottom:14px">
+        Elegí "Toda la empresa" para que todas las categorías activas lo vean, o seleccioná categorías específicas.
+      </div>
+      <div id="modal-visible-lista">
+        <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">Cargando...</div>
+      </div>
+      <div class="form-error" id="modal-visible-error" style="display:none;margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalVisible()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-visible" onclick="guardarVisible()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-editar-datos" onclick="if(event.target===this)cerrarModalEditar()">
   <div class="modal-box">
     <div class="modal-header">
@@ -632,6 +675,10 @@ let estado = {
   modificado:    false,
 };
 
+// v2.3 — categorías activas de la empresa del manual + ids actualmente asignados
+let categoriasEmpresa     = []; // [{ id, name, description, is_active, empresa_id }]
+let idsAsignadasManual    = new Set(); // ids de cats asignadas al manual (estado en DB)
+
 // ── INICIALIZAR ───────────────────────────────────────────────
 async function init() {
   if (!MANUAL_ID) {
@@ -684,6 +731,10 @@ async function init() {
       habilitarEditor();
     }
     cargarNotas();
+
+    // v2.3: cargar categorías de la empresa del manual + ids asignados.
+    // Lo hacemos en paralelo y actualizamos el resumen del botón "Visible para".
+    await cargarCategoriasYAsignaciones();
 
     // Si viene de importación desde manuales.php
     const htmlImportado = sessionStorage.getItem(`import_html_${MANUAL_ID}`);
@@ -1040,6 +1091,172 @@ async function publicar() {
 function formatFecha(str) {
   if (!str) return '—';
   return new Date(str).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+// ══════════════════════════════════════════════════════════════
+// v2.3 — VISIBILIDAD POR CATEGORÍAS (botón "Visible para" + modal)
+// ══════════════════════════════════════════════════════════════
+
+async function cargarCategoriasYAsignaciones() {
+  if (!estado.manual) return;
+  const empresaId = estado.manual.empresa_id;
+  if (!empresaId) {
+    // Sin empresa, no hay catálogo de categorías
+    document.getElementById('visible-resumen').textContent = 'Sin empresa asignada';
+    return;
+  }
+
+  try {
+    // Catálogo de cats activas de la empresa
+    const url = (rolUsuario === 'super_admin')
+      ? `/categorias?empresa_id=${empresaId}&activa=1`
+      : `/categorias?activa=1`;
+    const cats = await apiFetch('GET', url);
+    categoriasEmpresa = (cats || []).filter(c => c.is_active);
+
+    // Asignaciones actuales del manual
+    const asig = await apiFetch('GET', `/manuales/${MANUAL_ID}/categorias`);
+    idsAsignadasManual = new Set((asig || []).map(a => a.category_id));
+
+    actualizarResumenVisible();
+  } catch (e) {
+    console.error('Error al cargar visibilidad:', e);
+    document.getElementById('visible-resumen').textContent = 'Error al cargar';
+  }
+}
+
+function actualizarResumenVisible() {
+  const resumenEl = document.getElementById('visible-resumen');
+  const total     = categoriasEmpresa.length;
+  const asignadas = idsAsignadasManual.size;
+
+  if (total === 0) {
+    resumenEl.textContent = 'Sin categorías en la empresa';
+    resumenEl.style.color = 'var(--gris3)';
+  } else if (asignadas === 0) {
+    resumenEl.textContent = 'Nadie todavía';
+    resumenEl.style.color = 'var(--gris3)';
+  } else if (asignadas === total) {
+    resumenEl.textContent = 'Toda la empresa';
+    resumenEl.style.color = 'var(--dorado)';
+  } else {
+    resumenEl.textContent = `${asignadas} de ${total} categoría${asignadas === 1 ? '' : 's'}`;
+    resumenEl.style.color = 'var(--blanco)';
+  }
+}
+
+function abrirModalVisible() {
+  // Reset error
+  document.getElementById('modal-visible-error').style.display = 'none';
+  renderListaModalVisible();
+  document.getElementById('modal-visible').classList.add('open');
+}
+
+function cerrarModalVisible() {
+  document.getElementById('modal-visible').classList.remove('open');
+}
+
+function renderListaModalVisible() {
+  const cont = document.getElementById('modal-visible-lista');
+
+  if (!categoriasEmpresa.length) {
+    cont.innerHTML = `<div style="font-size:13px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:12px;text-align:center;background:var(--negro);border-radius:8px">
+      No hay categorías activas en esta empresa.<br>
+      <a href="${BASE_PHP}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una categoría primero</a>.
+    </div>`;
+    document.getElementById('btn-guardar-visible').disabled = true;
+    return;
+  }
+
+  document.getElementById('btn-guardar-visible').disabled = false;
+
+  // ¿Todas las cats están asignadas? → marcamos "toda la empresa"
+  const todasMarcadas = categoriasEmpresa.every(c => idsAsignadasManual.has(c.id));
+
+  cont.innerHTML = `
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;cursor:pointer;border-radius:6px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);margin-bottom:10px">
+      <input type="checkbox" id="modal-toda-empresa" ${todasMarcadas ? 'checked' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodaLaEmpresaEditor()">
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--dorado);font-weight:600">Toda la empresa</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">El manual será visible para todas las categorías activas.</div>
+      </div>
+    </label>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+      <div style="flex:1;height:1px;background:var(--gris2)"></div>
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Archivo',sans-serif">O elegí categorías específicas</span>
+      <div style="flex:1;height:1px;background:var(--gris2)"></div>
+    </div>
+
+    <div id="modal-cats-especificas" style="max-height:280px;overflow-y:auto">
+      ${categoriasEmpresa.map(c => `
+        <label class="cat-item-editor" style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;cursor:pointer;border-radius:5px;transition:background .12s;${todasMarcadas ? 'opacity:.45;pointer-events:none' : ''}" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
+          <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica-editor" ${idsAsignadasManual.has(c.id) ? 'checked' : ''} ${todasMarcadas ? 'disabled' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;color:var(--blanco);font-weight:500">${escNota(c.name)}</div>
+            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${escNota(c.description)}</div>` : ''}
+          </div>
+        </label>
+      `).join('')}
+    </div>
+  `;
+}
+
+function onToggleTodaLaEmpresaEditor() {
+  const checked = document.getElementById('modal-toda-empresa').checked;
+  document.querySelectorAll('.cat-especifica-editor').forEach(cb => {
+    if (checked) cb.checked = false;
+    cb.disabled = checked;
+  });
+  document.querySelectorAll('#modal-cats-especificas .cat-item-editor').forEach(el => {
+    el.style.opacity      = checked ? '.45' : '1';
+    el.style.pointerEvents = checked ? 'none' : 'auto';
+  });
+}
+
+function leerCategoriasModalEditor() {
+  const todaLaEmpresa = document.getElementById('modal-toda-empresa')?.checked;
+  if (todaLaEmpresa) {
+    return categoriasEmpresa.map(c => c.id);
+  }
+  const checks = document.querySelectorAll('.cat-especifica-editor:checked');
+  return Array.from(checks).map(cb => parseInt(cb.dataset.catId, 10));
+}
+
+async function guardarVisible() {
+  if (!estado.manual) return;
+  const btn   = document.getElementById('btn-guardar-visible');
+  const errEl = document.getElementById('modal-visible-error');
+  errEl.style.display = 'none';
+
+  const cats      = leerCategoriasModalEditor();
+  const empresaId = estado.manual.empresa_id;
+
+  const labelOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    await apiFetch('PUT', `/manuales/${MANUAL_ID}/categorias`, {
+      category_ids: cats,
+      empresa_id:   empresaId,
+    });
+
+    // Actualizar state local y resumen
+    idsAsignadasManual = new Set(cats);
+    actualizarResumenVisible();
+
+    mostrarToast('Visibilidad actualizada.', 'exito');
+    cerrarModalVisible();
+  } catch (e) {
+    console.error('Falló guardar visibilidad:', e);
+    const msg = e?.data?.error || e?.data?.message || 'Error desconocido.';
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = labelOriginal;
+  }
 }
 
 let toastTimer;

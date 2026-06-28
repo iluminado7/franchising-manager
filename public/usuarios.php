@@ -28,7 +28,7 @@ include 'layout/head.php';
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
         <button class="filtro-btn active" onclick="filtrarRol('todos', this)">Todos</button>
         <button class="filtro-btn" onclick="filtrarRol('franquiciante', this)">Franquiciantes</button>
-        <button class="filtro-btn" onclick="filtrarRol('franquiciado', this)">Franquiciados</button>
+        <button class="filtro-btn" onclick="filtrarRol('franquiciado', this)">Socios comerciales</button>
         <button class="filtro-btn" onclick="filtrarRol('empleado', this)">Empleados</button>
         <div class="filtro-sep"></div>
         <!-- Combobox empresa — solo super_admin -->
@@ -163,12 +163,13 @@ include 'layout/head.php';
         <div id="hint-empresa" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
       </div>
 
-      <!-- Franquicia — solo para franquiciado / empleado -->
+      <!-- Franquicia / Sucursal — para empleado (obligatoria) y socio comercial (opcional) -->
       <div class="form-group" id="grupo-franquicia" style="display:none">
-        <label>Franquicia *</label>
+        <label id="label-franquicia">Franquicia</label>
         <select id="form-franquicia" class="form-select">
-          <option value="">Seleccioná una franquicia</option>
+          <option value="">Sin sucursal asignada</option>
         </select>
+        <div id="hint-franquicia" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
       </div>
 
       <div class="form-error" id="form-error"></div>
@@ -223,6 +224,35 @@ include 'layout/head.php';
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalManuales()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CATEGORÍAS (solo franquiciado) ─────────────────── -->
+<div class="modal-overlay" id="modal-categorias">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div>
+        <h3 id="categorias-titulo">Categorías del usuario</h3>
+        <div id="categorias-subtitulo" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif"></div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalCategorias()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Categorías disponibles</div>
+      <div id="lista-categorias">
+        <div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando...</div>
+      </div>
+      <div class="form-error" id="categorias-error" style="display:none;margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalCategorias()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-categorias" onclick="guardarCategorias()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar
+      </button>
     </div>
   </div>
 </div>
@@ -341,6 +371,10 @@ include 'layout/head.php';
 let todosLosManuales    = [];
 let empleadoSeleccionado = null; // { id, nombre }
 
+// v2.3 — gestión de categorías del franquiciado
+let categoriasUsuarioSel  = null; // { id, nombre, empresaId }
+let categoriasDisponibles = []; // catálogo activo de la empresa
+
 let todosLosUsuarios    = [];
 let todasLasEmpresas    = [];
 let todasLasFranquicias = [];
@@ -352,6 +386,15 @@ let miRol               = localStorage.getItem('cl_rol') || '';
 let miEmpresaId         = null; // se completa en init() para franquiciante
 let pendingEliminar     = null;
 let mostrarEliminados   = false;
+
+// Mapa de roles visibles en la UI. El valor interno (DB / API) sigue siendo
+// 'franquiciado' — sólo cambia la etiqueta para diferenciarlo de la categoría.
+const LABEL_ROL = {
+  super_admin:   'Super Admin',
+  franquiciante: 'Franquiciante',
+  franquiciado:  'Socio comercial',
+  empleado:      'Empleado',
+};
 let empresaFiltroId     = ''; // ID activo del combobox de empresa (super_admin)
 let franquiciaFiltroId  = ''; // ID activo del combobox de franquicia (super_admin y franquiciante)
 
@@ -370,13 +413,13 @@ async function init() {
         <option value="">Seleccioná un rol</option>
         <option value="super_admin">Super Admin</option>
         <option value="franquiciante">Franquiciante</option>
-        <option value="franquiciado">Franquiciado</option>
+        <option value="franquiciado">Socio comercial</option>
         <option value="empleado">Empleado</option>`;
     } else if (miRol === 'franquiciante') {
-      // franquiciante: solo puede crear franquiciado y empleado
+      // franquiciante: solo puede crear socios comerciales (rol franquiciado) y empleados
       selRolForm.innerHTML = `
         <option value="">Seleccioná un rol</option>
-        <option value="franquiciado">Franquiciado</option>
+        <option value="franquiciado">Socio comercial</option>
         <option value="empleado">Empleado</option>`;
     } else {
       // franquiciado: solo puede crear empleados
@@ -477,9 +520,10 @@ function renderTabla(lista) {
   }
 
   tbody.innerHTML = lista.map(u => {
-    const perfil    = u.super_admin || u.system_admin || u.franchise_staff;
-    const nombre    = perfil ? `${perfil.nombre} ${perfil.apellido}` : '—';
-    const dni       = perfil?.dni || '—';
+    // v2.3: nombre/apellido/dni viven en users (toplevel del JSON).
+    const nombreFull = [u.nombre, u.apellido].filter(Boolean).join(' ').trim();
+    const nombre     = nombreFull || '—';
+    const dni        = u.dni || '—';
 
     // Estado de eliminación (solo aparece para super_admin con flag include_deleted=1)
     const eliminado     = !!u.deleted_at;
@@ -494,6 +538,9 @@ function renderTabla(lista) {
       contexto  = emp ? `<div style="font-size:12px;color:var(--blanco)">${esc(emp.nombre)}</div><div style="font-size:11px;color:var(--gris4)">Franquiciante</div>` : '—';
     } else if (u.franchise_staff?.franquicia) {
       contexto = `<div style="font-size:12px">${esc(u.franchise_staff.franquicia.nombre)}</div>`;
+    } else if (u.rol === 'franquiciado') {
+      // Socio comercial sin sucursal (ej. distribuidor, dropshipper)
+      contexto = `<div style="font-size:12px;color:var(--gris3);font-style:italic">Sin sucursal</div>`;
     }
 
     // Si está eliminado: solo super_admin lo ve, y solo puede restaurarlo (sin otras acciones)
@@ -501,7 +548,7 @@ function renderTabla(lista) {
       return `<tr style="opacity:.65">
         <td style="color:var(--blanco);font-weight:500">${esc(nombre)}${badgeElim}</td>
         <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif">${esc(u.email)}</td>
-        <td><span class="rol-badge ${u.rol}">${u.rol.replace('_',' ')}</span></td>
+        <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
         <td>${contexto}</td>
         <td style="font-family:'Archivo Narrow',sans-serif">${esc(dni)}</td>
         <td><span class="estado-pill estado-pendiente">Eliminado</span></td>
@@ -540,7 +587,7 @@ function renderTabla(lista) {
     return `<tr>
       <td style="color:var(--blanco);font-weight:500">${esc(nombre)}</td>
       <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif">${esc(u.email)}</td>
-      <td><span class="rol-badge ${u.rol}">${u.rol.replace('_',' ')}</span></td>
+      <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
       <td>${contexto}</td>
       <td style="font-family:'Archivo Narrow',sans-serif">${esc(dni)}</td>
       <td><span class="estado-pill ${u.activo ? 'estado-completo' : 'estado-pendiente'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
@@ -554,6 +601,11 @@ function renderTabla(lista) {
           <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalManuales(${u.id}, '${esc(nombre)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Manuales
+          </button>` : ''}
+          ${u.rol === 'franquiciado' ? `
+          <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalCategorias(${u.id}, '${esc(nombre)}', ${u.empresa_id || 'null'})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Categorías
           </button>` : ''}
           ${btnToggle}
           ${btnEliminar}
@@ -588,8 +640,8 @@ function aplicarFiltros() {
 
   if (texto) {
     lista = lista.filter(u => {
-      const perfil = u.super_admin || u.system_admin || u.franchise_staff;
-      const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}`.toLowerCase() : '';
+      // v2.3: nombre/apellido viven en users
+      const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ').toLowerCase();
       return nombre.includes(texto);
     });
   }
@@ -740,15 +792,14 @@ function abrirModalEditar(id) {
   rolEditando = u.rol;
   limpiarForm();
 
-  const perfil = u.super_admin || u.system_admin || u.franchise_staff;
-
+  // v2.3: nombre/apellido/dni viven en users
   document.getElementById('modal-titulo').textContent   = 'Editar usuario';
   document.getElementById('form-id').value              = u.id;
   document.getElementById('form-rol-original').value    = u.rol;
-  document.getElementById('form-nombre').value          = perfil?.nombre   || '';
-  document.getElementById('form-apellido').value        = perfil?.apellido || '';
+  document.getElementById('form-nombre').value          = u.nombre   || '';
+  document.getElementById('form-apellido').value        = u.apellido || '';
   document.getElementById('form-email').value           = u.email;
-  document.getElementById('form-dni').value             = perfil?.dni      || '';
+  document.getElementById('form-dni').value             = u.dni      || '';
   document.getElementById('form-rol').value             = u.rol;
   document.getElementById('form-rol').disabled          = true; // rol no editable
 
@@ -818,6 +869,19 @@ function onRolChange() {
   const mostrarFranq = (rol === 'franquiciado' || rol === 'empleado') && miRol !== 'franquiciado';
   grupoFranq.style.display = mostrarFranq ? 'block' : 'none';
 
+  // Label + hint dinámicos: socio comercial = opcional, empleado = obligatorio
+  if (mostrarFranq) {
+    const labelEl = document.getElementById('label-franquicia');
+    const hintEl  = document.getElementById('hint-franquicia');
+    if (rol === 'empleado') {
+      labelEl.textContent = 'Sucursal *';
+      hintEl.textContent  = 'Los empleados pertenecen a una sucursal específica.';
+    } else {
+      labelEl.textContent = 'Sucursal';
+      hintEl.textContent  = 'Opcional para Socios comerciales. Dejá vacío para distribuidores, dropshippers o similares sin sucursal asignada.';
+    }
+  }
+
   // Si el super_admin va a elegir franquicia, el select arranca dependiente
   // de la empresa actual: vacío si no eligió, filtrado si ya eligió.
   if (mostrarFranq && miRol === 'super_admin') {
@@ -846,7 +910,7 @@ function onEmpresaChange() {
   sel.disabled = false;
   const franqsFiltradas = todasLasFranquicias.filter(f => String(f.empresa_id) === empresaId);
 
-  sel.innerHTML = '<option value="">Seleccioná una franquicia</option>';
+  sel.innerHTML = '<option value="">Sin sucursal asignada</option>';
   franqsFiltradas.forEach(f => {
     const opt = document.createElement('option');
     opt.value = f.id; opt.textContent = f.nombre;
@@ -895,8 +959,11 @@ async function guardar() {
   if ((rol === 'franquiciado' || rol === 'empleado') && !modoEdicion && miRol === 'super_admin' && !empresaId) {
     mostrarFormError('Seleccioná una empresa.'); return;
   }
-  if ((rol === 'franquiciado' || rol === 'empleado') && !franqId && miRol !== 'franquiciado') {
-    mostrarFormError('Seleccioná una franquicia.'); return;
+  // Empleado: la sucursal sigue siendo obligatoria.
+  // Socio comercial (rol franquiciado): la sucursal es opcional — puede ser
+  // distribuidor, dropshipper, etc. sin sucursal asignada.
+  if (rol === 'empleado' && !franqId && miRol !== 'franquiciado') {
+    mostrarFormError('Seleccioná una sucursal para el empleado.'); return;
   }
   if (!modoEdicion && !password) {
     mostrarFormError('La contraseña es obligatoria.'); return;
@@ -950,8 +1017,9 @@ async function guardar() {
 // ── TOGGLE ────────────────────────────────────────────────────
 function abrirModalToggle(id, activo) {
   const u      = todosLosUsuarios.find(x => x.id === id);
-  const perfil = u?.super_admin || u?.system_admin || u?.franchise_staff;
-  const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}` : u?.email;
+  // v2.3: nombre/apellido viven en users
+  const nombreFull = u ? [u.nombre, u.apellido].filter(Boolean).join(' ').trim() : '';
+  const nombre     = nombreFull || u?.email;
   pendingToggle = { id, activo };
 
   document.getElementById('toggle-titulo').textContent = activo ? 'Desactivar usuario' : 'Activar usuario';
@@ -1139,6 +1207,93 @@ async function desasignarManual(manualId) {
   }
 }
 
+// ── MODAL CATEGORÍAS (solo franquiciado) ───────────────────────
+async function abrirModalCategorias(userId, userNombre, empresaId) {
+  categoriasUsuarioSel = { id: userId, nombre: userNombre, empresaId: empresaId };
+
+  document.getElementById('categorias-titulo').textContent    = `Categorías de ${userNombre}`;
+  document.getElementById('categorias-subtitulo').textContent = 'Asigná las categorías que aplican a este franquiciado';
+  document.getElementById('categorias-error').style.display   = 'none';
+  document.getElementById('modal-categorias').classList.add('open');
+
+  await cargarCategoriasUsuario();
+}
+
+function cerrarModalCategorias() {
+  const modal = document.getElementById('modal-categorias');
+  if (modal) modal.classList.remove('open');
+  categoriasUsuarioSel = null;
+}
+
+async function cargarCategoriasUsuario() {
+  const lista = document.getElementById('lista-categorias');
+  lista.innerHTML = `<div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando...</div>`;
+
+  try {
+    // 1. Catálogo de la empresa. super_admin manda ?empresa_id; franquiciante ya viene filtrado por su empresa.
+    const empresaId = categoriasUsuarioSel.empresaId;
+    const urlCats = (miRol === 'super_admin' && empresaId)
+      ? `/categorias?empresa_id=${empresaId}&activa=1`
+      : `/categorias?activa=1`;
+
+    const todas = await apiFetch('GET', urlCats);
+    categoriasDisponibles = (todas || []).filter(c => c.is_active);
+
+    // 2. Categorías que el usuario ya tiene asignadas
+    const actuales = await apiFetch('GET', `/usuarios/${categoriasUsuarioSel.id}/categorias`);
+    const idsActuales = new Set((actuales || []).map(c => c.id));
+
+    if (!categoriasDisponibles.length) {
+      lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">
+        No hay categorías activas en esta empresa.<br>
+        <a href="${BASE_URL}/categorias.php" style="color:var(--dorado);text-decoration:underline">Creá una categoría primero.</a>
+      </div>`;
+      return;
+    }
+
+    lista.innerHTML = categoriasDisponibles.map(c => `
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color .15s"
+             onmouseover="this.style.borderColor='var(--gris3)'"
+             onmouseout="this.style.borderColor='var(--gris2)'">
+        <input type="checkbox" data-cat-id="${c.id}" ${idsActuales.has(c.id) ? 'checked' : ''} style="margin:0;cursor:pointer;accent-color:var(--dorado)">
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
+          ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">${esc(c.description)}</div>` : ''}
+        </div>
+      </label>
+    `).join('');
+
+  } catch (e) {
+    lista.innerHTML = `<div style="font-size:13px;color:var(--error);padding:12px">Error al cargar las categorías.</div>`;
+  }
+}
+
+async function guardarCategorias() {
+  if (!categoriasUsuarioSel) return;
+  const btn   = document.getElementById('btn-guardar-categorias');
+  const errEl = document.getElementById('categorias-error');
+  errEl.style.display = 'none';
+
+  const checkboxes = document.querySelectorAll('#lista-categorias input[type=checkbox]');
+  const seleccion  = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.dataset.catId));
+
+  const labelOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    await apiFetch('PUT', `/usuarios/${categoriasUsuarioSel.id}/categorias`, { category_ids: seleccion });
+    mostrarToast('Categorías actualizadas.', 'exito');
+    cerrarModalCategorias();
+  } catch (e) {
+    errEl.textContent  = e.data?.error || e.data?.message || 'Error al guardar las categorías.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled  = false;
+    btn.innerHTML = labelOriginal;
+  }
+}
+
 // ── HELPERS ───────────────────────────────────────────────────
 function mostrarFormError(msg) {
   const el = document.getElementById('form-error');
@@ -1164,7 +1319,7 @@ function esc(str) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { cerrarModal(); cerrarModalToggle(); cerrarModalManuales(); }
+  if (e.key === 'Escape') { cerrarModal(); cerrarModalToggle(); cerrarModalManuales(); cerrarModalCategorias(); }
 });
 
 init();

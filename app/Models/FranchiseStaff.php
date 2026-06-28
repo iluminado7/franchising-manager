@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FranchiseStaff extends Model
 {
@@ -13,12 +12,12 @@ class FranchiseStaff extends Model
     public $timestamps = false;
     protected $dates = ['created_at', 'updated_at'];
 
+    // Tras v2.3 nombre/apellido/dni viven en users. Esta tabla conserva
+    // el vínculo con la franquicia, que es lo que la diferencia del resto
+    // de tablas de perfil.
     protected $fillable = [
         'user_id',
         'franquicia_id',
-        'nombre',
-        'apellido',
-        'dni',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -37,8 +36,10 @@ class FranchiseStaff extends Model
 
     // ── Helpers ──────────────────────────────────────────────────────
 
+    // Delegado a User para no romper código existente que llamara
+    // $franchiseStaff->nombreCompleto().
     public function nombreCompleto(): string
     {
-        return "{$this->nombre} {$this->apellido}";
+        return $this->user?->nombreCompleto() ?? '';
     }
 }

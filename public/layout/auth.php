@@ -117,45 +117,80 @@ function verificarSesion(?string $rol_requerido = null): void
  * Si el usuario es franquiciado con manuales asignados sin aceptar, lo manda
  * a lectura.php del primer pendiente. Si ya está viendo uno de esos manuales,
  * lo deja pasar (para que pueda aceptarlo).
+ *
+ * v2.3: la visibilidad se calcula por (categoría activa OR asignación individual),
+ * no por "todos los manuales publicados de la empresa".
  */
 function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
 {
     if (($usuario['rol'] ?? '') !== 'franquiciado') return;
     if (empty($usuario['empresa_id'])) return;
 
+    // Manuales publicados de la empresa con versión activa, sin aceptar todavía,
+    // a los que el usuario tiene acceso por categoría O por asignación individual.
+    //
+    // Nota: incluimos m.created_at en el SELECT porque MySQL en modo
+    // ONLY_FULL_GROUP_BY no permite ordenar por columnas que no estén en el
+    // SELECT cuando se usa DISTINCT.
     $stmt = $pdo->prepare("
-        SELECT m.id AS manual_id
-        FROM manual_empresa_assignments mea
-        JOIN manuals m
-          ON m.id = mea.manual_id
+        SELECT DISTINCT m.id AS manual_id, m.created_at AS m_created_at
+        FROM manuals m
+        JOIN manual_empresa_assignments mea
+          ON mea.manual_id = m.id
+         AND mea.empresa_id = :emp
         JOIN manual_versions mv
           ON mv.manual_id = m.id
          AND mv.es_activa = 1
         LEFT JOIN acceptances a
           ON a.manual_version_id = mv.id
          AND a.user_id = :uid
-        WHERE mea.empresa_id = :emp
-          AND m.estado = 'publicado'
+        WHERE m.estado = 'publicado'
+          AND m.deleted_at IS NULL
           AND a.id IS NULL
-        ORDER BY m.created_at ASC
+          AND (
+            -- v2.3: acceso por categoría activa que el usuario tenga asignada
+            EXISTS (
+              SELECT 1
+              FROM manual_category_assignments mca
+              JOIN user_categories uc
+                ON uc.category_id = mca.category_id
+               AND uc.user_id = :uid2
+              JOIN franchise_categories fc
+                ON fc.id = mca.category_id
+               AND fc.is_active = 1
+               AND fc.empresa_id = :emp2
+              WHERE mca.manual_id = m.id
+            )
+            OR
+            -- v2.3: acceso por asignación individual
+            EXISTS (
+              SELECT 1
+              FROM manual_user_assignments mua
+              WHERE mua.manual_id = m.id
+                AND mua.user_id = :uid3
+            )
+          )
+        ORDER BY m_created_at ASC
     ");
     $stmt->execute([
-        ':uid' => $usuario['id'],
-        ':emp' => $usuario['empresa_id'],
+        ':uid'  => $usuario['id'],
+        ':uid2' => $usuario['id'],
+        ':uid3' => $usuario['id'],
+        ':emp'  => $usuario['empresa_id'],
+        ':emp2' => $usuario['empresa_id'],
     ]);
     $pendientes = $stmt->fetchAll();
 
     if (!$pendientes) return;
 
     // Si ya está en lectura.php viendo uno de los manuales pendientes, lo dejamos pasar
-    // (esa es justamente la página donde tiene que aceptarlo).
     $scriptName    = basename($_SERVER['SCRIPT_NAME'] ?? '');
     $manualIdEnUrl = (int) ($_GET['id'] ?? 0);
 
     if ($scriptName === 'lectura.php' && $manualIdEnUrl > 0) {
         foreach ($pendientes as $p) {
             if ((int) $p['manual_id'] === $manualIdEnUrl) {
-                return; // está en el lugar correcto, dejarlo
+                return;
             }
         }
     }

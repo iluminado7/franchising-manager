@@ -106,10 +106,25 @@ include 'layout/head.php';
       <!-- Selector de empresa (super_admin siempre ve esto) -->
       <div class="form-group">
         <label>Empresa *</label>
-        <select id="nuevo-empresa" class="form-select">
+        <select id="nuevo-empresa" class="form-select" onchange="onCambioEmpresaModal()">
           <option value="">Seleccioná una empresa</option>
         </select>
         <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">El manual quedará asociado a esta empresa.</div>
+      </div>
+
+      <!-- v2.3: ¿A qué socios comerciales va dirigido? -->
+      <div class="form-group">
+        <label>Este manual va dirigido para:</label>
+        <div id="manual-categorias-wrap" style="margin-top:6px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
+          <div id="manual-categorias-lista">
+            <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:4px 0">
+              ${''}
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+          Si no marcás ninguna opción, el manual quedará sin asignar y no será visible para socios comerciales.
+        </div>
       </div>
 
       <!-- Selector de modo -->
@@ -320,6 +335,9 @@ let modoImport       = 'scratch';
 let htmlImportado    = '';
 let pendingArchivar  = null;
 let pendingEliminar = null;
+
+// v2.3 — categorías activas de la empresa seleccionada en el modal
+let categoriasEmpresa = [];
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -539,10 +557,98 @@ function abrirModalNuevo() {
   document.getElementById('import-warn').style.display  = 'none';
   htmlImportado = '';
   seleccionarModo('scratch');
+
+  // v2.3: resetear lista de categorías hasta que se elija empresa
+  categoriasEmpresa = [];
+  renderListaCategoriasManual();
+
   document.getElementById('modal-nuevo').classList.add('open');
   setTimeout(() => document.getElementById('nuevo-titulo').focus(), 100);
 }
 function cerrarModalNuevo() { document.getElementById('modal-nuevo').classList.remove('open'); }
+
+// ── v2.3: Categorías a las que va dirigido el manual ──────────
+async function onCambioEmpresaModal() {
+  const empresaId = document.getElementById('nuevo-empresa').value;
+  if (!empresaId) {
+    categoriasEmpresa = [];
+    renderListaCategoriasManual();
+    return;
+  }
+  try {
+    const cats = await apiFetch('GET', `/categorias?empresa_id=${empresaId}&activa=1`);
+    categoriasEmpresa = (cats || []).filter(c => c.is_active);
+  } catch {
+    categoriasEmpresa = [];
+  }
+  renderListaCategoriasManual();
+}
+
+function renderListaCategoriasManual() {
+  const cont = document.getElementById('manual-categorias-lista');
+  if (!cont) return;
+
+  if (!categoriasEmpresa.length) {
+    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:4px 0">
+      Esta empresa todavía no tiene categorías activas. <a href="${BASE_PHP}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una</a>.
+    </div>`;
+    return;
+  }
+
+  // Checkbox especial "Toda la empresa" + separador + lista de categorías
+  cont.innerHTML = `
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;cursor:pointer;border-radius:6px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);margin-bottom:10px">
+      <input type="checkbox" id="cat-toda-empresa" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodaLaEmpresa()">
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--dorado);font-weight:600">Toda la empresa</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">El manual será visible para todas las categorías activas.</div>
+      </div>
+    </label>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+      <div style="flex:1;height:1px;background:var(--gris2)"></div>
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Archivo',sans-serif">O elegí categorías específicas</span>
+      <div style="flex:1;height:1px;background:var(--gris2)"></div>
+    </div>
+
+    <div id="cats-especificas">
+      ${categoriasEmpresa.map(c => `
+        <label class="cat-item" style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;cursor:pointer;border-radius:5px;transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
+          <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
+            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+          </div>
+        </label>
+      `).join('')}
+    </div>
+  `;
+}
+
+function onToggleTodaLaEmpresa() {
+  const checked = document.getElementById('cat-toda-empresa').checked;
+  const cats    = document.querySelectorAll('.cat-especifica');
+  cats.forEach(cb => {
+    if (checked) cb.checked = false;
+    cb.disabled = checked;
+  });
+  // Atenuar visualmente las cards individuales cuando están deshabilitadas
+  document.querySelectorAll('#cats-especificas .cat-item').forEach(el => {
+    el.style.opacity   = checked ? '.45' : '1';
+    el.style.pointerEvents = checked ? 'none' : 'auto';
+  });
+}
+
+function leerCategoriasManualSeleccionadas() {
+  const todaLaEmpresa = document.getElementById('cat-toda-empresa')?.checked;
+  if (todaLaEmpresa) {
+    // "Toda la empresa": enviamos todas las cats activas de la empresa
+    return categoriasEmpresa.map(c => c.id);
+  }
+  // Cats individuales marcadas
+  const checks = document.querySelectorAll('.cat-especifica:checked');
+  return Array.from(checks).map(cb => parseInt(cb.dataset.catId, 10));
+}
 
 function seleccionarModo(modo) {
   modoImport = modo;
@@ -606,6 +712,29 @@ async function crearManual() {
   try {
     const payload = { titulo, categoria: categoria || null, orden: 0, empresa_id: empresaId };
     const manual  = await apiFetch('POST', '/manuales', payload);
+
+    // v2.3: sync de categorías a las que va dirigido el manual.
+    // Si nadie marca nada, mandamos array vacío (manual sin destinatarios).
+    // OJO: super_admin DEBE mandar empresa_id porque el backend no lo infiere
+    // (a diferencia del franquiciante, que lo deriva del actor).
+    const catsSeleccionadas = leerCategoriasManualSeleccionadas();
+    try {
+      await apiFetch('PUT', `/manuales/${manual.id}/categorias`, {
+        category_ids: catsSeleccionadas,
+        empresa_id:   parseInt(empresaId, 10),
+      });
+    } catch (errCat) {
+      // El manual ya está creado pero falló asignar categorías.
+      // Hacemos visible el error (antes era console.warn silencioso) para no
+      // dejar al usuario creyendo que todo salió bien.
+      console.error('Falló sync de categorías del manual:', errCat);
+      const msg = errCat?.data?.error || errCat?.data?.message || 'Error desconocido';
+      alert(
+        `El manual fue creado, pero falló la asignación de categorías:\n\n${msg}\n\n` +
+        `Editá el manual más tarde para reasignar las categorías.`
+      );
+    }
+
     cerrarModalNuevo();
     const url = `${BASE_PHP}/editor.php?id=${manual.id}` + (modoImport === 'import' && htmlImportado ? `&import=1` : '');
     if (modoImport === 'import' && htmlImportado) sessionStorage.setItem(`import_html_${manual.id}`, htmlImportado);
@@ -628,7 +757,7 @@ function irEditor(id) { window.location.href = `${BASE_PHP}/editor.php?id=${id}`
 // ── ARCHIVAR ──────────────────────────────────────────────────
 function abrirModalArchivar(id, titulo) {
   pendingArchivar = id;
-  document.getElementById('archivar-msg').textContent = `¿Archivar "${titulo}"? Dejará de ser visible para los franquiciados. El historial se conserva.`;
+  document.getElementById('archivar-msg').textContent = `¿Archivar "${titulo}"? Dejará de ser visible para los Socios comerciales. El historial se conserva.`;
   document.getElementById('archivar-error').style.display = 'none';
   document.getElementById('modal-archivar').classList.add('open');
 }
@@ -694,19 +823,27 @@ async function verAceptaciones(manualId, titulo, versionId) {
   try {
     const aceptaciones = await apiFetch('GET', `/versiones/${versionId}/aceptaciones`);
     if (!aceptaciones.length) {
-      document.getElementById('acept-body').innerHTML = `<div class="empty-state">Ningún franquiciado ha aceptado esta versión aún.</div>`;
+      document.getElementById('acept-body').innerHTML = `<div class="empty-state">Ningún Socio comercial ha aceptado esta versión aún.</div>`;
       return;
     }
     document.getElementById('acept-body').innerHTML = `
       <table>
-        <thead><tr><th>Franquiciado</th><th>Franquicia</th><th>Fecha</th><th>IP</th></tr></thead>
+        <thead><tr><th>Socio comercial</th><th>Sucursal</th><th>Fecha</th><th>IP</th></tr></thead>
         <tbody>
-          ${aceptaciones.map(a => `<tr>
-            <td style="color:var(--blanco);font-weight:500">${esc(a.user?.franchise_staff?.nombre || '')} ${esc(a.user?.franchise_staff?.apellido || '')}</td>
-            <td>${esc(a.user?.franchise_staff?.franquicia?.nombre || '—')}</td>
-            <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px">${formatFechaHora(a.aceptado_at)}</td>
-            <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;color:var(--gris4)">${esc(a.ip_address)}</td>
-          </tr>`).join('')}
+          ${aceptaciones.map(a => {
+            // v2.3: nombre/apellido viven en users (toplevel), no en franchise_staff
+            const nombreCompleto = [a.user?.nombre, a.user?.apellido].filter(Boolean).join(' ').trim();
+            // Sucursal: si está vacía (socio comercial sin sucursal), mostrar "Sin sucursal" en gris
+            const sucursal = a.user?.franchise_staff?.franquicia?.nombre
+              ? esc(a.user.franchise_staff.franquicia.nombre)
+              : `<span style="color:var(--gris3);font-style:italic">Sin sucursal</span>`;
+            return `<tr>
+              <td style="color:var(--blanco);font-weight:500">${esc(nombreCompleto) || '—'}</td>
+              <td>${sucursal}</td>
+              <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px">${formatFechaHora(a.aceptado_at)}</td>
+              <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;color:var(--gris4)">${esc(a.ip_address)}</td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
       <div style="margin-top:12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">

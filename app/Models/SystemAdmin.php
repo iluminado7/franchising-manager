@@ -13,12 +13,12 @@ class SystemAdmin extends Model
     public $timestamps = false;
     protected $dates = ['created_at'];
 
+    // Tras v2.3 nombre/apellido/dni viven en users. Esta tabla queda como
+    // marcador de rol (id, user_id, created_at).
+    // 'cuit' fue removido del fillable porque la columna no existe en la
+    // base; si llegase a necesitarse, conviene agregarlo a users.
     protected $fillable = [
         'user_id',
-        'nombre',
-        'apellido',
-        'dni',
-        'cuit',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -44,9 +44,11 @@ class SystemAdmin extends Model
 
     // ── Helpers ──────────────────────────────────────────────────────
 
+    // Delegado a User para no romper código existente que llamara
+    // $systemAdmin->nombreCompleto().
     public function nombreCompleto(): string
     {
-        return "{$this->nombre} {$this->apellido}";
+        return $this->user?->nombreCompleto() ?? '';
     }
 
     // Acceso directo al empresa_id sin cargar la relación completa

@@ -18,6 +18,8 @@ class Notification extends Model
         'manual_id',
         'manual_version_id',
         'document_id',
+        'document_version_id',
+        'category_id',
         'titulo',
         'mensaje',
         'leida',
@@ -35,7 +37,20 @@ class Notification extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Cada una es nullable — solo una tiene valor a la vez (CHECK CONSTRAINT en DB)
+    // Cada FK puede ser NULL — qué combinación es válida lo controla
+    // el CHECK constraint chk_notif_fk (ver migración v2.3 paso 17).
+    //
+    // Tipos y FKs requeridas:
+    //   - nuevo_manual                  → manual_id
+    //   - modificacion_manual           → manual_version_id
+    //   - manual_asignado               → manual_version_id
+    //   - nuevo_documento               → document_id
+    //   - recordatorio_pendiente        → ninguna
+    //   - manual_asignado_categoria     → manual_id + category_id
+    //   - documento_asignado            → document_id
+    //   - documento_asignado_categoria  → document_id + category_id
+    //   - nueva_version_documento       → document_version_id
+
     public function manual(): BelongsTo
     {
         return $this->belongsTo(Manual::class, 'manual_id');
@@ -49,6 +64,18 @@ class Notification extends Model
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');
+    }
+
+    // v2.3: nuevas FKs
+
+    public function documentVersion(): BelongsTo
+    {
+        return $this->belongsTo(DocumentVersion::class, 'document_version_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(FranchiseCategory::class, 'category_id');
     }
 
     // ── Scopes ───────────────────────────────────────────────────────

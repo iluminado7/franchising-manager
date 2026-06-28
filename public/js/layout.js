@@ -33,6 +33,7 @@ function renderSidebar(rol) {
       { id: 'usuarios',    label: 'Usuarios',         href: 'usuarios.php',    icon: 'users'       },
       { id: 'manuales',    label: 'Manuales',         href: 'manuales.php',    icon: 'file-text'   },
       { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'      },
+      { id: 'categorias',  label: 'Categorías',       href: 'categorias.php',  icon: 'tag'         },
       { id: 'planes',      label: 'Planes',           href: 'planes.php',      icon: 'credit-card' },
       { id: 'log',         label: 'Log de actividad', href: 'log.php',         icon: 'shield'      },
       { id: 'perfil',      label: 'Mi perfil',        href: 'perfil.php',      icon: 'user'        },
@@ -43,6 +44,7 @@ function renderSidebar(rol) {
       { id: 'franquicias', label: 'Franquicias', href: 'franquicias.php', icon: 'store'  },
       { id: 'usuarios',    label: 'Usuarios',    href: 'usuarios.php',    icon: 'users'     },
       { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'},
+      { id: 'categorias',  label: 'Categorías',  href: 'categorias.php',  icon: 'tag'       },
       { id: 'perfil',      label: 'Mi perfil',   href: 'perfil.php',      icon: 'user'      },
     ],
     franquiciado: [
@@ -67,6 +69,7 @@ function renderSidebar(rol) {
     'bell':        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
     'credit-card': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
     'user':        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    'tag':         `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
   };
 
   const items        = NAV[rol] || [];
@@ -101,9 +104,9 @@ document.addEventListener('DOMContentLoaded', async function iniciarLayout() {
 
     const nombreEl = document.getElementById('topbar-nombre');
     const rolEl    = document.getElementById('topbar-rol');
-    if (nombreEl) nombreEl.textContent = me.perfil
-      ? `${me.perfil.nombre} ${me.perfil.apellido}`
-      : me.email;
+    // v2.3: nombre/apellido viven en users — vienen al toplevel de /me
+    const nombreCompleto = [me.nombre, me.apellido].filter(Boolean).join(' ').trim();
+    if (nombreEl) nombreEl.textContent = nombreCompleto || me.email;
     if (rolEl) {
       rolEl.textContent = me.rol.replace('_', ' ');
       rolEl.className   = `rol-badge ${me.rol}`;

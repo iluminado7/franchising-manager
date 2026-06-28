@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -23,6 +24,9 @@ class User extends Authenticatable
         'empresa_id',
         'email',
         'password_hash',
+        'nombre',
+        'apellido',
+        'dni',
         'rol',
         'celular',
         'activo',
@@ -62,6 +66,8 @@ class User extends Authenticatable
     }
 
     // ── Relaciones de perfil (1 a 1) ────────────────────────────────
+    // Las tablas de perfil quedan como marcadores de rol después de v2.3.
+    // franchise_staff conserva además franquicia_id.
 
     // Solo existe si rol = 'super_admin'
     public function superAdmin(): HasOne
@@ -81,6 +87,26 @@ class User extends Authenticatable
         return $this->hasOne(FranchiseStaff::class, 'user_id');
     }
 
+    // ── Categorías (v2.3) ────────────────────────────────────────────
+
+    // Categorías a las que el usuario pertenece (vía user_categories).
+    // Aplica principalmente a franquiciado y empleado.
+    public function categorias(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            FranchiseCategory::class,
+            'user_categories',
+            'user_id',
+            'category_id'
+        )->withPivot('empresa_id', 'assigned_by', 'assigned_at');
+    }
+
+    // Fila pivote directa cuando se necesita assigned_by, fecha, etc.
+    public function userCategories(): HasMany
+    {
+        return $this->hasMany(UserCategory::class, 'user_id');
+    }
+
     // ── Acciones del usuario ─────────────────────────────────────────
 
     public function manualesCreados(): HasMany
@@ -98,20 +124,55 @@ class User extends Authenticatable
         return $this->hasMany(Acceptance::class, 'user_id');
     }
 
+    // ── Asignaciones de manuales (v2.3) ──────────────────────────────
+
+    // Manuales asignados al usuario individualmente.
+    // Antes apuntaba a ManualAssignment — ahora a ManualUserAssignment.
     public function asignaciones(): HasMany
     {
-        return $this->hasMany(ManualAssignment::class, 'user_id');
+        return $this->hasMany(ManualUserAssignment::class, 'user_id');
     }
 
+    // Asignaciones individuales realizadas POR este usuario (auditoría).
     public function asignacionesRealizadas(): HasMany
     {
-        return $this->hasMany(ManualAssignment::class, 'assigned_by');
+        return $this->hasMany(ManualUserAssignment::class, 'assigned_by');
+    }
+
+    // Lista directa de manuales asignados individualmente (sin pasar por el pivote)
+    public function manualesAsignados(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Manual::class,
+            'manual_user_assignments',
+            'user_id',
+            'manual_id'
+        )->withPivot('empresa_id', 'assigned_by', 'assigned_at');
     }
 
     public function asignacionesEmpresaRealizadas(): HasMany
     {
         return $this->hasMany(ManualEmpresaAssignment::class, 'asignado_por');
     }
+
+    // ── Asignaciones de documentos (v2.3) ────────────────────────────
+
+    public function documentAssignments(): HasMany
+    {
+        return $this->hasMany(DocumentUserAssignment::class, 'user_id');
+    }
+
+    public function documentosAsignados(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Document::class,
+            'document_user_assignments',
+            'user_id',
+            'document_id'
+        )->withPivot('empresa_id', 'assigned_by', 'assigned_at');
+    }
+
+    // ── Notificaciones y logs ────────────────────────────────────────
 
     public function notifications(): HasMany
     {
@@ -153,5 +214,15 @@ class User extends Authenticatable
     public function esEmpleado(): bool
     {
         return $this->rol === 'empleado';
+    }
+
+    // ── Helpers de nombre ────────────────────────────────────────────
+
+    // Nombre completo del usuario. Reemplaza el método que vivía en cada
+    // modelo de perfil (super_admins/system_admins/franchise_staff) tras
+    // la migración v2.3 que centralizó nombre y apellido en users.
+    public function nombreCompleto(): string
+    {
+        return trim("{$this->nombre} {$this->apellido}");
     }
 }

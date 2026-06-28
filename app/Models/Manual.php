@@ -69,15 +69,47 @@ class Manual extends Model
         )->withPivot('asignado_por', 'asignado_at');
     }
 
-    // Empleados con acceso asignado directamente
-    public function empleadosAsignados(): BelongsToMany
+    // ── Asignaciones v2.3 ────────────────────────────────────────────
+
+    // Usuarios con acceso individual al manual (vía manual_user_assignments).
+    // Antes vivía en manual_assignments — la tabla fue migrada en v2.3.
+    public function usuariosAsignados(): BelongsToMany
     {
         return $this->belongsToMany(
             User::class,
-            'manual_assignments',
+            'manual_user_assignments',
             'manual_id',
             'user_id'
         )->withPivot('assigned_by', 'assigned_at', 'empresa_id');
+    }
+
+    // Alias para mantener compatibilidad con código viejo
+    public function empleadosAsignados(): BelongsToMany
+    {
+        return $this->usuariosAsignados();
+    }
+
+    // Categorías a las que el manual está dirigido. Cualquier usuario que
+    // tenga una de estas categorías (activa) verá el manual.
+    public function categorias(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            FranchiseCategory::class,
+            'manual_category_assignments',
+            'manual_id',
+            'category_id'
+        )->withPivot('empresa_id', 'assigned_by', 'assigned_at');
+    }
+
+    // Filas pivote directas — útiles cuando se necesita assigned_by, fecha, etc.
+    public function categoryAssignments(): HasMany
+    {
+        return $this->hasMany(ManualCategoryAssignment::class, 'manual_id');
+    }
+
+    public function userAssignments(): HasMany
+    {
+        return $this->hasMany(ManualUserAssignment::class, 'manual_id');
     }
 
     public function notifications(): HasMany

@@ -104,8 +104,11 @@ async function cargarDashboard() {
     document.getElementById('stat-borradores').textContent  = borradores;
     document.getElementById('stat-usuarios').textContent    = usuarios.length;
 
+
     const nombreEmpresa = me.empresa?.nombre
-      || (me.perfil ? `${me.perfil.nombre} ${me.perfil.apellido}` : '');
+      || [me.nombre, me.apellido].filter(Boolean).join(' ').trim()
+      || me.email
+      || '';
     document.getElementById('page-sub').textContent =
       esSuper ? 'Resumen general del sistema' : `Resumen de ${nombreEmpresa}`;
 

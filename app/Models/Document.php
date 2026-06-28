@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Document extends Model
 {
@@ -58,8 +59,8 @@ class Document extends Model
         return $this->hasMany(DocumentVersion::class, 'document_id');
     }
 
-    // Versión actualmente vigente — solo una con es_activa = 1 a la vez.
-    // Espejo del patrón usado en Manual::versionActiva().
+    // Versión actualmente vigente — solo una con es_activa = 1 a la vez
+    // (forzado por UNIQUE generada en v2.3).
     public function versionActiva(): HasMany
     {
         return $this->hasMany(DocumentVersion::class, 'document_id')
@@ -69,6 +70,42 @@ class Document extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class, 'document_id');
+    }
+
+    // ── Asignaciones v2.3 ────────────────────────────────────────────
+
+    // Categorías a las que el documento está dirigido. Cualquier usuario que
+    // tenga una de estas categorías (activa) verá el documento.
+    public function categorias(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            FranchiseCategory::class,
+            'document_category_assignments',
+            'document_id',
+            'category_id'
+        )->withPivot('empresa_id', 'assigned_by', 'assigned_at');
+    }
+
+    // Usuarios con acceso individual al documento (excepciones puntuales)
+    public function usuariosAsignados(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'document_user_assignments',
+            'document_id',
+            'user_id'
+        )->withPivot('empresa_id', 'assigned_by', 'assigned_at');
+    }
+
+    // Filas pivote directas — útiles cuando se necesita assigned_by, fecha, etc.
+    public function categoryAssignments(): HasMany
+    {
+        return $this->hasMany(DocumentCategoryAssignment::class, 'document_id');
+    }
+
+    public function userAssignments(): HasMany
+    {
+        return $this->hasMany(DocumentUserAssignment::class, 'document_id');
     }
 
     // ── Scopes ───────────────────────────────────────────────────────
