@@ -181,7 +181,7 @@ include 'layout/head.php';
           <input type="checkbox" id="form-sede-central" style="width:auto;accent-color:var(--dorado);width:15px;height:15px">
           ¿Esta franquicia es la sede central?
         </label>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Solo puede haber una sede central por empresa. Al marcarla se desmarca la anterior automáticamente.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Solo puede haber una sede central por empresa. Al marcarla se desmarca la anterior automáticamente.</div>
       </div>
       <div class="form-error" id="form-error"></div>
     </div>
@@ -205,7 +205,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="toggle-error"></div>
     </div>
     <div class="modal-footer">
@@ -261,7 +261,7 @@ include 'layout/head.php';
 .form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px; }
 .accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 /* Tarjetas de empresa */
@@ -272,7 +272,7 @@ include 'layout/head.php';
 }
 .empresa-card:hover { border-color: var(--dorado); background: rgba(201,168,76,.04); }
 .empresa-card-nombre { font-size:14px;font-weight:600;color:var(--blanco);margin-bottom:4px; }
-.empresa-card-sub    { font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+.empresa-card-sub    { font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 .empresa-card-badge  { display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;margin-top:8px; }
 </style>
 
@@ -352,7 +352,7 @@ function renderGridEmpresas(lista) {
         <span class="empresa-card-badge ${e.activa ? 'estado-completo' : 'estado-pendiente'}">
           ${e.activa ? 'Activa' : 'Suspendida'}
         </span>
-        <span style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">
+        <span style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">
           ${e.franquicias_count ?? 0} franquicia(s)
         </span>
       </div>
@@ -472,7 +472,7 @@ function renderTabla(lista, tbodyId, tituloId) {
         </div>
       </td>
       <td>${esc(f.razon_social)}</td>
-      <td style="font-family:'Archivo Narrow',sans-serif">${esc(f.cuit)}</td>
+      <td style="font-family:'Roboto',sans-serif">${esc(f.cuit)}</td>
       <td style="font-size:12px">
         ${f.email_contacto ? `<div>${esc(f.email_contacto)}</div>` : ''}
         ${f.telefono       ? `<div style="color:var(--gris4)">${esc(f.telefono)}</div>` : ''}

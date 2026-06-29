@@ -93,7 +93,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="toggle-error"></div>
     </div>
     <div class="modal-footer">
@@ -163,7 +163,7 @@ include 'layout/head.php';
 .empresa-card-stat {
   font-size:12px;
   color:var(--gris4);
-  font-family:'Archivo Narrow',sans-serif;
+  font-family:'Roboto',sans-serif;
 }
 .empresa-card-stat strong {
   color:var(--dorado);
@@ -210,7 +210,7 @@ include 'layout/head.php';
 .cat-descripcion {
   font-size:11px;
   color:var(--gris4);
-  font-family:'Archivo Narrow',sans-serif;
+  font-family:'Roboto',sans-serif;
   margin-top:3px;
   line-height:1.4;
   max-width:340px;
@@ -247,7 +247,7 @@ include 'layout/head.php';
 .accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
 
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 /* Estado vacío */
@@ -256,7 +256,7 @@ include 'layout/head.php';
   padding:60px 20px;
   color:var(--gris4);
   font-size:13px;
-  font-family:'Archivo Narrow',sans-serif;
+  font-family:'Roboto',sans-serif;
 }
 .empty-state svg {
   display:block;

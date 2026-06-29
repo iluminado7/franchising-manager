@@ -96,7 +96,7 @@ include 'layout/head.php';
         </button>
 
         <div style="flex:1"></div>
-        <span id="word-count" style="font-size:11px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">0 palabras</span>
+        <span id="word-count" style="font-size:11px;color:var(--gris3);font-family:'Roboto',sans-serif">0 palabras</span>
       </div>
 
       <!-- Área de escritura -->
@@ -179,7 +179,7 @@ include 'layout/head.php';
           </span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gris4)"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-        <div style="margin-top:8px;font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+        <div style="margin-top:8px;font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5">
           Definí qué categorías de Socios comerciales pueden ver este manual.
         </div>
       </div>
@@ -197,7 +197,7 @@ include 'layout/head.php';
             Publicar versión
           </button>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris2)">
+        <div style="margin-top:10px;font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris2)">
           Al publicar se genera un hash SHA-256 y se notifica a todos los franquiciados activos.
         </div>
       </div>
@@ -208,7 +208,7 @@ include 'layout/head.php';
 
         <!-- Caja para escribir (solo franquiciante) -->
         <div id="nota-form" style="display:none;margin-bottom:12px">
-          <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; una sugerencia sobre este manual..." style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--gris2);border-radius:8px;color:var(--blanco);font-family:'Archivo Narrow',sans-serif;font-size:12.5px;padding:8px 10px;resize:vertical;outline:none;line-height:1.5"></textarea>
+          <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; una sugerencia sobre este manual..." style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--gris2);border-radius:8px;color:var(--blanco);font-family:'Roboto',sans-serif;font-size:12.5px;padding:8px 10px;resize:vertical;outline:none;line-height:1.5"></textarea>
           <button class="btn btn-ghost" id="btn-nota-enviar" onclick="agregarNota()" style="width:100%;justify-content:center;margin-top:8px">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
             Enviar nota
@@ -217,7 +217,7 @@ include 'layout/head.php';
 
         <!-- Hilo de notas -->
         <div class="notas-list" id="notas-list">
-          <div style="font-size:12px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">Cargando notas...</div>
+          <div style="font-size:12px;color:var(--gris3);font-family:'Roboto',sans-serif">Cargando notas...</div>
         </div>
       </div>
 
@@ -225,7 +225,7 @@ include 'layout/head.php';
       <div class="panel-section" style="flex:1">
         <div class="panel-section-title">Historial de versiones</div>
         <div class="version-list" id="version-list">
-          <div style="font-size:12px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">Sin versiones publicadas aún.</div>
+          <div style="font-size:12px;color:var(--gris3);font-family:'Roboto',sans-serif">Sin versiones publicadas aún.</div>
         </div>
       </div>
 
@@ -246,10 +246,10 @@ include 'layout/head.php';
 
       <!-- Contenido para superadmin -->
       <div id="pub-body-admin">
-        <p style="font-size:15px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif">
+        <p style="font-size:15px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif">
           Se creará una nueva versión del manual. Todos los franquiciados activos recibirán una notificación. Esta acción no se puede deshacer.
         </p>
-        <p style="margin-top:8px;font-size:14px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;line-height:1.5;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris3)">
+        <p style="margin-top:8px;font-size:14px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris3)">
           Las imágenes del documento no se importan. Solo se conserva el texto y el formato.
         </p>
       </div>
@@ -288,9 +288,9 @@ include 'layout/head.php';
         </label>
         <textarea id="pub-nota" maxlength="2000" rows="3"
           placeholder="Ej: Actualizamos las cláusulas 3 y 5 según el nuevo decreto. Revisar antes del 30/06."
-          style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--blanco);font-family:'Archivo Narrow',sans-serif;resize:vertical;outline:none;transition:border-color .15s"
+          style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;resize:vertical;outline:none;transition:border-color .15s"
           onfocus="this.style.borderColor='var(--dorado)'" onblur="this.style.borderColor='var(--gris2)'"></textarea>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif;line-height:1.5">
           Este mensaje aparecerá en el hilo de notas del manual para todos los que tengan acceso. Podés editarlo después.
         </div>
       </div>
@@ -318,11 +318,11 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <div style="font-size:13px;color:var(--gris5);font-family:'Archivo Narrow',sans-serif;line-height:1.5;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--gris5);font-family:'Roboto',sans-serif;line-height:1.5;margin-bottom:14px">
         Elegí "Toda la empresa" para que todas las categorías activas lo vean, o seleccioná categorías específicas.
       </div>
       <div id="modal-visible-lista">
-        <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">Cargando...</div>
+        <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px 0">Cargando...</div>
       </div>
       <div class="form-error" id="modal-visible-error" style="display:none;margin-top:12px"></div>
     </div>
@@ -345,7 +345,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--gris4);margin-bottom:16px;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:12px;color:var(--gris4);margin-bottom:16px;font-family:'Roboto',sans-serif">
         Los cambios se aplican a todas las versiones del manual.
       </p>
 
@@ -504,10 +504,10 @@ include 'layout/head.php';
 }
 
 .manual-info-nombre { font-size: 13px; font-weight: 600; color: var(--blanco); margin-bottom: 3px; line-height: 1.3; }
-.manual-info-cat    { font-size: 12px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; }
+.manual-info-cat    { font-size: 12px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 
 .status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
-.status-label { font-size: 12px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; }
+.status-label { font-size: 12px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .status-value { font-size: 12px; color: var(--gris5); font-weight: 500; }
 .status-value.guardado  { color: var(--exito); }
 .status-value.pendiente { color: var(--dorado); }
@@ -533,8 +533,8 @@ include 'layout/head.php';
 
 .version-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
 .version-num  { font-size: 13px; font-weight: 600; color: var(--blanco); }
-.version-fecha { font-size: 11px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; }
-.version-autor { font-size: 11px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; }
+.version-fecha { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.version-autor { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .version-tag   { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(201,168,76,.15); color: var(--dorado); margin-top: 4px; }
 
 /* Modal */
@@ -583,7 +583,7 @@ include 'layout/head.php';
   background: var(--gris1); border: 1px solid var(--gris2);
   border-radius: 8px; padding: 10px 12px;
   font-size: 13px; color: var(--blanco);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   transition: border-color .15s, background .15s;
 }
 .form-input::placeholder { color: var(--gris3); }
@@ -594,7 +594,7 @@ include 'layout/head.php';
   display: none; background: rgba(226,92,92,.1);
   border: 1px solid rgba(226,92,92,.3); border-radius: 8px;
   padding: 10px 12px; color: var(--error); font-size: 12px;
-  margin-top: 12px; font-family: 'Archivo Narrow', sans-serif;
+  margin-top: 12px; font-family: 'Roboto', sans-serif;
 }
 
 .btn-success { background: var(--exito); color: var(--negro); }
@@ -609,7 +609,7 @@ include 'layout/head.php';
   display: flex; align-items: center; gap: 10px;
   transform: translateY(80px); opacity: 0;
   transition: transform .3s, opacity .3s;
-  z-index: 600; font-family: 'Archivo Narrow', sans-serif; max-width: 340px;
+  z-index: 600; font-family: 'Roboto', sans-serif; max-width: 340px;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 
@@ -638,8 +638,8 @@ include 'layout/head.php';
   gap: 8px; margin-bottom: 5px;
 }
 .nota-autor { font-size: 12px; font-weight: 600; color: var(--blanco); }
-.nota-fecha { font-size: 10.5px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; white-space: nowrap; }
-.nota-contenido { font-size: 12.5px; color: var(--gris5); font-family: 'Archivo Narrow', sans-serif; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.nota-fecha { font-size: 10.5px; color: var(--gris4); font-family: 'Roboto', sans-serif; white-space: nowrap; }
+.nota-contenido { font-size: 12.5px; color: var(--gris5); font-family: 'Roboto', sans-serif; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 .nota-meta { display: flex; align-items: center; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
 .nota-estado {
   display: inline-block; font-size: 9.5px; font-weight: 600;
@@ -649,10 +649,10 @@ include 'layout/head.php';
 .nota-estado.pendiente { background: rgba(201,168,76,.15); color: var(--dorado); }
 .nota-estado.leida     { background: rgba(55,138,221,.15); color: #378ADD; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: var(--exito); }
-.nota-ver { font-size: 10px; color: var(--gris4); font-family: 'Archivo Narrow', sans-serif; }
+.nota-ver { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .nota-acciones { display: flex; gap: 6px; margin-top: 8px; }
 .nota-btn {
-  flex: 1; font-size: 10.5px; font-family: 'Archivo Narrow', sans-serif;
+  flex: 1; font-size: 10.5px; font-family: 'Roboto', sans-serif;
   padding: 5px 8px; border-radius: 6px; cursor: pointer;
   background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
   transition: border-color .15s, color .15s, background .15s;
@@ -778,7 +778,7 @@ function renderVersiones(versiones) {
   const borrador = estado.versiones.find(v => v.version_number === 0);
 
   if (!versiones.length && !borrador) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">Sin versiones publicadas aún.</div>`;
+    el.innerHTML = `<div style="font-size:12px;color:var(--gris3);font-family:'Roboto',sans-serif">Sin versiones publicadas aún.</div>`;
     return;
   }
 
@@ -1160,7 +1160,7 @@ function renderListaModalVisible() {
   const cont = document.getElementById('modal-visible-lista');
 
   if (!categoriasEmpresa.length) {
-    cont.innerHTML = `<div style="font-size:13px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:12px;text-align:center;background:var(--negro);border-radius:8px">
+    cont.innerHTML = `<div style="font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:12px;text-align:center;background:var(--negro);border-radius:8px">
       No hay categorías activas en esta empresa.<br>
       <a href="${BASE_PHP}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una categoría primero</a>.
     </div>`;
@@ -1178,7 +1178,7 @@ function renderListaModalVisible() {
       <input type="checkbox" id="modal-toda-empresa" ${todasMarcadas ? 'checked' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodaLaEmpresaEditor()">
       <div style="flex:1">
         <div style="font-size:13px;color:var(--dorado);font-weight:600">Toda la empresa</div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">El manual será visible para todas las categorías activas.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">El manual será visible para todas las categorías activas.</div>
       </div>
     </label>
 
@@ -1194,7 +1194,7 @@ function renderListaModalVisible() {
           <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica-editor" ${idsAsignadasManual.has(c.id) ? 'checked' : ''} ${todasMarcadas ? 'disabled' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;color:var(--blanco);font-weight:500">${escNota(c.name)}</div>
-            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${escNota(c.description)}</div>` : ''}
+            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${escNota(c.description)}</div>` : ''}
           </div>
         </label>
       `).join('')}
@@ -1291,7 +1291,7 @@ async function cargarNotas() {
     const notas = await apiFetch('GET', `/manuales/${MANUAL_ID}/notas`);
     renderNotas(notas);
   } catch (e) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--error);font-family:'Archivo Narrow',sans-serif">Error al cargar las notas.</div>`;
+    el.innerHTML = `<div style="font-size:12px;color:var(--error);font-family:'Roboto',sans-serif">Error al cargar las notas.</div>`;
   }
 }
 
@@ -1309,7 +1309,7 @@ function nombreAutorNota(nota) {
 function renderNotas(notas) {
   const el = document.getElementById('notas-list');
   if (!notas.length) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--gris3);font-family:'Archivo Narrow',sans-serif">Todav&iacute;a no hay notas para este manual.</div>`;
+    el.innerHTML = `<div style="font-size:12px;color:var(--gris3);font-family:'Roboto',sans-serif">Todav&iacute;a no hay notas para este manual.</div>`;
     return;
   }
 

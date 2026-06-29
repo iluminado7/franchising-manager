@@ -97,7 +97,7 @@ include 'layout/head.php';
       <div id="wrap-ultimo-periodo" style="display:none;margin-bottom:14px">
       <div class="form-group" style="margin-bottom:0">
         <label>Último período facturado</label>
-        <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">
+        <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">
           <span id="ultimo-periodo">—</span>
         </div>
       </div>
@@ -113,7 +113,7 @@ include 'layout/head.php';
       </div>
 
       <!-- Descripción del plan seleccionado -->
-      <div id="plan-desc" style="display:none;margin-bottom:14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Archivo Narrow',sans-serif;line-height:1.6;color:var(--gris5)"></div>
+      <div id="plan-desc" style="display:none;margin-bottom:14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
 
       <!-- Precio custom según tipo de plan -->
       <div id="wrap-precio-franquicia" style="display:none">
@@ -147,7 +147,7 @@ include 'layout/head.php';
         <div style="font-size:14px;color:var(--blanco)">
           Total estimado: <strong id="sim-total" style="color:var(--dorado);font-size:16px">—</strong>
         </div>
-        <div id="sim-detalle" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
+        <div id="sim-detalle" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif"></div>
       </div>
 
       <!-- Sección: Emails -->
@@ -186,7 +186,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="toggle-error"></div>
     </div>
     <div class="modal-footer">
@@ -205,7 +205,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif">
         ¿Estás seguro de guardar los cambios en esta empresa? Esta acción modificará los datos de facturación y contacto.
       </p>
     </div>
@@ -322,7 +322,7 @@ include 'layout/head.php';
   color:var(--blanco);display:flex;align-items:center;gap:10px;
   transform:translateY(80px);opacity:0;
   transition:transform .3s,opacity .3s;
-  z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px;
+  z-index:600;font-family:'Roboto',sans-serif;max-width:320px;
 }
 .toast.show { transform:translateY(0);opacity:1; }
 </style>
@@ -425,14 +425,14 @@ function renderTabla(lista) {
     return `<tr>
       <td>
         <div style="font-weight:500;color:var(--blanco)">${esc(e.nombre)}</div>
-        <div style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">${esc(e.razon_social)}</div>
+        <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${esc(e.razon_social)}</div>
       </td>
-      <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px">${esc(e.cuit)}</td>
+      <td style="font-family:'Roboto',sans-serif;font-size:12px">${esc(e.cuit)}</td>
       <td>
         <div style="font-size:13px;font-weight:500">${esc(planNombre)}</div>
-        <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">${precioHtml}</div>
+        <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif">${precioHtml}</div>
       </td>
-      <td style="font-family:'Archivo Narrow',sans-serif;font-size:13px;text-align:center">
+      <td style="font-family:'Roboto',sans-serif;font-size:13px;text-align:center">
         <span style="color:var(--blanco);font-weight:500">${activas}</span>
         <span style="color:var(--gris4)"> / ${total}</span>
       </td>

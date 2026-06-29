@@ -244,7 +244,7 @@ include 'layout/head.php';
 .dato-valor {
   font-size: 13px;
   color: var(--blanco);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   text-align: right;
   word-break: break-all;
 }
@@ -308,7 +308,7 @@ include 'layout/head.php';
 }
 .plan-detalle {
   font-size: 12px; color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   line-height: 1.7;
 }
 .plan-precio {
@@ -331,7 +331,7 @@ include 'layout/head.php';
 .facturas-tabla td {
   font-size: 12px; color: var(--gris5);
   padding: 10px 10px; border-bottom: 1px solid var(--gris2);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   vertical-align: middle;
 }
 .facturas-tabla tr:last-child td { border-bottom: none; }
@@ -350,7 +350,7 @@ include 'layout/head.php';
   display: flex; align-items: center; gap: 10px;
   transform: translateY(80px); opacity: 0;
   transition: transform .3s, opacity .3s;
-  z-index: 600; font-family: 'Archivo Narrow', sans-serif; max-width: 320px;
+  z-index: 600; font-family: 'Roboto', sans-serif; max-width: 320px;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 </style>

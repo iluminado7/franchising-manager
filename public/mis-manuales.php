@@ -67,7 +67,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif">
         Al confirmar, estás aceptando digitalmente el contenido de este manual. Esta acción queda registrada con la fecha y hora exacta.
       </p>
       <div class="form-error" id="acept-error"></div>
@@ -137,19 +137,19 @@ include 'layout/head.php';
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
 .form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
 .badge-aceptado { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;background:rgba(92,184,122,.12);color:var(--exito); }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:340px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
 .toast.show { transform:translateY(0);opacity:1; }
 /* ── Notas / sugerencias ── */
-.notas-intro { font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Archivo Narrow',sans-serif;margin-bottom:14px; }
+.notas-intro { font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:14px; }
 .notas-label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
-.nota-textarea { width:100%;min-height:90px;resize:vertical;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo Narrow',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;line-height:1.5; }
+.nota-textarea { width:100%;min-height:90px;resize:vertical;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Roboto',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;line-height:1.5; }
 .nota-textarea:focus { border-color:var(--dorado); }
 .nota-textarea::placeholder { color:var(--gris3); }
 .notas-hist-label { font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:10px;padding-top:6px;border-top:1px solid var(--gris2); }
 .nota-card { background:var(--negro);border:1px solid var(--gris2);border-radius:10px;padding:12px 14px;margin-bottom:10px; }
 .nota-card:last-child { margin-bottom:0; }
 .nota-card-top { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px; }
-.nota-meta { font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+.nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
 /* Release notes: anuncios del publicador, estilo destacado */
 .nota-card.nota-release { background:rgba(196,162,107,.05);border-color:rgba(196,162,107,.3);border-left:3px solid var(--dorado); }
@@ -160,7 +160,7 @@ include 'layout/head.php';
   border:1px solid rgba(196,162,107,.4);
   font-family:'Archivo',sans-serif;
 }
-.nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif;white-space:pre-wrap; }
+.nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
 .nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
@@ -257,8 +257,8 @@ function renderTabla(lista) {
         <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}</div>
       </td>
       <td>${esc(m.categoria) || '—'}</td>
-      <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif;color:var(--gris4)">${fecha}</td>
-      <td style="font-family:'Archivo Narrow',sans-serif">${verNum}</td>
+      <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">${fecha}</td>
+      <td style="font-family:'Roboto',sans-serif">${verNum}</td>
       ${colAceptacion}
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">

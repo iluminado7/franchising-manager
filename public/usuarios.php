@@ -137,7 +137,7 @@ include 'layout/head.php';
             <svg id="modal-eye" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
-        <div id="hint-password" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
+        <div id="hint-password" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif"></div>
       </div>
 
       <div class="form-row">
@@ -160,7 +160,7 @@ include 'layout/head.php';
         <select id="form-empresa" class="form-select" onchange="onEmpresaChange()">
           <option value="">Seleccioná una empresa</option>
         </select>
-        <div id="hint-empresa" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
+        <div id="hint-empresa" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif"></div>
       </div>
 
       <!-- Franquicia / Sucursal — para empleado (obligatoria) y socio comercial (opcional) -->
@@ -169,7 +169,7 @@ include 'layout/head.php';
         <select id="form-franquicia" class="form-select">
           <option value="">Sin sucursal asignada</option>
         </select>
-        <div id="hint-franquicia" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
+        <div id="hint-franquicia" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif"></div>
       </div>
 
       <!-- v2.3: Categorías para Socio comercial al crear -->
@@ -178,7 +178,7 @@ include 'layout/head.php';
         <div id="categorias-socio-lista" style="background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:10px;max-height:240px;overflow-y:auto">
           <!-- Se renderiza dinámicamente -->
         </div>
-        <div id="hint-categorias-socio" style="font-size:11px;color:var(--gris4);margin-top:6px;font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+        <div id="hint-categorias-socio" style="font-size:11px;color:var(--gris4);margin-top:6px;font-family:'Roboto',sans-serif;line-height:1.5">
           Definí a qué categorías va a pertenecer este Socio comercial. Esto determina qué manuales y documentos podrá ver.
         </div>
       </div>
@@ -203,7 +203,7 @@ include 'layout/head.php';
     <div class="modal-header">
       <div>
         <h3 id="manuales-titulo">Manuales asignados</h3>
-        <div id="manuales-subtitulo" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif"></div>
+        <div id="manuales-subtitulo" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif"></div>
       </div>
       <button class="modal-close" onclick="cerrarModalManuales()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -245,7 +245,7 @@ include 'layout/head.php';
     <div class="modal-header">
       <div>
         <h3 id="categorias-titulo">Categorías del usuario</h3>
-        <div id="categorias-subtitulo" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif"></div>
+        <div id="categorias-subtitulo" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif"></div>
       </div>
       <button class="modal-close" onclick="cerrarModalCategorias()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -278,7 +278,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="toggle-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="toggle-error"></div>
     </div>
     <div class="modal-footer">
@@ -300,7 +300,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="eliminar-error"></div>
     </div>
     <div class="modal-footer">
@@ -343,9 +343,9 @@ include 'layout/head.php';
 
 /* ── Combobox de empresa/franquicia (mismo patrón que documentos/manuales/log) ── */
 .combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
-.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Archivo Narrow',sans-serif;transition:background .12s; }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
-.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
@@ -374,7 +374,7 @@ include 'layout/head.php';
 .accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
 .btn-sm { padding:8px 14px;font-size:12px; }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 </style>
 
@@ -561,10 +561,10 @@ function renderTabla(lista) {
     if (eliminado) {
       return `<tr style="opacity:.65">
         <td style="color:var(--blanco);font-weight:500">${esc(nombre)}${badgeElim}</td>
-        <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif">${esc(u.email)}</td>
+        <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
         <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
         <td>${contexto}</td>
-        <td style="font-family:'Archivo Narrow',sans-serif">${esc(dni)}</td>
+        <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
         <td><span class="estado-pill estado-pendiente">Eliminado</span></td>
         <td>
           <button class="accion-btn" style="color:var(--dorado)" onclick="restaurarUsuario(${u.id}, '${esc(nombre)}')">
@@ -600,10 +600,10 @@ function renderTabla(lista) {
 
     return `<tr>
       <td style="color:var(--blanco);font-weight:500">${esc(nombre)}</td>
-      <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif">${esc(u.email)}</td>
+      <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
       <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
       <td>${contexto}</td>
-      <td style="font-family:'Archivo Narrow',sans-serif">${esc(dni)}</td>
+      <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
       <td><span class="estado-pill ${u.activo ? 'estado-completo' : 'estado-pendiente'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td>
         <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -987,7 +987,7 @@ async function cargarCategoriasSocio(empresaId) {
 
   // Mostramos un loading mientras llega la respuesta
   document.getElementById('categorias-socio-lista').innerHTML =
-    `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px">Cargando categorías...</div>`;
+    `<div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px">Cargando categorías...</div>`;
 
   try {
     // super_admin pasa empresa_id explícito; franquiciante lo infiere el server.
@@ -1008,13 +1008,13 @@ function renderCategoriasSocio(estado) {
   const cont = document.getElementById('categorias-socio-lista');
 
   if (estado === 'empresa') {
-    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px">Seleccioná primero una empresa.</div>`;
+    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px">Seleccioná primero una empresa.</div>`;
     return;
   }
 
   if (estado === 'vacio') {
     cont.innerHTML = `
-      <div style="font-size:13px;color:var(--gris5);font-family:'Archivo Narrow',sans-serif;padding:8px;line-height:1.5">
+      <div style="font-size:13px;color:var(--gris5);font-family:'Roboto',sans-serif;padding:8px;line-height:1.5">
         Esta empresa no tiene categorías. Creálas primero en
         <a href="categorias.php" style="color:var(--dorado);text-decoration:underline">categorías</a>.
       </div>`;
@@ -1022,7 +1022,7 @@ function renderCategoriasSocio(estado) {
   }
 
   if (estado === 'error') {
-    cont.innerHTML = `<div style="font-size:12px;color:#E25C5C;font-family:'Archivo Narrow',sans-serif;padding:8px">Error al cargar las categorías. Probá de nuevo.</div>`;
+    cont.innerHTML = `<div style="font-size:12px;color:#E25C5C;font-family:'Roboto',sans-serif;padding:8px">Error al cargar las categorías. Probá de nuevo.</div>`;
     return;
   }
 
@@ -1032,7 +1032,7 @@ function renderCategoriasSocio(estado) {
       <input type="checkbox" data-cat-id="${c.id}" class="cat-socio-check" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
-        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
       </div>
     </label>
   `).join('');
@@ -1283,7 +1283,7 @@ async function cargarManualAsignados() {
       });
 
     if (!asignaciones.length) {
-      lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">No tiene manuales asignados todavía.</div>`;
+      lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">No tiene manuales asignados todavía.</div>`;
       return;
     }
 
@@ -1293,7 +1293,7 @@ async function cargarManualAsignados() {
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px">
         <div>
           <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(manual?.titulo || '—')}</div>
-          <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">
+          <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">
             ${manual?.categoria ? esc(manual.categoria) + ' · ' : ''}
             ${version ? `v${version.version_number}` : 'Sin versión publicada'}
           </div>
@@ -1376,7 +1376,7 @@ async function cargarCategoriasUsuario() {
     const idsActuales = new Set((actuales || []).map(c => c.id));
 
     if (!categoriasDisponibles.length) {
-      lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">
+      lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">
         No hay categorías activas en esta empresa.<br>
         <a href="${BASE_URL}/categorias.php" style="color:var(--dorado);text-decoration:underline">Creá una categoría primero.</a>
       </div>`;
@@ -1390,7 +1390,7 @@ async function cargarCategoriasUsuario() {
         <input type="checkbox" data-cat-id="${c.id}" ${idsActuales.has(c.id) ? 'checked' : ''} style="margin:0;cursor:pointer;accent-color:var(--dorado)">
         <div style="flex:1">
           <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
-          ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">${esc(c.description)}</div>` : ''}
+          ${c.description ? `<div style="font-size:13px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">${esc(c.description)}</div>` : ''}
         </div>
       </label>
     `).join('');

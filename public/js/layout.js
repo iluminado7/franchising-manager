@@ -193,11 +193,11 @@ async function mostrarPopupNotificaciones() {
         <div style="width:6px;height:6px;border-radius:50%;background:var(--dorado);flex-shrink:0;margin-top:5px"></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:500;color:var(--blanco);margin-bottom:3px;line-height:1.3">${n.titulo}</div>
-          <div style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">${formatFechaNotif(n.created_at)}</div>
+          <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${formatFechaNotif(n.created_at)}</div>
         </div>
       </div>
     `).join('') + (notifs.length > 6
-      ? `<div style="font-size:12px;color:var(--gris4);text-align:center;padding:12px 0;font-family:'Archivo Narrow',sans-serif">y ${notifs.length - 6} notificación(es) más...</div>`
+      ? `<div style="font-size:12px;color:var(--gris4);text-align:center;padding:12px 0;font-family:'Roboto',sans-serif">y ${notifs.length - 6} notificación(es) más...</div>`
       : '');
 
     document.getElementById('popup-notif-overlay').style.display = 'flex';
@@ -279,7 +279,7 @@ function cerrarPanelNotificaciones() {
 
 async function cargarNotificacionesPanel() {
   const lista = document.getElementById('notif-panel-lista');
-  lista.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--gris4);font-size:13px;font-family:'Archivo Narrow',sans-serif"><div style="width:16px;height:16px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .6s linear infinite"></div>Cargando...</div>`;
+  lista.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--gris4);font-size:13px;font-family:'Roboto',sans-serif"><div style="width:16px;height:16px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .6s linear infinite"></div>Cargando...</div>`;
 
   try {
     const data     = await apiFetch('GET', '/notificaciones');
@@ -298,7 +298,7 @@ async function cargarNotificacionesPanel() {
     }
 
     if (!notifs.length) {
-      lista.innerHTML = `<div style="text-align:center;padding:64px 24px;color:var(--gris4);font-size:14px;font-family:'Archivo Narrow',sans-serif">Sin notificaciones aún.</div>`;
+      lista.innerHTML = `<div style="text-align:center;padding:64px 24px;color:var(--gris4);font-size:14px;font-family:'Roboto',sans-serif">Sin notificaciones aún.</div>`;
       return;
     }
 
@@ -313,7 +313,7 @@ async function cargarNotificacionesPanel() {
           <div class="notif-dot" style="width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;background:${!n.leida ? 'var(--dorado)' : 'var(--gris2)'}"></div>
           <div style="flex:1">
             <div class="notif-titulo" style="font-size:13px;font-weight:${!n.leida ? '500' : '400'};color:${!n.leida ? 'var(--blanco)' : 'var(--gris5)'};margin-bottom:4px;line-height:1.3">${n.titulo}</div>
-            <div style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">${formatFechaNotif(n.created_at)}</div>
+            <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${formatFechaNotif(n.created_at)}</div>
           </div>
         </div>
       </div>

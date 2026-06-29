@@ -84,7 +84,7 @@ body.tema-claro {
 .topbar-user {
   font-size: 13px;
   color: var(--gris5);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
 }
 
 .rol-badge {
@@ -175,7 +175,7 @@ body.tema-claro {
   padding: 9px 12px;
   border-radius: 7px;
   font-size: 14px;
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   color: var(--gris4);
   cursor: pointer;
   transition: background .15s, color .15s;
@@ -209,7 +209,7 @@ body.tema-claro {
 .page-sub {
   font-size: 14px;
   color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* ── STATS CARDS ─────────────────────────────────────────────── */
@@ -286,7 +286,7 @@ tbody td {
   font-size: 13px;
   color: var(--gris5);
   border-bottom: 1px solid rgba(44,44,44,.5);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
 }
 
 tbody tr:last-child td { border-bottom: none; }
@@ -343,14 +343,14 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   padding: 48px;
   color: var(--gris4);
   font-size: 14px;
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
 }
 
 .empty-state {
   text-align: center;
   padding: 64px 32px;
   color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
 }
 

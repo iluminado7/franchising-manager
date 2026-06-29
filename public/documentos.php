@@ -168,7 +168,7 @@ include 'layout/head.php';
           <input type="checkbox" id="doc-visible" style="margin-right:6px;accent-color:var(--dorado)" onchange="onToggleVisibilidadCategorias('doc')">
           ¿Permitir que sea visible para Socios comerciales?
         </label>
-        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">
           Si está activado, elegí qué categorías de Socios comerciales podrán ver y descargar este documento.
         </div>
 
@@ -177,16 +177,16 @@ include 'layout/head.php';
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4)">Categorías visibles</span>
             <button type="button" id="doc-btn-sel-todas" onclick="toggleSeleccionarTodasCategorias('doc')"
-                    style="background:transparent;border:none;color:var(--dorado);font-size:12px;cursor:pointer;font-family:'Archivo Narrow',sans-serif;padding:0;text-decoration:underline">
+                    style="background:transparent;border:none;color:var(--dorado);font-size:12px;cursor:pointer;font-family:'Roboto',sans-serif;padding:0;text-decoration:underline">
               Seleccionar todos
             </button>
           </div>
           <div id="doc-categorias-lista">
-            <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">
+            <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px 0">
               ${''}
             </div>
           </div>
-          <div id="doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+          <div id="doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Roboto',sans-serif;line-height:1.5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Sin categorías marcadas: ningún socio comercial verá este documento.
           </div>
@@ -199,7 +199,7 @@ include 'layout/head.php';
           <select id="doc-franquicia" class="form-select">
             <option value="">Toda la empresa (global)</option>
           </select>
-          <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Dejá vacío para que aplique a todas las franquicias.</div>
+          <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Dejá vacío para que aplique a todas las franquicias.</div>
       </div>
 
       <!-- Zona de archivo -->
@@ -239,7 +239,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="eliminar-error"></div>
     </div>
     <div class="modal-footer">
@@ -261,8 +261,8 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="eliminar-ver-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
-      <p id="eliminar-ver-aviso" style="font-size:12px;color:var(--dorado);line-height:1.5;font-family:'Archivo Narrow',sans-serif;margin-top:10px;display:none">
+      <p id="eliminar-ver-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
+      <p id="eliminar-ver-aviso" style="font-size:12px;color:var(--dorado);line-height:1.5;font-family:'Roboto',sans-serif;margin-top:10px;display:none">
         <strong>Atención:</strong> esta es la versión vigente. Al eliminarla, la versión inmediatamente anterior pasará a ser la vigente.
       </p>
       <div class="form-error" id="eliminar-ver-error"></div>
@@ -286,7 +286,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--gris4);margin-bottom:14px;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:12px;color:var(--gris4);margin-bottom:14px;font-family:'Roboto',sans-serif">
         La nueva versión quedará como vigente. La anterior pasa al historial.
       </p>
 
@@ -300,14 +300,14 @@ include 'layout/head.php';
             <button type="button" class="btn btn-ghost" onclick="document.getElementById('archivo-v').click()" style="font-size:12px;padding:6px 14px">
               Seleccionar archivo
             </button>
-            <div style="font-size:11px;color:var(--gris4);margin-top:10px;font-family:'Archivo Narrow',sans-serif">PDF, DOC o DOCX · máx. 20 MB</div>
+            <div style="font-size:11px;color:var(--gris4);margin-top:10px;font-family:'Roboto',sans-serif">PDF, DOC o DOCX · máx. 20 MB</div>
           </div>
           <div id="drop-info-v" style="display:none">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;justify-content:center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dorado)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               <div>
                 <div id="drop-nombre-v" style="color:var(--blanco);font-weight:500;font-size:13px"></div>
-                <div id="drop-tamano-v" style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif"></div>
+                <div id="drop-tamano-v" style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif"></div>
               </div>
             </div>
             <button type="button" class="btn btn-ghost" onclick="resetDropZoneVersion()" style="font-size:12px;padding:4px 10px">Cambiar archivo</button>
@@ -317,8 +317,8 @@ include 'layout/head.php';
 
       <div class="form-group">
         <label class="form-label">Nota (opcional)</label>
-        <textarea id="version-nota" maxlength="500" rows="3" class="form-input" placeholder="Describí qué cambió en esta versión (opcional)..." style="resize:vertical;font-family:'Archivo Narrow',sans-serif"></textarea>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Podés agregar o editar la nota más tarde.</div>
+        <textarea id="version-nota" maxlength="500" rows="3" class="form-input" placeholder="Describí qué cambió en esta versión (opcional)..." style="resize:vertical;font-family:'Roboto',sans-serif"></textarea>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Podés agregar o editar la nota más tarde.</div>
       </div>
 
       <div class="form-error" id="version-error"></div>
@@ -345,7 +345,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--gris4);margin-bottom:14px;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:12px;color:var(--gris4);margin-bottom:14px;font-family:'Roboto',sans-serif">
         Estos datos se aplican a todas las versiones del documento.
       </p>
 
@@ -369,7 +369,7 @@ include 'layout/head.php';
         <select id="edit-doc-franquicia" class="form-select">
           <option value="">Toda la empresa (global)</option>
         </select>
-        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">
           Si elegís una franquicia específica, solo los franquiciados/empleados de esa sucursal verán este documento.
         </div>
       </div>
@@ -379,7 +379,7 @@ include 'layout/head.php';
           <input type="checkbox" id="edit-doc-visible" style="margin-right:6px;accent-color:var(--dorado)" onchange="onToggleVisibilidadCategorias('edit-doc')">
           ¿Permitir que sea visible para Socios comerciales?
         </label>
-        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+        <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">
           Si está desactivado, solo los franquiciantes y super admins verán este documento. Las categorías marcadas se preservan para cuando vuelvas a activarlo.
         </div>
 
@@ -387,16 +387,16 @@ include 'layout/head.php';
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4)">Categorías visibles</span>
             <button type="button" id="edit-doc-btn-sel-todas" onclick="toggleSeleccionarTodasCategorias('edit-doc')"
-                    style="background:transparent;border:none;color:var(--dorado);font-size:12px;cursor:pointer;font-family:'Archivo Narrow',sans-serif;padding:0;text-decoration:underline">
+                    style="background:transparent;border:none;color:var(--dorado);font-size:12px;cursor:pointer;font-family:'Roboto',sans-serif;padding:0;text-decoration:underline">
               Seleccionar todos
             </button>
           </div>
           <div id="edit-doc-categorias-lista">
-            <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">
+            <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px 0">
               Cargando categorías...
             </div>
           </div>
-          <div id="edit-doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+          <div id="edit-doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Roboto',sans-serif;line-height:1.5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Sin categorías marcadas: ningún socio comercial verá este documento.
           </div>
@@ -444,16 +444,16 @@ include 'layout/head.php';
 
 /* ── Combobox de empresa (igual a manuales.php) ─────────────── */
 .combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
-.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Archivo Narrow',sans-serif;transition:background .12s; }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
-.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
 /* ── Tabla ────────────────────────────────────────────────── */
 .tabla-wrap { background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px; overflow: hidden; }
 .tabla-header { padding: 14px 18px; border-bottom: 1px solid var(--gris2); font-size: 13px; font-weight: 500; color: var(--gris5); }
 .tabla { width: 100%; border-collapse: collapse; }
 .tabla th { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--gris4); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--gris2); white-space: nowrap; }
-.tabla td { padding: 13px 16px; font-size: 13px; color: var(--gris5); border-bottom: 1px solid var(--gris2); font-family: 'Archivo Narrow', sans-serif; vertical-align: middle; }
+.tabla td { padding: 13px 16px; font-size: 13px; color: var(--gris5); border-bottom: 1px solid var(--gris2); font-family: 'Roboto', sans-serif; vertical-align: middle; }
 .tabla tr:last-child td { border-bottom: none; }
 .tabla tr:hover td { background: rgba(255,255,255,.02); }
 
@@ -513,7 +513,7 @@ include 'layout/head.php';
 .accion-btn:hover { background:var(--gris2);color:var(--blanco); }
 
 /* ── Toast ────────────────────────────────────────────────── */
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 /* ── Vista detalle ─────────────────────────────────────────── */
 .detalle-header {
@@ -528,7 +528,7 @@ include 'layout/head.php';
 }
 .detalle-meta {
   font-size: 13px; color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
 }
 .detalle-meta .sep { color: var(--gris3); }
@@ -557,7 +557,7 @@ include 'layout/head.php';
   background: transparent; border: 1px solid var(--gris2);
   border-radius: 20px; padding: 6px 14px;
   font-size: 12px; color: var(--gris5);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   cursor: pointer; transition: all .15s; outline: none;
 }
 .filtro-btn:hover { border-color: var(--dorado); color: var(--blanco); }
@@ -581,11 +581,11 @@ include 'layout/head.php';
 
 .version-info-autor {
   font-size: 12px; color: var(--gris5);
-  font-family: 'Archivo Narrow', sans-serif; margin-bottom: 4px;
+  font-family: 'Roboto', sans-serif; margin-bottom: 4px;
 }
 .version-info-meta {
   font-size: 11px; color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
 }
 
@@ -593,7 +593,7 @@ include 'layout/head.php';
   margin-top: 8px; padding: 8px 12px;
   background: var(--gris1); border-left: 2px solid var(--gris3);
   border-radius: 4px; font-size: 12px; color: var(--gris5);
-  font-family: 'Archivo Narrow', sans-serif; line-height: 1.5;
+  font-family: 'Roboto', sans-serif; line-height: 1.5;
   display: flex; gap: 8px; align-items: flex-start;
 }
 .version-nota.vacia { color: var(--gris3); font-style: italic; border-left-color: var(--gris2); }
@@ -615,7 +615,7 @@ include 'layout/head.php';
   background: var(--gris1); border: 1px solid var(--gris2);
   border-radius: 6px; padding: 8px 10px;
   font-size: 12px; color: var(--blanco);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   resize: vertical; min-height: 60px; outline: none;
   transition: border-color .15s;
 }
@@ -734,7 +734,7 @@ function renderListaCategoriasModal(prefix, idsMarcadas) {
   if (!cont) return;
 
   if (!categoriasEmpresa.length) {
-    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px 0">
+    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px 0">
       No hay categorías activas en esta empresa. <a href="${BASE_URL}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una</a>.
     </div>`;
     document.getElementById(`${prefix}-categorias-warning`).style.display = 'none';
@@ -746,7 +746,7 @@ function renderListaCategoriasModal(prefix, idsMarcadas) {
       <input type="checkbox" data-cat-id="${c.id}" ${idsMarcadas.has(c.id) ? 'checked' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onCambioCheckboxCategoria('${prefix}')">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
-        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
       </div>
     </label>
   `).join('');

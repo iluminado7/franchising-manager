@@ -136,7 +136,7 @@ include 'layout/head.php';
 
         <!-- Paginación -->
         <div id="paginacion" style="display:none;padding:14px 20px;border-top:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between">
-          <span id="pag-info" style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif"></span>
+          <span id="pag-info" style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif"></span>
           <div style="display:flex;gap:6px">
             <button class="btn btn-ghost" id="btn-prev" onclick="cambiarPagina(-1)" style="padding:5px 12px;font-size:12px">← Anterior</button>
             <button class="btn btn-ghost" id="btn-next" onclick="cambiarPagina(1)"  style="padding:5px 12px;font-size:12px">Siguiente →</button>
@@ -187,9 +187,9 @@ include 'layout/head.php';
 
 /* ── Combobox de empresa (mismo patrón que documentos.php) ── */
 .combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
-.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Archivo Narrow',sans-serif;transition:background .12s; }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
-.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
 .accion-pill {
   display: inline-flex; align-items: center; gap: 5px;
@@ -240,7 +240,7 @@ include 'layout/head.php';
 
 .detalle-row {
   display: flex; gap: 12px; margin-bottom: 12px;
-  font-size: 13px; font-family: 'Archivo Narrow', sans-serif;
+  font-size: 13px; font-family: 'Roboto', sans-serif;
 }
 .detalle-label { color: var(--gris4); min-width: 110px; flex-shrink: 0; }
 .detalle-valor { color: var(--blanco); word-break: break-all; }
@@ -475,14 +475,14 @@ function renderTabla() {
       const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}` : (l.user?.email || `#${l.user_id}`);
       const empresa = l.empresa?.nombre || l.user?.empresa?.nombre || '—';
       return `<tr style="cursor:pointer" onclick="verDetalle(${inicio + i})" title="Ver detalle">
-        <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">${formatFechaHora(l.created_at)}</td>
+        <td style="font-family:'Roboto',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">${formatFechaHora(l.created_at)}</td>
         <td>
           <div style="font-size:13px;font-weight:500;color:var(--blanco)">${esc(nombre)}</div>
           <div style="font-size:11px;color:var(--gris4)">${esc(d.manual_titulo || '')}${d.version ? ' · v' + d.version : ''}</div>
         </td>
         <td style="font-size:12px;color:var(--gris5)">${esc(empresa)}</td>
-        <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif;color:var(--gris4)">${esc(l.user?.email || '—')}</td>
-        <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;color:var(--gris4)">${esc(l.ip_address)}</td>
+        <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">${esc(l.user?.email || '—')}</td>
+        <td style="font-family:'Roboto',sans-serif;font-size:12px;color:var(--gris4)">${esc(l.ip_address)}</td>
       </tr>`;
     }).join('');
     const pagF = document.getElementById('paginacion');
@@ -511,7 +511,7 @@ function renderTabla() {
     const rol    = l.user?.rol || '';
 
     return `<tr style="cursor:pointer" onclick="verDetalle(${inicio + i})" title="Ver detalle">
-      <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">
+      <td style="font-family:'Roboto',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">
         ${formatFechaHora(l.created_at)}
       </td>
       <td>
@@ -519,13 +519,13 @@ function renderTabla() {
         <div style="font-size:11px;color:var(--gris4)">${rol}</div>
       </td>
       <td>${accionPill(l.accion)}</td>
-      <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif;color:var(--gris4)">
+      <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">
         ${l.entidad_tipo ? `<span style="color:var(--gris5)">${esc(l.entidad_tipo)}</span> #${l.entidad_id}` : '—'}
       </td>
-      <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif;color:var(--gris4);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+      <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
         ${resumenDetalle(l.detalle)}
       </td>
-      <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;color:var(--gris4)">
+      <td style="font-family:'Roboto',sans-serif;font-size:12px;color:var(--gris4)">
         ${esc(l.ip_address)}
       </td>
     </tr>`;

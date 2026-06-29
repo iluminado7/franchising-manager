@@ -92,7 +92,7 @@ include 'layout/head.php';
       <div class="form-group">
         <label>Descripción</label>
         <textarea id="plan-descripcion" placeholder="Breve descripción de cómo funciona este plan y para qué tipo de empresa está pensado..." rows="3" maxlength="500"></textarea>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Esta descripción es visible solo para el super admin.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Esta descripción es visible solo para el super admin.</div>
       </div>
 
       <div class="form-group" id="grupo-precio-franquicia" style="display:none">
@@ -101,7 +101,7 @@ include 'layout/head.php';
           <span class="input-prefix">$</span>
           <input type="number" id="plan-precio-franquicia" placeholder="0.00" min="0" step="0.01">
         </div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Se multiplica por la cantidad de franquicias activas al generar la factura.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Se multiplica por la cantidad de franquicias activas al generar la factura.</div>
       </div>
 
       <div class="form-group" id="grupo-precio-global" style="display:none">
@@ -110,13 +110,13 @@ include 'layout/head.php';
           <span class="input-prefix">$</span>
           <input type="number" id="plan-precio-global" placeholder="0.00" min="0" step="0.01">
         </div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Precio fijo mensual sin importar la cantidad de franquicias.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Precio fijo mensual sin importar la cantidad de franquicias.</div>
       </div>
 
       <div class="form-group">
         <label>Límite de franquicias</label>
         <input type="number" id="plan-limite" placeholder="Sin límite" min="1" step="1">
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">Dejá vacío para franquicias ilimitadas.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Dejá vacío para franquicias ilimitadas.</div>
       </div>
 
       <div class="form-error" id="plan-error" style="display:none"></div>
@@ -144,7 +144,7 @@ include 'layout/head.php';
     </div>
     <div class="modal-body">
       <input type="hidden" id="factura-id">
-      <div id="factura-resumen" style="background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-family:'Archivo Narrow',sans-serif;font-size:13px;color:var(--gris5);line-height:1.7"></div>
+      <div id="factura-resumen" style="background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-family:'Roboto',sans-serif;font-size:13px;color:var(--gris5);line-height:1.7"></div>
       <div class="form-group">
         <label>Estado *</label>
         <select id="factura-estado" class="form-select">
@@ -178,7 +178,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif">
+      <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif">
         Esto generará facturas del período <strong id="periodo-txt" style="color:var(--blanco)"></strong> para todas las empresas activas que aún no tengan factura en ese período.<br><br>
         Las empresas que ya tienen factura para este mes <strong style="color:var(--blanco)">no serán afectadas</strong>.
       </p>
@@ -251,7 +251,7 @@ include 'layout/head.php';
 }
 .plan-descripcion {
   font-size: 12px; color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   line-height: 1.6; min-height: 36px;
 }
 .plan-meta {
@@ -260,7 +260,7 @@ include 'layout/head.php';
 }
 .plan-meta-item {
   font-size: 11px; color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   display: flex; align-items: center; gap: 5px;
 }
 .plan-meta-item strong { color: var(--gris5); }
@@ -307,7 +307,7 @@ include 'layout/head.php';
 .tabla-facturas td {
   padding: 12px 16px; font-size: 13px; color: var(--gris5);
   border-bottom: 1px solid var(--gris2);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   vertical-align: middle;
 }
 .tabla-facturas tr:last-child td { border-bottom: none; }
@@ -317,7 +317,7 @@ include 'layout/head.php';
 .empty-state-soft {
   padding: 32px 0; text-align: center;
   font-size: 13px; color: var(--gris4);
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
 }
 .filtro-select {
   background: var(--gris2); border: 1px solid var(--gris2);
@@ -331,7 +331,7 @@ include 'layout/head.php';
 .input-prefix {
   position: absolute; left: 12px;
   font-size: 13px; color: var(--gris4);
-  pointer-events: none; font-family: 'Archivo Narrow', sans-serif;
+  pointer-events: none; font-family: 'Roboto', sans-serif;
 }
 .input-prefix-wrap input { padding-left: 26px; }
 
@@ -356,7 +356,7 @@ include 'layout/head.php';
   font-family:'Archivo',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
-.form-group textarea { resize:vertical; font-family:'Archivo Narrow',sans-serif; line-height:1.6; }
+.form-group textarea { resize:vertical; font-family:'Roboto',sans-serif; line-height:1.6; }
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group .form-select:focus { border-color:var(--dorado); }
@@ -369,7 +369,7 @@ include 'layout/head.php';
 .btn-sm { padding:8px 14px;font-size:12px; }
 .accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
 .accion-btn:hover { background:var(--gris2);color:var(--blanco); }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 </style>
 
@@ -598,7 +598,7 @@ function renderTablaFacturas(facturas, empresaId) {
     <div class="tabla-facturas-wrap">
       <div class="tabla-facturas-header">
         <h3>${esc(empresa?.nombre || '')} — ${facturas.length} factura(s)</h3>
-        <div style="display:flex;gap:16px;font-size:12px;font-family:'Archivo Narrow',sans-serif">
+        <div style="display:flex;gap:16px;font-size:12px;font-family:'Roboto',sans-serif">
           <span style="color:var(--exito)">Pagado: $${totalPagado.toLocaleString('es-AR')}</span>
           <span style="color:var(--amarillo,#f0c040)">Pendiente: $${totalPendiente.toLocaleString('es-AR')}</span>
         </div>

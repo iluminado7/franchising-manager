@@ -46,7 +46,7 @@ body {
 .doc-back:hover { color: #1A1A1A; }
 .doc-meta {
   display: flex; align-items: center; gap: 12px;
-  font-size: 12px; color: #888; font-family: 'Archivo Narrow', sans-serif;
+  font-size: 12px; color: #888; font-family: 'Roboto', sans-serif;
 }
 .doc-meta span { display: flex; align-items: center; gap: 5px; }
 
@@ -79,7 +79,7 @@ body {
 .doc-content strong { font-weight: 700; color: #111; }
 .doc-content em     { font-style: italic; }
 .doc-content u      { text-decoration: underline; }
-.doc-content table  { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; font-family: 'Archivo Narrow', sans-serif; }
+.doc-content table  { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; font-family: 'Roboto', sans-serif; }
 .doc-content td, .doc-content th { border: 1px solid #E0DDD6; padding: 9px 14px; text-align: left; }
 .doc-content th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Archivo', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
 
@@ -87,7 +87,7 @@ body {
 
 .estado-aceptacion {
   padding: 14px 20px; border-radius: 10px; font-size: 13px;
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Roboto', sans-serif;
   display: flex; align-items: center; gap: 10px;
 }
 .estado-aceptacion.aceptado  { background: rgba(92,184,122,.1);  border: 1px solid rgba(92,184,122,.25); color: #27500A; }
@@ -106,7 +106,7 @@ body {
 
 .nota-legal {
   font-size: 11px; color: #999; text-align: center;
-  font-family: 'Archivo Narrow', sans-serif; line-height: 1.5; padding: 0 8px;
+  font-family: 'Roboto', sans-serif; line-height: 1.5; padding: 0 8px;
 }
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:16px; }
@@ -124,11 +124,11 @@ body {
 .btn-modal-confirm:hover    { opacity:.88; }
 .btn-modal-confirm:disabled { opacity:.4;cursor:not-allowed; }
 
-.loading-doc { display:flex;align-items:center;justify-content:center;gap:12px;padding:80px 0;color:#999;font-size:14px;font-family:'Archivo Narrow',sans-serif; }
+.loading-doc { display:flex;align-items:center;justify-content:center;gap:12px;padding:80px 0;color:#999;font-size:14px;font-family:'Roboto',sans-serif; }
 .spinner-doc { width:20px;height:20px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius:10px;padding:12px 16px;font-size:13px;color:#F5F3EE;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:340px; }
+.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius:10px;padding:12px 16px;font-size:13px;color:#F5F3EE;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -144,10 +144,10 @@ body {
   padding: 24px 28px; box-shadow: 0 2px 20px rgba(0,0,0,.05);
 }
 .notas-box-title { font-family: 'Archivo', sans-serif; font-size: 16px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
-.notas-box-sub   { font-size: 12.5px; color: #888; font-family: 'Archivo Narrow', sans-serif; margin-bottom: 14px; line-height: 1.5; }
+.notas-box-sub   { font-size: 12.5px; color: #888; font-family: 'Roboto', sans-serif; margin-bottom: 14px; line-height: 1.5; }
 .nota-textarea {
   width: 100%; background: #F7F5F0; border: 1px solid #E0DDD6; border-radius: 8px;
-  color: #1A1A1A; font-family: 'Archivo Narrow', sans-serif; font-size: 13.5px;
+  color: #1A1A1A; font-family: 'Roboto', sans-serif; font-size: 13.5px;
   padding: 10px 12px; resize: vertical; outline: none; line-height: 1.5;
 }
 .nota-textarea:focus { border-color: var(--dorado); }
@@ -165,13 +165,13 @@ body {
   background: #F7F5F0; border: 1px solid #E8E4DC; border-radius: 10px; padding: 12px 14px;
 }
 .nota-item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
-.nota-fecha { font-size: 11px; color: #999; font-family: 'Archivo Narrow', sans-serif; }
-.nota-contenido { font-size: 13.5px; color: #333; font-family: 'Archivo Narrow', sans-serif; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.nota-fecha { font-size: 11px; color: #999; font-family: 'Roboto', sans-serif; }
+.nota-contenido { font-size: 13.5px; color: #333; font-family: 'Roboto', sans-serif; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
 .nota-estado { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
 .nota-estado.pendiente { background: rgba(201,168,76,.15); color: #8A6D1B; }
 .nota-estado.leida     { background: rgba(55,138,221,.12); color: #2A5E9E; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: #27500A; }
-.notas-empty { font-size: 12.5px; color: #aaa; font-family: 'Archivo Narrow', sans-serif; padding: 4px 0; }
+.notas-empty { font-size: 12.5px; color: #aaa; font-family: 'Roboto', sans-serif; padding: 4px 0; }
 
 </style>
 
@@ -245,7 +245,7 @@ body {
       </p>
       <div style="background:#F7F5F0;border-radius:8px;padding:12px 16px;margin-bottom:14px">
         <div style="font-size:14px;font-weight:600;color:#1A1A1A" id="modal-manual-nombre"></div>
-        <div style="font-size:12px;color:#888;margin-top:3px;font-family:'Archivo Narrow',sans-serif" id="modal-manual-version"></div>
+        <div style="font-size:12px;color:#888;margin-top:3px;font-family:'Roboto',sans-serif" id="modal-manual-version"></div>
       </div>
       <p style="font-size:14px;color:#666;line-height:1.6;font-family:'Montserrat',sans-serif">
         Esta acción es <strong style="color:#1A1A1A">queda registrada</strong> una vez aceptes que leiste el manual.</strong>.

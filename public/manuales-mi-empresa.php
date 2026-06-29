@@ -100,12 +100,12 @@ include 'layout/head.php';
         <label>Este manual va dirigido para:</label>
         <div id="manual-categorias-wrap" style="margin-top:6px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
           <div id="manual-categorias-lista">
-            <div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:4px 0">
+            <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:4px 0">
               ${''}
             </div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif">
+        <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">
           Si no marcás ninguna opción, el manual quedará sin asignar y no será visible para socios comerciales.
         </div>
       </div>
@@ -185,7 +185,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="archivar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="archivar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="archivar-error"></div>
     </div>
     <div class="modal-footer">
@@ -205,7 +205,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif"></p>
+      <p id="eliminar-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
       <div class="form-error" id="eliminar-error"></div>
     </div>
     <div class="modal-footer">
@@ -225,7 +225,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <p class="notas-intro">Dejá una sugerencia sobre este manual para el administrador (por ejemplo, proponer cambiar una cláusula). Queda asociada a la versión actual del manual y el administrador la revisará y marcará su estado.</p>
+      <p class="notas-intro">Dejá una sugerencia sobre este manual para el administrador, por ejemplo, proponer cambiar una cláusula. Queda asociada a la versión actual del manual y el administrador la revisará y marcará su estado.</p>
 
       <div class="form-group" style="margin-bottom:8px">
         <label>Nueva nota</label>
@@ -283,7 +283,7 @@ include 'layout/head.php';
 .modo-btn:hover { border-color:var(--gris3);color:var(--blanco); }
 .modo-btn.active { border-color:var(--dorado);background:rgba(201,168,76,.06);color:var(--blanco); }
 .modo-btn span { font-size:13px;font-weight:500;color:inherit;font-family:'Archivo',sans-serif; }
-.modo-btn small { font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
+.modo-btn small { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 .drop-zone { border:1.5px dashed var(--gris2);border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;display:flex;flex-direction:column;align-items:center; }
 .drop-zone:hover { border-color:var(--dorado);background:rgba(201,168,76,.04); }
 .drop-zone.drag { border-color:var(--dorado);background:rgba(201,168,76,.08); }
@@ -292,11 +292,11 @@ include 'layout/head.php';
 .empresa-separador td { background:rgba(201,168,76,.06);border-top:1px solid rgba(201,168,76,.15);border-bottom:1px solid rgba(201,168,76,.15);padding:8px 16px !important; }
 .empresa-sep-inner { display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--dorado); }
 .empresa-sep-count { font-size:10px;font-weight:400;color:var(--gris4);text-transform:none;letter-spacing:0;margin-left:4px; }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Archivo Narrow',sans-serif;max-width:340px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
 .toast.show { transform:translateY(0);opacity:1; }
 /* ── Notas / sugerencias ── */
-.notas-intro { font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Archivo Narrow',sans-serif;margin-bottom:14px; }
-.nota-textarea { width:100%;min-height:90px;resize:vertical;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo Narrow',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;line-height:1.5; }
+.notas-intro { font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:14px; }
+.nota-textarea { width:100%;min-height:90px;resize:vertical;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Roboto',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;line-height:1.5; }
 .nota-textarea:focus { border-color:var(--dorado); }
 .nota-textarea::placeholder { color:var(--gris3); }
 .notas-hist-label { font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:10px;padding-top:6px;border-top:1px solid var(--gris2); }
@@ -319,8 +319,8 @@ include 'layout/head.php';
   transition:color .15s;flex-shrink:0;
 }
 .btn-editar-release:hover { color:var(--dorado); }
-.nota-meta { font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif; }
-.nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Archivo Narrow',sans-serif;white-space:pre-wrap; }
+.nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
+.nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
 .nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
@@ -415,10 +415,10 @@ function renderTabla(lista) {
       </td>
       <td>${esc(m.categoria) || '—'}</td>
       <td>${estadoPill(m.estado)}</td>
-      <td style="font-size:12px;font-family:'Archivo Narrow',sans-serif;color:var(--gris4)">
+      <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">
         <span style="color:var(--gris3);font-size:10px">${fechaLabel}</span><br>${fecha}
       </td>
-      <td style="font-family:'Archivo Narrow',sans-serif">${verNum}</td>
+      <td style="font-family:'Roboto',sans-serif">${verNum}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="accion-btn" style="color:var(--dorado)" onclick="irEditor(${m.id})">
@@ -478,7 +478,7 @@ function renderListaCategoriasManual() {
   if (!cont) return;
 
   if (!categoriasEmpresa.length) {
-    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:4px 0">
+    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:4px 0">
       Tu empresa todavía no tiene categorías activas. <a href="${BASE_PHP}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una</a>.
     </div>`;
     return;
@@ -489,7 +489,7 @@ function renderListaCategoriasManual() {
       <input type="checkbox" id="cat-toda-empresa" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodaLaEmpresa()">
       <div style="flex:1">
         <div style="font-size:13px;color:var(--dorado);font-weight:600">Toda la empresa</div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif">El manual será visible para todas las categorías activas.</div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">El manual será visible para todas las categorías activas.</div>
       </div>
     </label>
 
@@ -505,7 +505,7 @@ function renderListaCategoriasManual() {
           <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
-            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
           </div>
         </label>
       `).join('')}
@@ -710,13 +710,13 @@ async function verAceptaciones(manualId, titulo, versionId) {
             return `<tr>
               <td style="color:var(--blanco);font-weight:500">${esc(nombreCompleto) || '—'}</td>
               <td>${sucursal}</td>
-              <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px">${formatFechaHora(a.aceptado_at)}</td>
-              <td style="font-family:'Archivo Narrow',sans-serif;font-size:12px;color:var(--gris4)">${esc(a.ip_address)}</td>
+              <td style="font-family:'Roboto',sans-serif;font-size:12px">${formatFechaHora(a.aceptado_at)}</td>
+              <td style="font-family:'Roboto',sans-serif;font-size:12px;color:var(--gris4)">${esc(a.ip_address)}</td>
             </tr>`;
           }).join('')}
         </tbody>
       </table>
-      <div style="margin-top:12px;font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif">
+      <div style="margin-top:12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif">
         Total: ${aceptaciones.length} aceptación(es)
       </div>`;
   } catch (e) {
@@ -828,7 +828,7 @@ function editarReleaseInline(versionId) {
 
   cont.innerHTML = `
     <textarea id="release-edit-${versionId}" maxlength="2000" rows="4"
-      style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--blanco);font-family:'Archivo Narrow',sans-serif;resize:vertical;outline:none;transition:border-color .15s;min-height:80px"
+      style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;resize:vertical;outline:none;transition:border-color .15s;min-height:80px"
       onfocus="this.style.borderColor='var(--dorado)'" onblur="this.style.borderColor='var(--gris2)'">${esc(textoActual)}</textarea>
     <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="cancelarEditarRelease(${versionId})" style="padding:5px 12px;font-size:11px">Cancelar</button>
