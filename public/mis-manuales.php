@@ -68,7 +68,7 @@ include 'layout/head.php';
     </div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Archivo Narrow',sans-serif">
-        Al confirmar, estás aceptando digitalmente el contenido de este manual bajo los términos de la <strong style="color:var(--blanco)">Ley 25.506</strong> de firma digital argentina. Esta acción queda registrada con tu IP, fecha y hora exacta.
+        Al confirmar, estás aceptando digitalmente el contenido de este manual. Esta acción queda registrada con la fecha y hora exacta.
       </p>
       <div class="form-error" id="acept-error"></div>
     </div>

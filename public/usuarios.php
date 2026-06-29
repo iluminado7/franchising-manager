@@ -172,6 +172,17 @@ include 'layout/head.php';
         <div id="hint-franquicia" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Archivo Narrow',sans-serif"></div>
       </div>
 
+      <!-- v2.3: Categorías para Socio comercial al crear -->
+      <div class="form-group" id="grupo-categorias-socio" style="display:none">
+        <label>Categorías del Socio comercial</label>
+        <div id="categorias-socio-lista" style="background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:10px;max-height:240px;overflow-y:auto">
+          <!-- Se renderiza dinámicamente -->
+        </div>
+        <div id="hint-categorias-socio" style="font-size:11px;color:var(--gris4);margin-top:6px;font-family:'Archivo Narrow',sans-serif;line-height:1.5">
+          Definí a qué categorías va a pertenecer este Socio comercial. Esto determina qué manuales y documentos podrá ver.
+        </div>
+      </div>
+
       <div class="form-error" id="form-error"></div>
     </div>
 
@@ -373,6 +384,9 @@ let empleadoSeleccionado = null; // { id, nombre }
 
 // v2.3 — gestión de categorías del franquiciado
 let categoriasUsuarioSel  = null; // { id, nombre, empresaId }
+
+// v2.3: cats activas de la empresa al CREAR un Socio comercial (modal "Nuevo usuario")
+let categoriasParaSocio = []; // [{ id, name, description, is_active, empresa_id }]
 let categoriasDisponibles = []; // catálogo activo de la empresa
 
 let todosLosUsuarios    = [];
@@ -893,6 +907,27 @@ function onRolChange() {
   if (rol === 'franquiciante' && miRol === 'super_admin') {
     onEmpresaChange();
   }
+
+  // v2.3: bloque de categorías del Socio comercial. Solo visible al CREAR un
+  // franquiciado. En edición se gestiona desde el botón "Categorías" en la fila.
+  const grupoCatsSocio = document.getElementById('grupo-categorias-socio');
+  const mostrarCatsSocio = !modoEdicion && rol === 'franquiciado';
+  grupoCatsSocio.style.display = mostrarCatsSocio ? 'block' : 'none';
+
+  if (mostrarCatsSocio) {
+    if (miRol === 'franquiciante') {
+      // Empresa fija: la del actor. Cargamos las cats al instante.
+      cargarCategoriasSocio(miEmpresaId);
+    } else {
+      // super_admin: arranca dependiente de la empresa actual del select.
+      const empresaIdActual = document.getElementById('form-empresa').value;
+      if (empresaIdActual) {
+        cargarCategoriasSocio(parseInt(empresaIdActual, 10));
+      } else {
+        renderCategoriasSocio('empresa');
+      }
+    }
+  }
 }
 
 function onEmpresaChange() {
@@ -921,6 +956,14 @@ function onEmpresaChange() {
   if (franqsFiltradas.length === 0) {
     sel.innerHTML += '<option value="" disabled>(esta empresa no tiene sucursales registradas)</option>';
   }
+
+  // v2.3: si el rol elegido es franquiciado, recargamos las cats para la
+  // nueva empresa. Esto vale solo en CREATE (super_admin).
+  const rolActual = document.getElementById('form-rol').value;
+  if (!modoEdicion && rolActual === 'franquiciado') {
+    if (empresaId) cargarCategoriasSocio(parseInt(empresaId, 10));
+    else           renderCategoriasSocio('empresa');
+  }
 }
 
 function togglePassModal() {
@@ -931,6 +974,73 @@ function togglePassModal() {
   eye.innerHTML = visible
     ? `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`
     : `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+}
+
+// ── v2.3: CATEGORÍAS AL CREAR SOCIO COMERCIAL ─────────────────
+
+async function cargarCategoriasSocio(empresaId) {
+  if (!empresaId) {
+    categoriasParaSocio = [];
+    renderCategoriasSocio('empresa');
+    return;
+  }
+
+  // Mostramos un loading mientras llega la respuesta
+  document.getElementById('categorias-socio-lista').innerHTML =
+    `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px">Cargando categorías...</div>`;
+
+  try {
+    // super_admin pasa empresa_id explícito; franquiciante lo infiere el server.
+    const url = (miRol === 'super_admin')
+      ? `/categorias?empresa_id=${empresaId}&activa=1`
+      : `/categorias?activa=1`;
+    const cats = await apiFetch('GET', url);
+    categoriasParaSocio = (cats || []).filter(c => c.is_active);
+    renderCategoriasSocio(categoriasParaSocio.length ? 'lista' : 'vacio');
+  } catch (e) {
+    console.error('Error al cargar categorías para el Socio comercial:', e);
+    categoriasParaSocio = [];
+    renderCategoriasSocio('error');
+  }
+}
+
+function renderCategoriasSocio(estado) {
+  const cont = document.getElementById('categorias-socio-lista');
+
+  if (estado === 'empresa') {
+    cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;padding:8px">Seleccioná primero una empresa.</div>`;
+    return;
+  }
+
+  if (estado === 'vacio') {
+    cont.innerHTML = `
+      <div style="font-size:13px;color:var(--gris5);font-family:'Archivo Narrow',sans-serif;padding:8px;line-height:1.5">
+        Esta empresa no tiene categorías. Creálas primero en
+        <a href="categorias.php" style="color:var(--dorado);text-decoration:underline">categorías</a>.
+      </div>`;
+    return;
+  }
+
+  if (estado === 'error') {
+    cont.innerHTML = `<div style="font-size:12px;color:#E25C5C;font-family:'Archivo Narrow',sans-serif;padding:8px">Error al cargar las categorías. Probá de nuevo.</div>`;
+    return;
+  }
+
+  // estado === 'lista'
+  cont.innerHTML = categoriasParaSocio.map(c => `
+    <label class="cat-socio-item" style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;cursor:pointer;border-radius:5px;transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
+      <input type="checkbox" data-cat-id="${c.id}" class="cat-socio-check" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
+        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Archivo Narrow',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+      </div>
+    </label>
+  `).join('');
+}
+
+function leerCategoriasSocioSeleccionadas() {
+  const checks = document.querySelectorAll('.cat-socio-check:checked');
+  return Array.from(checks).map(cb => parseInt(cb.dataset.catId, 10));
 }
 
 // ── GUARDAR ───────────────────────────────────────────────────
@@ -992,7 +1102,29 @@ async function guardar() {
       await apiFetch('PUT', `/usuarios/${id}`, body);
       mostrarToast('Usuario actualizado correctamente.', 'exito');
     } else {
-      await apiFetch('POST', '/usuarios', body);
+      const nuevoUsuario = await apiFetch('POST', '/usuarios', body);
+
+      // v2.3: si el rol es franquiciado, sincronizamos las cats seleccionadas.
+      // El POST anterior ya creó el usuario; si el PUT falla, el usuario igual
+      // queda creado y el admin lo puede editar después desde la fila.
+      if (rol === 'franquiciado' && nuevoUsuario?.id) {
+        const catsSeleccionadas = leerCategoriasSocioSeleccionadas();
+        if (catsSeleccionadas.length > 0) {
+          try {
+            await apiFetch('PUT', `/usuarios/${nuevoUsuario.id}/categorias`, {
+              category_ids: catsSeleccionadas,
+            });
+          } catch (errCat) {
+            console.error('Falló sync de categorías del Socio comercial:', errCat);
+            const msg = errCat?.data?.error || errCat?.data?.message || 'Error desconocido';
+            alert(
+              `El usuario fue creado, pero falló la asignación de categorías:\n\n${msg}\n\n` +
+              `Podés editar las categorías desde el botón "Categorías" en la fila del usuario.`
+            );
+          }
+        }
+      }
+
       mostrarToast('Usuario creado correctamente.', 'exito');
     }
 

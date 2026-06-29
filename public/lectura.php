@@ -209,8 +209,7 @@ body {
       <div id="estado-aceptacion-wrap"></div>
       <div id="btn-aceptar-wrap"></div>
       <div class="nota-legal" id="nota-legal" style="display:none">
-        Al aceptar, confirmás haber leído y comprendido el contenido de este manual.<br>
-        La aceptación queda registrada con tu IP, fecha y hora bajo los términos de la <strong>Ley 25.506</strong> de firma digital argentina.
+        Al aceptar, confirmás haber leído y comprendido el contenido de este manual.
       </div>
     </div>
 
