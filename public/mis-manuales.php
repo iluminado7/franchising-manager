@@ -378,13 +378,14 @@ function renderNotas(notas) {
   }).join('');
 }
 
-// Nombre legible del autor de una release note (el que publicó la versión)
+// Nombre legible del autor de una release note (v2.3: nombre toplevel en users)
 function autorReleaseLabel(n) {
   const u = n.autor;
   if (!u) return 'Publicador';
-  const p = u.system_admin || u.super_admin || u.franchise_staff;
-  if (p?.nombre) return `${p.nombre} ${p.apellido}`;
-  return u.email || 'Publicador';
+  const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ').trim();
+  if (nombre) return nombre;
+  // Fallback: si no hay nombre tampoco mostramos el email — solo el rol genérico.
+  return 'Publicador';
 }
 
 async function enviarNota() {

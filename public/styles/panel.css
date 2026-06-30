@@ -210,6 +210,7 @@ body.tema-claro {
   font-size: 14px;
   color: var(--gris4);
   font-family: 'Roboto', sans-serif;
+  margin-bottom: 15px;
 }
 
 /* ── STATS CARDS ─────────────────────────────────────────────── */

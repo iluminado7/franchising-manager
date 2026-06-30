@@ -130,8 +130,12 @@ class ManualNoteController extends Controller
         return response()->json($nota->load(self::RELACIONES), 201);
     }
 
-    // PUT /api/notas/{id}/estado — solo super_admin
+    // PUT /api/notas/{id}/estado — super_admin o franquiciante de la empresa
     // Marca una nota como pendiente / leida / resuelta.
+    // Reglas (v2.3):
+    //   - super_admin: puede gestionar el estado de cualquier nota, EXCEPTO las propias
+    //   - franquiciante: solo notas de SU empresa, EXCEPTO las propias
+    //   - nadie más
     public function updateEstado(Request $request, int $id): JsonResponse
     {
         $request->validate([
@@ -139,10 +143,30 @@ class ManualNoteController extends Controller
         ]);
 
         $nota = ManualNote::findOrFail($id);
+        $user = $request->user();
+
+        // No podés cambiar el estado de tus propias notas.
+        if ((int) $nota->user_id === (int) $user->id) {
+            return response()->json([
+                'error' => 'No podés cambiar el estado de tus propias notas.',
+            ], 403);
+        }
+
+        // Si es franquiciante, debe ser de la misma empresa de la nota.
+        if ($user->esFranquiciante() && (int) $nota->empresa_id !== (int) $user->empresa_id) {
+            return response()->json([
+                'error' => 'Sin acceso a esta nota.',
+            ], 403);
+        }
+
+        // Otros roles ya están bloqueados por la ruta (middleware role:...),
+        // pero por defensa en profundidad lo repetimos acá.
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
         $nota->estado = $request->estado;
         $nota->save();
-
-        $user = $request->user();
 
         ActivityLog::registrar(
             userId:      $user->id,

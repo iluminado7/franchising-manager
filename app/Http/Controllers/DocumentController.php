@@ -24,14 +24,14 @@ class DocumentController extends Controller
         $includeDeleted = (bool) $request->query('include_deleted', false);
 
         if ($user->esFranquiciante()) {
-            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor'])
+            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'categorias:id,name'])
                                   ->where('empresa_id', $user->empresa_id)
                                   ->noEliminados()
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
         } elseif ($user->esSuperAdmin()) {
-            $query = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'deletedBy:id,rol,nombre,apellido'])
+            $query = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'categorias:id,name', 'deletedBy:id,rol,nombre,apellido'])
                              ->orderBy('created_at', 'desc');
             if ($request->filled('empresa_id')) {
                 $query->where('empresa_id', $request->empresa_id);
@@ -51,7 +51,7 @@ class DocumentController extends Controller
             $empresaId    = $user->empresa_id;
             $userId       = $user->id;
 
-            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor'])
+            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'categorias:id,name'])
                                   ->where('empresa_id', $empresaId)
                                   ->where(function ($q) use ($franquiciaId) {
                                       $q->whereNull('franquicia_id')
@@ -97,7 +97,7 @@ class DocumentController extends Controller
         $request->validate([
             'archivo'              => 'required|file|mimes:pdf,doc,docx|max:20480',
             'titulo'               => 'required|string|max:200',
-            'tipo'                 => 'required|in:contrato,anexo,acta,otro',
+            'tipo'                 => 'required|in:contrato,politica,protocolo,circular,anexo,acta,otro',
             'franquicia_id'        => 'nullable|integer|exists:franquicias,id',
             'visible_franquiciado' => 'nullable|boolean',
             'empresa_id'           => 'nullable|integer|exists:empresas,id',
@@ -176,7 +176,7 @@ class DocumentController extends Controller
 
         $data = $request->validate([
             'titulo'               => 'sometimes|string|max:200',
-            'tipo'                 => 'sometimes|in:contrato,anexo,acta,otro',
+            'tipo'                 => 'sometimes|in:contrato,politica,protocolo,circular,anexo,acta,otro',
             'visible_franquiciado' => 'sometimes|boolean',
             'franquicia_id'        => 'nullable|integer|exists:franquicias,id',
         ]);

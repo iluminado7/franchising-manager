@@ -313,18 +313,20 @@ include 'layout/head.php';
   border:1px solid rgba(196,162,107,.4);
   font-family:'Archivo',sans-serif;
 }
-.btn-editar-release {
-  background:transparent;border:none;cursor:pointer;
-  color:var(--gris4);padding:4px;line-height:0;
-  transition:color .15s;flex-shrink:0;
-}
-.btn-editar-release:hover { color:var(--dorado); }
+/* (estilo de btn-editar-release eliminado: release notes son inmutables en v2.3) */
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 .nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
 .nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
 .nota-resuelta { background:rgba(92,184,122,.14);color:var(--exito); }
+
+/* v2.3: botones para cambiar el estado (super_admin/franquiciante salvo notas propias) */
+.nota-acciones { display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-top:1px solid var(--gris2);padding-top:10px;margin-top:10px; }
+.nota-acciones-label { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;margin-right:2px; }
+.nota-estado-btn { background:transparent;border:1px solid var(--gris2);border-radius:20px;padding:4px 12px;font-size:11px;font-family:'Archivo',sans-serif;color:var(--gris4);cursor:pointer;transition:all .15s; }
+.nota-estado-btn:hover { border-color:var(--gris3);color:var(--blanco); }
+.nota-estado-btn.activo { background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--dorado); }
 </style>
 
 <script src="<?= BASE_URL_PHP ?>/js/mammoth.browser.min.js"></script>
@@ -337,7 +339,8 @@ let modoImport       = 'scratch';
 let htmlImportado    = '';
 let pendingArchivar  = null;
 let pendingEliminar = null;
-let rolUsuario       = ''; // rol del usuario actual — para mostrar botón Editar en release notes
+let rolUsuario = ''; // rol del usuario actual
+let miUserId   = null; // id del usuario actual — para chequear notas propias
 let miEmpresaId      = null;
 
 // v2.3 — categorías activas de la empresa del franquiciante
@@ -349,7 +352,8 @@ async function init() {
     // Cargar rol y empresa del usuario actual
     try {
       const me = await apiFetch('GET', '/me');
-      rolUsuario  = me.rol || '';
+      rolUsuario = me.rol || '';
+      miUserId   = me.id;
       miEmpresaId = me.empresa_id;
     } catch { /* si falla, queda vacío y se ocultan acciones */ }
 
@@ -750,13 +754,23 @@ async function cargarNotas(manualId) {
 }
 
 function autorLabel(n) {
+  // v2.3: nombre/apellido viven en users (toplevel)
+  const a = n.autor || {};
+  const nombre = [a.nombre, a.apellido].filter(Boolean).join(' ').trim();
+  if (nombre) return esc(nombre);
+  return a.email ? esc(a.email) : 'Autor';
+}
+
+// v2.3: rol legible para mostrar al lado del nombre
+function rolLabel(n) {
   const rol = n.autor?.rol;
   if (rol === 'franquiciado') {
     const fr = n.autor?.franchise_staff?.franquicia?.nombre;
-    return fr ? `Franquiciado · ${esc(fr)}` : 'Franquiciado';
+    return fr ? `Socio comercial · ${esc(fr)}` : 'Socio comercial';
   }
   if (rol === 'franquiciante') return 'Franquiciante';
-  return n.autor?.email ? esc(n.autor.email) : 'Autor';
+  if (rol === 'super_admin')   return 'Super admin';
+  return '';
 }
 
 function renderNotas(notas) {
@@ -768,95 +782,75 @@ function renderNotas(notas) {
   }
 
   const estadoLabel = { pendiente: 'Pendiente', leida: 'Leída', resuelta: 'Resuelta' };
-  const puedeEditarRelease = (typeof rolUsuario !== 'undefined') &&
-                             (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante');
 
   body.innerHTML = notas.map(n => {
     const version = n.version ? `v${n.version.version_number}` : 'Sin versión publicada';
 
-    // Release note: mensaje del publicador (super_admin/franquiciante) al subir una versión.
+    // v2.3: release notes son inmutables. Sin botón Editar, sin estado, sin acciones.
     if (n.tipo === 'release') {
       const autor = autorReleaseLabel(n);
-      const versionId = n.manual_version_id;
       return `
-        <div class="nota-card nota-release" id="release-${versionId}">
+        <div class="nota-card nota-release">
           <div class="nota-card-top">
             <div style="flex:1">
               <span class="nota-release-tag">Mensaje del publicador · ${version}</span>
               <span style="display:block;font-size:13px;font-weight:600;color:var(--blanco);margin-top:4px">${esc(autor)}</span>
               <span class="nota-meta">${formatFechaHora(n.created_at)}</span>
             </div>
-            ${puedeEditarRelease ? `
-              <button class="btn-editar-release" onclick="editarReleaseInline(${versionId})" title="Editar mensaje">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-            ` : ''}
           </div>
-          <div class="nota-contenido" id="release-contenido-${versionId}">${esc(n.contenido)}</div>
+          <div class="nota-contenido">${esc(n.contenido)}</div>
         </div>`;
     }
 
-    // Feedback (nota normal)
+    // Feedback: botones de estado para super_admin/franquiciante, salvo notas propias.
+    const esPropia    = miUserId && Number(n.user_id) === Number(miUserId);
+    const puedeMarcar = !esPropia && (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante');
+    const rol         = rolLabel(n);
+
     return `
       <div class="nota-card">
         <div class="nota-card-top">
           <div>
             <span style="display:block;font-size:13px;font-weight:600;color:var(--blanco)">${autorLabel(n)}</span>
-            <span class="nota-meta">${version} · ${formatFechaHora(n.created_at)}</span>
+            <span class="nota-meta">${rol ? rol + ' · ' : ''}${version} · ${formatFechaHora(n.created_at)}</span>
           </div>
           <span class="nota-estado-pill nota-${n.estado}">${estadoLabel[n.estado] || n.estado}</span>
         </div>
         <div class="nota-contenido">${esc(n.contenido)}</div>
+        ${puedeMarcar ? `
+          <div class="nota-acciones" style="margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;margin-right:4px">Marcar como:</span>
+            <button class="nota-estado-btn ${n.estado === 'pendiente' ? 'activo' : ''}" onclick="marcarEstadoNotaMiEmpresa(${n.id}, 'pendiente')">Pendiente</button>
+            <button class="nota-estado-btn ${n.estado === 'leida' ? 'activo' : ''}" onclick="marcarEstadoNotaMiEmpresa(${n.id}, 'leida')">Leída</button>
+            <button class="nota-estado-btn ${n.estado === 'resuelta' ? 'activo' : ''}" onclick="marcarEstadoNotaMiEmpresa(${n.id}, 'resuelta')">Resuelta</button>
+          </div>` : ''}
       </div>`;
   }).join('');
 }
 
-// Nombre del publicador de una release note
-function autorReleaseLabel(n) {
-  const u = n.autor;
-  if (!u) return 'Publicador';
-  const p = u.system_admin || u.super_admin || u.franchise_staff;
-  if (p?.nombre) return `${p.nombre} ${p.apellido}`;
-  return u.email || 'Publicador';
-}
-
-// Edición inline de release note (super_admin / franquiciante)
-function editarReleaseInline(versionId) {
-  const cont = document.getElementById(`release-contenido-${versionId}`);
-  if (!cont) return;
-  const textoActual = cont.textContent;
-
-  cont.innerHTML = `
-    <textarea id="release-edit-${versionId}" maxlength="2000" rows="4"
-      style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;resize:vertical;outline:none;transition:border-color .15s;min-height:80px"
-      onfocus="this.style.borderColor='var(--dorado)'" onblur="this.style.borderColor='var(--gris2)'">${esc(textoActual)}</textarea>
-    <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
-      <button class="btn btn-ghost" onclick="cancelarEditarRelease(${versionId})" style="padding:5px 12px;font-size:11px">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarReleaseInline(${versionId})" style="padding:5px 12px;font-size:11px">Guardar</button>
-    </div>`;
-  document.getElementById(`release-edit-${versionId}`).focus();
-}
-
-async function guardarReleaseInline(versionId) {
-  if (!notaManualActual) return;
-  const ta = document.getElementById(`release-edit-${versionId}`);
-  if (!ta) return;
-  const nota = ta.value.trim();
+// v2.3: cambio de estado para franquiciante en su modal de notas
+async function marcarEstadoNotaMiEmpresa(notaId, estado) {
   try {
-    await apiFetch('PUT',
-      `/manuales/${notaManualActual}/versiones/${versionId}/nota-publicacion`,
-      { nota_publicacion: nota || null }
-    );
-    mostrarToast('Mensaje actualizado.', 'exito');
-    await cargarNotas(notaManualActual);
+    await apiFetch('PUT', `/notas/${notaId}/estado`, { estado });
+    mostrarToast('Estado actualizado.', 'exito');
+    if (notaManualActual) await cargarNotas(notaManualActual);
   } catch (e) {
-    mostrarToast(e.data?.error || e.data?.message || 'No se pudo actualizar el mensaje.', 'error');
+    mostrarToast(e.data?.message || e.data?.error || 'Error al actualizar el estado.', 'error');
   }
 }
 
-function cancelarEditarRelease(versionId) {
-  if (notaManualActual) cargarNotas(notaManualActual);
+// Nombre del publicador de una release note (v2.3: nombre toplevel en users)
+function autorReleaseLabel(n) {
+  const u = n.autor;
+  if (!u) return 'Publicador';
+  const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ').trim();
+  if (nombre) return nombre;
+  return u.email || 'Publicador';
 }
+
+// v2.3: edición de release notes eliminada — los mensajes del publicador son
+// inmutables una vez creados. Si se necesita corregir uno, publicar una versión
+// nueva con el mensaje correcto.
 
 async function enviarNota() {
   const contenido = document.getElementById('nota-contenido').value.trim();

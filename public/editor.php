@@ -667,6 +667,7 @@ include 'layout/head.php';
 const MANUAL_ID  = new URLSearchParams(location.search).get('id');
 const BASE_PHP   = '<?= BASE_URL_PHP ?>';
 let rolUsuario   = '';
+let miUserId     = null; // v2.3: id del usuario actual, para chequear notas propias
 
 let estado = {
   manual:        null,
@@ -691,6 +692,7 @@ async function init() {
   try {
     const me = await apiFetch('GET', '/me');
     rolUsuario = me.rol;
+    miUserId   = me.id;
     const urlVolver = me.rol === 'super_admin'
       ? `${BASE_PHP}/manuales.php`
       : `${BASE_PHP}/manuales-mi-empresa.php`;
@@ -1300,9 +1302,10 @@ function escNota(str) {
 }
 
 function nombreAutorNota(nota) {
+  // v2.3: nombre/apellido viven en users (toplevel), no en relaciones por rol.
   const a = nota.autor || {};
-  const p = a.franchise_staff || a.system_admin || a.super_admin;
-  if (p && (p.nombre || p.apellido)) return `${p.nombre || ''} ${p.apellido || ''}`.trim();
+  const nombre = [a.nombre, a.apellido].filter(Boolean).join(' ').trim();
+  if (nombre) return nombre;
   return a.email || 'Usuario';
 }
 
@@ -1313,13 +1316,31 @@ function renderNotas(notas) {
     return;
   }
 
-  const esAdmin = rolUsuario === 'super_admin';
-
   el.innerHTML = notas.map(n => {
-    const estado = n.estado || 'pendiente';
-    const ver    = n.version?.version_number ? `<span class="nota-ver">v${n.version.version_number}</span>` : '';
+    const ver = n.version?.version_number ? `<span class="nota-ver">v${n.version.version_number}</span>` : '';
 
-    const acciones = esAdmin ? `
+    // v2.3: release notes (mensajes del publicador). Sin estado ni acciones, son inmutables.
+    if (n.tipo === 'release') {
+      return `
+        <div class="nota-item nota-item-release">
+          <div class="nota-item-header">
+            <span class="nota-autor">${escNota(nombreAutorNota(n))}</span>
+            <span class="nota-fecha">${formatFecha(n.created_at)}</span>
+          </div>
+          <div class="nota-contenido">${escNota(n.contenido || '')}</div>
+          <div class="nota-meta">
+            <span class="nota-estado pendiente" style="background:rgba(201,168,76,.15);color:#8A6D1B">mensaje del publicador</span>
+            ${ver}
+          </div>
+        </div>`;
+    }
+
+    // v2.3: feedback. Botones de estado para super_admin y franquiciante, salvo notas propias.
+    const estado     = n.estado || 'pendiente';
+    const esPropia   = miUserId && Number(n.user_id) === Number(miUserId);
+    const puedeMarcar = !esPropia && (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante');
+
+    const acciones = puedeMarcar ? `
       <div class="nota-acciones">
         <button class="nota-btn ${estado === 'leida' ? 'activo' : ''}"    onclick="marcarEstadoNota(${n.id}, 'leida')">Le&iacute;da</button>
         <button class="nota-btn ${estado === 'resuelta' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'resuelta')">Resuelta</button>

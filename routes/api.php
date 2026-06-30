@@ -97,8 +97,6 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::put('/invoices/{id}',     [InvoiceController::class, 'update']);
         Route::post('/invoices/generar', [InvoiceController::class, 'generar']);
 
-        // Notas de manuales — super_admin marca el estado (pendiente/leida/resuelta)
-        Route::put('/notas/{id}/estado', [ManualNoteController::class, 'updateEstado']);
     });
 
     // ── SUPER ADMIN + FRANQUICIANTE ───────────────────────────────────
@@ -159,8 +157,6 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
         // Versiones de manuales
         Route::get('/manuales/{id}/versiones', [ManualController::class, 'versiones']);
-        Route::put('/manuales/{manualId}/versiones/{versionId}/nota-publicacion',
-            [ManualController::class, 'updateNotaPublicacion']);
 
         // Activity Log
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);
@@ -209,6 +205,13 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // Notas de manuales — lectura
         // (super_admin ve todas, franquiciante las de su empresa, franquiciado las suyas)
         Route::get('/manuales/{manualId}/notas', [ManualNoteController::class, 'porManual']);
+    });
+
+    // ── SUPER ADMIN + FRANQUICIANTE (cambiar estado de notas) ─────────
+    // El control fino (no permitir cambiar estado de notas propias / de otras
+    // empresas) se aplica en ManualNoteController::updateEstado.
+    Route::middleware('role:super_admin,franquiciante')->group(function () {
+        Route::put('/notas/{id}/estado', [ManualNoteController::class, 'updateEstado']);
     });
 
     // ── FRANQUICIANTE + FRANQUICIADO ──────────────────────────────────

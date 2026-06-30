@@ -395,60 +395,6 @@ class ManualController extends Controller
         ]);
     }
 
-    // PUT /api/manuales/{manualId}/versiones/{versionId}/nota-publicacion
-    // Permite editar (o limpiar) la nota de publicación de una versión específica.
-    // Solo super_admin y franquiciantes con acceso al manual.
-    public function updateNotaPublicacion(Request $request, int $manualId, int $versionId): JsonResponse
-    {
-        $request->validate([
-            'nota_publicacion' => 'nullable|string|max:2000',
-        ]);
-
-        $version = ManualVersion::where('manual_id', $manualId)->findOrFail($versionId);
-        $manual  = $version->manual;
-        $user    = $request->user();
-
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
-
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $manualId)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
-
-        // Normalizar: vacío o solo whitespace → NULL
-        $nota = trim($request->nota_publicacion ?? '');
-        $nota = $nota === '' ? null : $nota;
-
-        $version->update(['nota_publicacion' => $nota]);
-
-        try {
-            ActivityLog::registrar(
-                userId:      $user->id,
-                accion:      'nota_publicacion_editada',
-                ip:          $request->ip(),
-                empresaId:   $user->empresa_id,
-                entidadTipo: 'manual_versions',
-                entidadId:   $version->id,
-                detalle:     [
-                    'manual_titulo' => $manual->titulo,
-                    'version'       => $version->version_number,
-                ],
-                userAgent:   $request->userAgent()
-            );
-        } catch (\Throwable $e) { /* best-effort */ }
-
-        return response()->json([
-            'message' => 'Nota de publicación actualizada.',
-            'version' => $version,
-        ]);
-    }
-
     // POST /api/manuales/{id}/archivar
     public function archivar(Request $request, int $id): JsonResponse
     {

@@ -336,12 +336,22 @@ let htmlImportado    = '';
 let pendingArchivar  = null;
 let pendingEliminar = null;
 
+// v2.3: id y rol del usuario actual — para chequear si una nota es propia
+// (no se puede cambiar el estado de las notas propias).
+let miUserId = null;
+let miRol    = '';
+
 // v2.3 — categorías activas de la empresa seleccionada en el modal
 let categoriasEmpresa = [];
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
+    // v2.3: cargar identidad del actor (necesaria para reglas de notas)
+    const me = await apiFetch('GET', '/me');
+    miUserId = me.id;
+    miRol    = me.rol || '';
+
     // Cargar empresas para filtro y modal
     const empresas = await apiFetch('GET', '/empresas');
     todasLasEmpresas = empresas;
@@ -878,13 +888,24 @@ async function cargarNotas(manualId) {
 }
 
 function autorLabel(n) {
+  // v2.3: nombre/apellido viven en users (toplevel), no en relaciones por rol.
+  const a = n.autor || {};
+  const nombre = [a.nombre, a.apellido].filter(Boolean).join(' ').trim();
+  if (nombre) return esc(nombre);
+  return a.email ? esc(a.email) : 'Autor';
+}
+
+// v2.3: para feedback notes, devuelve el rol legible (Socio comercial vs Franquiciante).
+// Las release notes no usan esto.
+function rolLabel(n) {
   const rol = n.autor?.rol;
   if (rol === 'franquiciado') {
     const fr = n.autor?.franchise_staff?.franquicia?.nombre;
-    return fr ? `Franquiciado · ${esc(fr)}` : 'Franquiciado';
+    return fr ? `Socio comercial · ${esc(fr)}` : 'Socio comercial';
   }
   if (rol === 'franquiciante') return 'Franquiciante';
-  return n.autor?.email ? esc(n.autor.email) : 'Autor';
+  if (rol === 'super_admin')   return 'Super admin';
+  return '';
 }
 
 function renderNotas(notas) {
@@ -899,22 +920,45 @@ function renderNotas(notas) {
 
   body.innerHTML = notas.map(n => {
     const version = n.version ? `v${n.version.version_number}` : 'Sin versión publicada';
+
+    // v2.3: release notes son anuncios del publicador, no feedback.
+    // No tienen estado ni botones — se muestran como mensaje informativo.
+    if (n.tipo === 'release') {
+      return `
+        <div class="nota-card nota-release">
+          <div class="nota-card-top">
+            <div>
+              <span class="nota-empresa">Mensaje del publicador · v${n.version?.version_number ?? '?'}</span>
+              <span class="nota-meta">${autorLabel(n)} · ${formatFechaHora(n.created_at)}</span>
+            </div>
+          </div>
+          <div class="nota-contenido">${esc(n.contenido)}</div>
+        </div>`;
+    }
+
+    // Feedback: badge de estado + botones solo si NO es nota propia.
+    // Reglas v2.3: super_admin y franquiciante pueden cambiar estado, salvo en sus propias notas.
+    const esPropia    = miUserId && Number(n.user_id) === Number(miUserId);
+    const puedeMarcar = !esPropia && (miRol === 'super_admin' || miRol === 'franquiciante');
+    const rol         = rolLabel(n);
+
     return `
       <div class="nota-card">
         <div class="nota-card-top">
           <div>
             <span class="nota-empresa">${esc(n.empresa?.nombre || 'Empresa')}</span>
-            <span class="nota-meta">${autorLabel(n)} · ${version} · ${formatFechaHora(n.created_at)}</span>
+            <span class="nota-meta">${autorLabel(n)}${rol ? ' · ' + rol : ''} · ${version} · ${formatFechaHora(n.created_at)}</span>
           </div>
           <span class="nota-estado-pill nota-${n.estado}">${estadoLabel[n.estado] || n.estado}</span>
         </div>
         <div class="nota-contenido">${esc(n.contenido)}</div>
-        <div class="nota-acciones">
-          <span class="nota-acciones-label">Marcar como:</span>
-          <button class="nota-estado-btn ${n.estado === 'pendiente' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'pendiente')">Pendiente</button>
-          <button class="nota-estado-btn ${n.estado === 'leida' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'leida')">Leída</button>
-          <button class="nota-estado-btn ${n.estado === 'resuelta' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'resuelta')">Resuelta</button>
-        </div>
+        ${puedeMarcar ? `
+          <div class="nota-acciones">
+            <span class="nota-acciones-label">Marcar como:</span>
+            <button class="nota-estado-btn ${n.estado === 'pendiente' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'pendiente')">Pendiente</button>
+            <button class="nota-estado-btn ${n.estado === 'leida' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'leida')">Leída</button>
+            <button class="nota-estado-btn ${n.estado === 'resuelta' ? 'activo' : ''}" onclick="marcarEstadoNota(${n.id}, 'resuelta')">Resuelta</button>
+          </div>` : ''}
       </div>`;
   }).join('');
 }

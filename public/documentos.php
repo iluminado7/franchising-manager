@@ -47,13 +47,21 @@ include 'layout/head.php';
           </div>
         </div>
 
-        <!-- Filtros de tipo y franquicia -->
+        <!-- Filtros de tipo, visibilidad y franquicia -->
         <select id="sel-tipo" class="filtro-select" onchange="aplicarFiltros()">
           <option value="">Todos los tipos</option>
           <option value="contrato">Contrato</option>
+          <option value="politica">Política</option>
+          <option value="protocolo">Protocolo</option>
+          <option value="circular">Circular</option>
           <option value="anexo">Anexo</option>
           <option value="acta">Acta</option>
           <option value="otro">Otro</option>
+        </select>
+
+        <!-- v2.3: filtro por visibilidad (categorías) -->
+        <select id="sel-categoria" class="filtro-select" onchange="aplicarFiltros()" disabled title="Elegí una empresa para habilitar este filtro">
+          <option value="">Todas las categorías</option>
         </select>
 
         <select id="sel-franquicia" class="filtro-select" onchange="aplicarFiltros()">
@@ -150,6 +158,9 @@ include 'layout/head.php';
           <select id="doc-tipo" class="form-select">
             <option value="">Seleccioná un tipo</option>
             <option value="contrato">Contrato</option>
+            <option value="politica">Política</option>
+            <option value="protocolo">Protocolo</option>
+            <option value="circular">Circular</option>
             <option value="anexo">Anexo</option>
             <option value="acta">Acta</option>
             <option value="otro">Otro</option>
@@ -358,6 +369,9 @@ include 'layout/head.php';
         <label>Tipo *</label>
         <select id="edit-doc-tipo" class="form-select">
           <option value="contrato">Contrato</option>
+          <option value="politica">Política</option>
+          <option value="protocolo">Protocolo</option>
+          <option value="circular">Circular</option>
           <option value="anexo">Anexo</option>
           <option value="acta">Acta</option>
           <option value="otro">Otro</option>
@@ -464,13 +478,13 @@ include 'layout/head.php';
   font-size: 10px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap;
 }
-.tipo-contrato { background: rgba(101,163,255,.12); color: #65a3ff; border: 1px solid rgba(101,163,255,.25); }
-.tipo-anexo    { background: rgba(201,168,76,.12);  color: var(--dorado); border: 1px solid rgba(201,168,76,.25); }
-.tipo-acta     { background: rgba(76,175,80,.12);   color: var(--exito);  border: 1px solid rgba(76,175,80,.25); }
-.tipo-otro     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
-.tipo-politica     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
-.tipo-circulo     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
-.tipo-protocolo     { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
+.tipo-contrato  { background: rgba(101,163,255,.12); color: #65a3ff;       border: 1px solid rgba(101,163,255,.25); }
+.tipo-politica  { background: rgba(186,104,200,.12); color: #ba68c8;       border: 1px solid rgba(186,104,200,.25); }
+.tipo-protocolo { background: rgba(255,138,101,.12); color: #ff8a65;       border: 1px solid rgba(255,138,101,.25); }
+.tipo-circular  { background: rgba(38,198,218,.12);  color: #26c6da;       border: 1px solid rgba(38,198,218,.25); }
+.tipo-anexo     { background: rgba(201,168,76,.12);  color: var(--dorado); border: 1px solid rgba(201,168,76,.25); }
+.tipo-acta      { background: rgba(76,175,80,.12);   color: var(--exito);  border: 1px solid rgba(76,175,80,.25); }
+.tipo-otro      { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
 
 /* ── Drop zone ────────────────────────────────────────────── */
 .drop-zone {
@@ -642,6 +656,9 @@ let archivoVersion    = null; // archivo seleccionado para subir nueva versión
 // v2.3 — categorías activas de la empresa actual (para los modales de subir/editar)
 let categoriasEmpresa = []; // [{ id, name, description, is_active, empresa_id }]
 
+// v2.3: cats activas de la empresa actualmente filtrada (para el select "Por visibilidad")
+let categoriasFiltro = [];
+
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
@@ -680,6 +697,8 @@ async function init() {
       // Franquiciante: cargar sus franquicias y sus categorías activas
       await cargarFranquicias(miEmpresaId);
       await cargarCategoriasDeEmpresa(miEmpresaId);
+      // v2.3: el franquiciante tiene empresa fija → habilitamos el filtro de cats al inicio
+      await poblarFiltroCategorias(miEmpresaId);
     }
 
     await cargarDocumentos();
@@ -816,6 +835,10 @@ async function onEmpresaChange() {
     } catch {}
   }
 
+  // v2.3: refrescar filtro de categorías según la empresa elegida.
+  // Sin empresa → select queda deshabilitado (caso super_admin).
+  await poblarFiltroCategorias(empresaId || null);
+
   await cargarDocumentos();
 }
 
@@ -907,16 +930,65 @@ async function cargarDocumentos() {
 function aplicarFiltros() {
   let lista = [...todosLosDocumentos];
   const tipo       = document.getElementById('sel-tipo').value;
+  const categoria  = document.getElementById('sel-categoria').value;
   const franquicia = document.getElementById('sel-franquicia').value;
   const texto      = document.getElementById('inp-buscar').value.toLowerCase().trim();
 
   if (tipo)      lista = lista.filter(d => d.tipo === tipo);
+
+  // v2.3: filtro por categoría asignada al documento
+  if (categoria === '__sin_asignar__') {
+    lista = lista.filter(d => !d.categorias || d.categorias.length === 0);
+  } else if (categoria) {
+    const catId = Number(categoria);
+    lista = lista.filter(d => (d.categorias || []).some(c => Number(c.id) === catId));
+  }
+
   if (franquicia === 'global') lista = lista.filter(d => !d.franquicia_id);
   else if (franquicia) lista = lista.filter(d => String(d.franquicia_id) === franquicia);
   if (texto)     lista = lista.filter(d => d.titulo.toLowerCase().includes(texto));
 
   renderTabla(lista);
   document.getElementById('tabla-titulo').textContent = `${lista.length} documento(s)`;
+}
+
+// v2.3: pobla el select "Por visibilidad" con las cats activas de una empresa.
+// Si empresaId es null/falsy, deshabilita el select (caso super_admin sin empresa elegida).
+async function poblarFiltroCategorias(empresaId) {
+  const sel = document.getElementById('sel-categoria');
+  // Reseteamos siempre el valor seleccionado al cambiar de contexto
+  sel.value = '';
+
+  if (!empresaId) {
+    sel.innerHTML = '<option value="">Todas las categorías</option>';
+    sel.disabled  = true;
+    sel.title     = 'Elegí una empresa para habilitar este filtro';
+    categoriasFiltro = [];
+    return;
+  }
+
+  try {
+    // super_admin pasa empresa_id explícito; franquiciante lo infiere el server
+    const url = (rolUsuario === 'super_admin')
+      ? `/categorias?empresa_id=${empresaId}&activa=1`
+      : `/categorias?activa=1`;
+    const cats = await apiFetch('GET', url);
+    categoriasFiltro = (cats || []).filter(c => c.is_active);
+  } catch {
+    categoriasFiltro = [];
+  }
+
+  const opciones = ['<option value="">Todas las categorías</option>',
+                    '<option value="__sin_asignar__">Sin asignar</option>'];
+  if (categoriasFiltro.length) {
+    opciones.push('<option disabled>──────────</option>');
+    categoriasFiltro.forEach(c => {
+      opciones.push(`<option value="${c.id}">${esc(c.name)}</option>`);
+    });
+  }
+  sel.innerHTML = opciones.join('');
+  sel.disabled  = false;
+  sel.title     = '';
 }
 
 // ── RENDER ────────────────────────────────────────────────────
@@ -942,7 +1014,15 @@ function renderTabla(lista) {
   }
 
   const tipoBadge = (tipo) => {
-    const map = { contrato: 'tipo-contrato', politica: 'tipo-politica', protocolo: 'tipo-protocolo', circulo: 'tipo-circulo', anexo: 'tipo-anexo', acta: 'tipo-acta', otro: 'tipo-otro' };
+    const map = {
+      contrato:  'tipo-contrato',
+      politica:  'tipo-politica',
+      protocolo: 'tipo-protocolo',
+      circular:  'tipo-circular',
+      anexo:     'tipo-anexo',
+      acta:      'tipo-acta',
+      otro:      'tipo-otro',
+    };
     return `<span class="tipo-badge ${map[tipo] || 'tipo-otro'}">${tipo}</span>`;
   };
 
