@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\ManualNote;
 use App\Models\ManualVersion;
-use App\Models\ManualEmpresaAssignment;
 use App\Models\ActivityLog;
+use App\Services\ManualAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -87,6 +87,15 @@ class ManualNoteController extends Controller
 
     // POST /api/manuales/{manualId}/notas — franquiciante y franquiciado
     // Agrega una nota (sugerencia) al hilo del manual.
+    //
+    // H-009 fix: ahora valida acceso EFECTIVO al manual (no solo asignación a
+    // la empresa). Antes, un franquiciado de la empresa X podía escribir notas
+    // en cualquier manual de X aunque no tuviera la categoría asignada para
+    // verlo. El servicio maneja la lógica por rol:
+    //   super_admin    → siempre pasa (no debería llegar acá, la ruta lo excluye)
+    //   franquiciante  → manual asignado a su empresa (comportamiento previo)
+    //   franquiciado   → categoría activa OR asignación individual (NUEVO)
+    //   empleado       → mismo criterio (aunque la ruta lo bloquea antes)
     public function store(Request $request, int $manualId): JsonResponse
     {
         $request->validate([
@@ -95,11 +104,7 @@ class ManualNoteController extends Controller
 
         $user = $request->user();
 
-        // El manual tiene que estar asignado a la empresa del autor
-        $asignado = ManualEmpresaAssignment::where('manual_id', $manualId)
-                                           ->where('empresa_id', $user->empresa_id)
-                                           ->exists();
-        if (!$asignado) {
+        if (!ManualAccessService::usuarioTieneAccesoAlManual($user, $manualId)) {
             return response()->json(['error' => 'Sin acceso a este manual.'], 403);
         }
 

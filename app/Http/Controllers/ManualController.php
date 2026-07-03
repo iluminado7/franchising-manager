@@ -9,6 +9,7 @@ use App\Models\ManualVersion;
 use App\Models\ManualEmpresaAssignment;
 use App\Models\Notification;
 use App\Models\ActivityLog;
+use App\Services\ManualAccessService;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -55,8 +56,8 @@ class ManualController extends Controller
             // Franquiciado y empleado: comportamiento unificado en v2.3.
             // Ambos ven manuales publicados de su empresa CON asignación efectiva
             // (categoría activa OR individual).
-            'franquiciado'  => $this->manualesVisiblesParaUsuario($user),
-            'empleado'      => $this->manualesVisiblesParaUsuario($user),
+            'franquiciado'  => ManualAccessService::manualesVisiblesParaUsuario($user),
+            'empleado'      => ManualAccessService::manualesVisiblesParaUsuario($user),
         };
 
         return response()->json($manuales);
@@ -72,26 +73,14 @@ class ManualController extends Controller
                         ->findOrFail($id);
 
         // Franquiciante: solo manuales asignados a su empresa
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                               ->where('empresa_id', $user->empresa_id)
-                                               ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
-
-        // Franquiciado/empleado: v2.3 — categoría activa O individual.
-        // usuarioTieneAccesoAlManual ya verifica que la categoría sea de la
-        // empresa del usuario (vía fc.empresa_id), por lo que un único gate
-        // alcanza. Antes había un doble gate redundante con manual_empresa_assignments
-        // que provocaba 403 en falsos negativos cuando mca.empresa_id no estaba
-        // poblado consistentemente.
-        if ($user->esFranquiciado() || $user->esEmpleado()) {
-            $tieneAcceso = $this->usuarioTieneAccesoAlManual($user->id, $manual->id, $user->empresa_id);
-            if (!$tieneAcceso) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
+        // v2.3 (post-auditoría): gate único centralizado en ManualAccessService.
+        // El servicio maneja todos los roles con la lógica correcta:
+        //   super_admin    → siempre pasa
+        //   franquiciante  → manual_empresa_assignments
+        //   franquiciado   → categoría activa OR asignación individual
+        //   empleado       → mismo criterio que franquiciado
+        if (!ManualAccessService::usuarioTieneAccesoAlManual($user, $manual->id)) {
+            return response()->json(['error' => 'Sin acceso a este manual.'], 403);
         }
 
         // v2.3: enriquecer el JSON con empresa_id + empresa (mismo patrón que
@@ -126,9 +115,18 @@ class ManualController extends Controller
     }
 
     // GET /api/manuales/{id}/versiones
-    public function versiones(int $id): JsonResponse
+    public function versiones(Request $request, int $id): JsonResponse
     {
-        $manual   = Manual::findOrFail($id);
+        $manual = Manual::findOrFail($id);
+        $user   = $request->user();
+
+        // H-002 fix: aplicar el mismo gate que show(). Sin esto, un franquiciante
+        // de empresa A podía enumerar IDs y obtener todas las versiones y contenido
+        // HTML completo de manuales de empresa B.
+        if (!ManualAccessService::usuarioTieneAccesoAlManual($user, $manual->id)) {
+            return response()->json(['error' => 'Sin acceso a este manual.'], 403);
+        }
+
         // v2.3: nombre/apellido viven en users — simplifico el eager load.
         // Antes: 'publicadoPor.superAdmin' (cargaba el perfil que ya no tiene nombre).
         $versiones = ManualVersion::where('manual_id', $manual->id)
@@ -325,6 +323,11 @@ class ManualController extends Controller
 
             $userIds = $this->usuariosConAccesoAlManual($manual->id);
 
+            // H-020 fix (defense in depth): strip_tags remueve cualquier marcado HTML
+            // del título antes de guardarlo en la notificación. Combinado con el escape
+            // en frontend (layout.js), cierra el vector de XSS almacenado.
+            $tituloManual = strip_tags($manual->titulo ?? '');
+
             if ($userIds->isNotEmpty()) {
                 $notificaciones = $userIds->map(fn($uid) => [
                     'user_id'             => $uid,
@@ -335,8 +338,8 @@ class ManualController extends Controller
                     'document_version_id' => null,
                     'category_id'         => null,
                     'titulo'              => $tipo === 'nuevo_manual'
-                                            ? "Nuevo manual: {$manual->titulo}"
-                                            : "Manual actualizado: {$manual->titulo} (v{$version->version_number})",
+                                            ? "Nuevo manual: {$tituloManual}"
+                                            : "Manual actualizado: {$tituloManual} (v{$version->version_number})",
                     'created_at'          => now(),
                 ])->toArray();
 
@@ -355,6 +358,9 @@ class ManualController extends Controller
                 if ($nombreAutor === '') {
                     $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
                 }
+                // H-020 fix: sanitizar el nombre del autor también (viene de la DB
+                // y es controlable por el usuario en su perfil o al crearse).
+                $nombreAutor = strip_tags($nombreAutor);
 
                 $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
                 $notifSuper  = $superadmins->map(fn($uid) => [
@@ -365,7 +371,7 @@ class ManualController extends Controller
                     'document_id'         => null,
                     'document_version_id' => null,
                     'category_id'         => null,
-                    'titulo'              => "El franquiciante {$nombreAutor} publicó una nueva versión de {$manual->titulo} (v{$version->version_number})",
+                    'titulo'              => "El franquiciante {$nombreAutor} publicó una nueva versión de {$tituloManual} (v{$version->version_number})",
                     'created_at'          => now(),
                 ])->toArray();
                 try {
@@ -519,6 +525,8 @@ class ManualController extends Controller
             if ($nombreAutor === '') {
                 $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
             }
+            // H-020 fix: sanitizar el nombre del autor (defense-in-depth).
+            $nombreAutor = strip_tags($nombreAutor);
 
             // Tomamos la última versión activa o la última creada, si existe
             $versionId = $manual->versiones()->orderByDesc('id')->value('id');
@@ -533,7 +541,7 @@ class ManualController extends Controller
                     'document_id'         => null,
                     'document_version_id' => null,
                     'category_id'         => null,
-                    'titulo'              => "El franquiciante {$nombreAutor} eliminó el manual \"{$manual->titulo}\"",
+                    'titulo'              => "El franquiciante {$nombreAutor} eliminó el manual \"" . strip_tags($manual->titulo ?? '') . "\"",
                     'created_at'          => now(),
                 ])->toArray();
                 try {
@@ -602,72 +610,6 @@ class ManualController extends Controller
      * Aplica el OR de asignación (categoría activa O individual) sobre el scope de empresa.
      * Incluye el flag mi_aceptacion para cada manual.
      */
-    private function manualesVisiblesParaUsuario(User $user)
-    {
-        $empresaId = $user->empresa_id;
-        $userId    = $user->id;
-
-        return Manual::publicados()
-            ->with('versionActiva')
-            ->whereHas('empresasAsignadas', fn($q) => $q->where('empresa_id', $empresaId))
-            // v2.3: filtro por asignaciones (categoría activa OR individual)
-            ->where(function ($q) use ($userId, $empresaId) {
-                $q->whereExists(function ($sub) use ($userId, $empresaId) {
-                    $sub->select(DB::raw(1))
-                        ->from('manual_category_assignments as mca')
-                        ->join('user_categories as uc', 'uc.category_id', '=', 'mca.category_id')
-                        ->join('franchise_categories as fc', function ($j) {
-                            $j->on('fc.id', '=', 'mca.category_id')
-                              ->where('fc.is_active', 1);
-                        })
-                        ->whereColumn('mca.manual_id', 'manuals.id')
-                        ->where('mca.empresa_id', $empresaId)
-                        ->where('uc.user_id', $userId);
-                })->orWhereExists(function ($sub) use ($userId, $empresaId) {
-                    $sub->select(DB::raw(1))
-                        ->from('manual_user_assignments as mua')
-                        ->whereColumn('mua.manual_id', 'manuals.id')
-                        ->where('mua.user_id', $userId)
-                        ->where('mua.empresa_id', $empresaId);
-                });
-            })
-            ->orderBy('orden')
-            ->get()
-            ->map(function ($manual) use ($userId) {
-                $version = $manual->versionActiva->first();
-                $manual->mi_aceptacion = $version
-                    ? $version->acceptances()->where('user_id', $userId)->exists()
-                    : false;
-                return $manual;
-            });
-    }
-
-    /**
-     * v2.3: Verifica si un usuario (franquiciado/empleado) tiene acceso a un manual
-     * por categoría activa O asignación individual.
-     */
-    private function usuarioTieneAccesoAlManual(int $userId, int $manualId, int $empresaId): bool
-    {
-        $porCategoria = DB::table('manual_category_assignments as mca')
-            ->join('user_categories as uc', 'uc.category_id', '=', 'mca.category_id')
-            ->join('franchise_categories as fc', function ($j) {
-                $j->on('fc.id', '=', 'mca.category_id')
-                  ->where('fc.is_active', 1);
-            })
-            ->where('mca.manual_id', $manualId)
-            ->where('mca.empresa_id', $empresaId)
-            ->where('uc.user_id', $userId)
-            ->exists();
-
-        if ($porCategoria) return true;
-
-        return DB::table('manual_user_assignments')
-            ->where('manual_id', $manualId)
-            ->where('empresa_id', $empresaId)
-            ->where('user_id', $userId)
-            ->exists();
-    }
-
     /**
      * v2.3: Devuelve los IDs de usuarios (franquiciado/empleado) activos que tienen
      * acceso al manual por categoría activa O asignación individual.

@@ -15,8 +15,11 @@ class PhysicalSignature extends Model
     protected $fillable = [
         'manual_version_id',
         'franquicia_id',
+        'user_id',
         'subido_por',
-        'archivo_url',
+        // Feature "Aceptaciones": path interno del storage, no URL pública.
+        // El frontend descarga vía el endpoint autenticado /firmas-fisicas/{id}/descargar.
+        'archivo_path',
         'archivo_hash',
         'notas',
     ];
@@ -29,13 +32,22 @@ class PhysicalSignature extends Model
         return $this->belongsTo(ManualVersion::class, 'manual_version_id');
     }
 
-    // La franquicia cuyo representante firmó
+    // La sucursal donde firma el socio (opcional — puede ser null si el socio
+    // no tiene sucursal asignada, ej: distribuidor o dropshipper).
     public function franquicia(): BelongsTo
     {
         return $this->belongsTo(Franquicia::class, 'franquicia_id');
     }
 
-    // El franquiciante que subió el documento escaneado
+    // El socio comercial que firmó el papel. Es la fuente de verdad de "quién
+    // firmó" — reemplaza el modelo anterior donde la firma era "de la sucursal".
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // El super_admin o franquiciante que subió el PDF escaneado al sistema.
+    // Distinto de user_id: puede ser un admin que sube en nombre del socio.
     public function subidoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'subido_por');

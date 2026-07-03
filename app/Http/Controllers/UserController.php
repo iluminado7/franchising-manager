@@ -86,6 +86,16 @@ class UserController extends Controller
             default                   => [],
         };
 
+        // H-004 fix: resolver empresa_id preliminar ANTES del validate para poder
+        // validar que la franquicia pertenezca a esa empresa. Antes, un franquiciante
+        // de empresa A podía asignar un usuario a una franquicia de empresa B.
+        $empresaIdPreliminar = match(true) {
+            $actor->esSuperAdmin()     => $request->empresa_id ?? null,
+            $actor->esFranquiciante()  => $actor->empresa_id,
+            $actor->esFranquiciado()   => $actor->empresa_id,
+            default                    => null,
+        };
+
         // v2.3: 'cuit' removido — la columna no existe en system_admins.
         $data = $request->validate([
             'email'         => 'required|email|unique:users,email',
@@ -96,15 +106,21 @@ class UserController extends Controller
             'dni'           => 'nullable|string|max:15',
             'celular'       => 'nullable|string|max:30',
             'empresa_id'    => 'sometimes|integer|exists:empresas,id',
-            'franquicia_id' => Rule::requiredIf(
-                // v2.3 UX: el rol 'franquiciado' representa un "Socio comercial" en la UI.
-                // Puede no tener sucursal asignada (distribuidor, dropshipper, proveedor
-                // de servicios, etc.). Solo el empleado requiere sucursal obligatoria.
-                // Excepción: si el actor es franquiciado creando empleado, la franquicia
-                // se fuerza desde el actor más abajo — no la mandamos por request.
-                fn() => $request->rol === 'empleado'
-                        && !$actor->esFranquiciado()
-            ),
+            'franquicia_id' => [
+                Rule::requiredIf(
+                    // v2.3 UX: el rol 'franquiciado' representa un "Socio comercial" en la UI.
+                    // Puede no tener sucursal asignada (distribuidor, dropshipper, proveedor
+                    // de servicios, etc.). Solo el empleado requiere sucursal obligatoria.
+                    // Excepción: si el actor es franquiciado creando empleado, la franquicia
+                    // se fuerza desde el actor más abajo — no la mandamos por request.
+                    fn() => $request->rol === 'empleado'
+                            && !$actor->esFranquiciado()
+                ),
+                'nullable', 'integer',
+                Rule::exists('franquicias', 'id')->where(
+                    fn($q) => $q->where('empresa_id', $empresaIdPreliminar)
+                ),
+            ],
         ]);
 
         // Determinar empresa_id
@@ -125,16 +141,23 @@ class UserController extends Controller
             : ($data['franquicia_id'] ?? null);
 
         // v2.3: nombre/apellido/dni ahora viven en users (antes en cada perfil).
-        $user = User::create([
-            'empresa_id'    => $empresaId,
-            'email'         => $data['email'],
-            'password_hash' => Hash::make($data['password']),
-            'rol'           => $data['rol'],
-            'nombre'        => $data['nombre'],
-            'apellido'      => $data['apellido'],
-            'dni'           => $data['dni'] ?? null,
-            'celular'       => $data['celular'] ?? null,
+        // H-015: los campos privilegiados (rol/empresa_id/password_hash) se
+        // setean con setter directo porque están fuera del $fillable.
+        $user = new User();
+        // Campos no-privilegiados (via mass assignment).
+        $user->fill([
+            'email'    => $data['email'],
+            'nombre'   => $data['nombre'],
+            'apellido' => $data['apellido'],
+            'dni'      => $data['dni']     ?? null,
+            'celular'  => $data['celular'] ?? null,
         ]);
+        // Campos privilegiados (setter directo — protegidos de mass assignment).
+        $user->empresa_id    = $empresaId;
+        $user->rol           = $data['rol'];
+        $user->password_hash = Hash::make($data['password']);
+        $user->activo        = 1; // por default, activo al crear
+        $user->save();
 
         // v2.3: las tablas de perfil quedan como marcadores de rol.
         // FranchiseStaff conserva además el vínculo con la franquicia.
@@ -185,7 +208,10 @@ class UserController extends Controller
             }
         }
 
-        // v2.3: 'cuit' removido — la columna no existe en system_admins.
+        // H-004 fix: la nueva franquicia debe pertenecer a la empresa del usuario
+        // editado. El $user->empresa_id ya está validado por los gates de arriba.
+        // Antes, un franquiciante podía mover un empleado a la franquicia de otra
+        // empresa, corrompiendo el aislamiento.
         $data = $request->validate([
             'nombre'        => 'sometimes|string|max:100',
             'apellido'      => 'sometimes|string|max:100',
@@ -193,7 +219,12 @@ class UserController extends Controller
             'password'      => 'nullable|string|min:8',
             'dni'           => 'nullable|string|max:15',
             'celular'       => 'nullable|string|max:30',
-            'franquicia_id' => 'nullable|integer|exists:franquicias,id',
+            'franquicia_id' => [
+                'nullable', 'integer',
+                Rule::exists('franquicias', 'id')->where(
+                    fn($q) => $q->where('empresa_id', $user->empresa_id)
+                ),
+            ],
         ]);
 
         // El franquiciado no puede mover al empleado a otra sucursal
@@ -211,12 +242,15 @@ class UserController extends Controller
             'email'    => $data['email']    ?? null,
         ], fn($v) => $v !== null);
 
-        if (!empty($data['password'])) {
-            $updateUser['password_hash'] = Hash::make($data['password']);
-        }
-
+        // H-015: password_hash está fuera del $fillable, se setea con setter
+        // directo después del update() de campos no-privilegiados.
         if (!empty($updateUser)) {
             $user->update($updateUser);
+        }
+
+        if (!empty($data['password'])) {
+            $user->password_hash = Hash::make($data['password']);
+            $user->save();
         }
 
         // franquicia_id sigue viviendo en franchise_staff
@@ -255,8 +289,10 @@ class UserController extends Controller
             }
         }
 
+        // H-015: 'activo' está fuera del $fillable, se setea con setter directo.
         $nuevoEstado = !$user->activo;
-        $user->update(['activo' => $nuevoEstado]);
+        $user->activo = $nuevoEstado;
+        $user->save();
 
         if (!$nuevoEstado) {
             $user->tokens()->delete();
@@ -309,10 +345,11 @@ class UserController extends Controller
             return response()->json(['error' => 'El usuario ya fue eliminado.'], 409);
         }
 
-        $user->update([
-            'deleted_by' => $actor->id,
-            'deleted_at' => now(),
-        ]);
+        // H-015: deleted_by/deleted_at están fuera del $fillable, se setean con
+        // setter directo.
+        $user->deleted_by = $actor->id;
+        $user->deleted_at = now();
+        $user->save();
 
         // Matar la sesión activa del usuario eliminado (si la tuviera)
         $user->tokens()->delete();
@@ -345,10 +382,11 @@ class UserController extends Controller
             return response()->json(['error' => 'El usuario no está eliminado.'], 409);
         }
 
-        $user->update([
-            'deleted_by' => null,
-            'deleted_at' => null,
-        ]);
+        // H-015: deleted_by/deleted_at están fuera del $fillable, se setean con
+        // setter directo.
+        $user->deleted_by = null;
+        $user->deleted_at = null;
+        $user->save();
 
         ActivityLog::registrar(
             userId:      $actor->id,

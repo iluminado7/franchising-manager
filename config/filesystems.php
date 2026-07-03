@@ -33,7 +33,11 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // H-018 fix: serve=true exponía una ruta HTTP que servía archivos
+            // del disk 'local' sin autenticación. Con las firmas físicas movidas
+            // a este disk (H-017), eso reabría la vulnerabilidad. Ahora el único
+            // acceso es a través de los endpoints autenticados de los controllers.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

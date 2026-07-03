@@ -169,7 +169,11 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // H-010 fix: default fail-secure (true). Si SESSION_SECURE_COOKIE no está
+    // definida, las cookies se emiten con Secure=true. En dev/XAMPP hay que
+    // agregar SESSION_SECURE_COOKIE=false al .env local para que el navegador
+    // acepte la cookie por HTTP.
+    'secure' => env('SESSION_SECURE_COOKIE', true),
 
     /*
     |--------------------------------------------------------------------------

@@ -20,18 +20,28 @@ class User extends Authenticatable
         return $this->password_hash;
     }
 
+    // H-015 fix (mass assignment): campos privilegiados removidos del $fillable.
+    // Los siguientes campos NO pueden ser seteados vía create()/update()/fill()
+    // con datos del request. Los controllers deben usar setter directo
+    // (->rol = ..., ->save()) para modificarlos, después de validaciones
+    // explícitas por rol del actor:
+    //   - rol            → auto-promoción de rol
+    //   - empresa_id     → cambio de tenant
+    //   - activo         → reactivar cuenta suspendida
+    //   - password_hash  → cambio de contraseña sin verificación
+    //   - deleted_by     → soft-delete de otros usuarios
+    //   - deleted_at     → auto-eliminación o eliminación de otros
+    //
+    // Defensa en profundidad: aunque los controllers actuales ya validan cada
+    // campo con $request->validate(), esta protección a nivel modelo evita que
+    // un refactor futuro introduzca por accidente un patrón vulnerable como
+    // User::create($request->all()) o ->fill($request->all()).
     protected $fillable = [
-        'empresa_id',
         'email',
-        'password_hash',
         'nombre',
         'apellido',
         'dni',
-        'rol',
         'celular',
-        'activo',
-        'deleted_by',
-        'deleted_at',
     ];
 
     protected $hidden = [

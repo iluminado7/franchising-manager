@@ -65,12 +65,27 @@ class AuthController extends Controller
             userAgent: $request->userAgent()
         );
 
+        // H-010 fix: el flag Secure ahora se lee de la config de sesión (no
+        // hardcodeado en false). Con fail-secure default true en config/session.php,
+        // si SESSION_SECURE_COOKIE no está en el .env, la cookie sale con Secure=true.
+        // En dev (XAMPP HTTP) hay que definir SESSION_SECURE_COOKIE=false en el .env
+        // local, sino el navegador no envía la cookie por HTTP.
+        //
+        // Argumentos de cookie(): $name, $value, $minutes, $path, $domain,
+        //                         $secure, $httpOnly, $raw, $sameSite
         return response()->json([
             'rol'    => $user->rol,
             'perfil' => $perfil,
         ])->cookie(
-            'auth_token', $token, 60 * 8,
-            '/', null, false, true, false, 'Strict'
+            'auth_token',
+            $token,
+            60 * 8,
+            '/',
+            null,
+            (bool) config('session.secure'),  // Secure: leído de config
+            true,                              // HttpOnly: bloquea acceso desde JS
+            false,                             // raw: false → valor URL-encoded
+            'Strict'                           // SameSite: mitigación CSRF
         );
     }
 
@@ -134,11 +149,36 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (!Hash::check($request->password, $request->user()->password_hash)) {
+        $user = $request->user();
+
+        // H-024: registrar intento fallido de cambio de credenciales — señal de
+        // brute-force o de sesión comprometida intentando tomar la cuenta.
+        if (!Hash::check($request->password, $user->password_hash)) {
+            try {
+                ActivityLog::registrar(
+                    userId:    $user->id,
+                    accion:    'email_actualizado_fallo',
+                    ip:        $request->ip(),
+                    empresaId: $user->empresa_id,
+                    userAgent: $request->userAgent()
+                );
+            } catch (\Throwable $e) { /* best-effort */ }
+
             return response()->json(['message' => 'La contraseña actual es incorrecta.'], 422);
         }
 
-        $request->user()->update(['email' => $request->email]);
+        $user->update(['email' => $request->email]);
+
+        // H-024: log de éxito
+        try {
+            ActivityLog::registrar(
+                userId:    $user->id,
+                accion:    'email_actualizado',
+                ip:        $request->ip(),
+                empresaId: $user->empresa_id,
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort */ }
 
         return response()->json(['message' => 'Email actualizado correctamente.']);
     }
@@ -151,13 +191,60 @@ class AuthController extends Controller
             'password_confirmation' => 'required|string',
         ]);
 
-        if (!Hash::check($request->current_password, $request->user()->password_hash)) {
+        $user = $request->user();
+
+        // H-024: registrar intento fallido — señal de brute-force o de sesión
+        // comprometida intentando cambiar la contraseña.
+        if (!Hash::check($request->current_password, $user->password_hash)) {
+            try {
+                ActivityLog::registrar(
+                    userId:    $user->id,
+                    accion:    'password_actualizada_fallo',
+                    ip:        $request->ip(),
+                    empresaId: $user->empresa_id,
+                    userAgent: $request->userAgent()
+                );
+            } catch (\Throwable $e) { /* best-effort */ }
+
             return response()->json(['message' => 'La contraseña actual es incorrecta.'], 422);
         }
 
-        $request->user()->update([
-            'password_hash' => Hash::make($request->password),
-        ]);
+        // H-015: password_hash está fuera del $fillable, se setea con setter directo.
+        $user->password_hash = Hash::make($request->password);
+        $user->save();
+
+        // H-012: revocar TODAS las sesiones activas del usuario excepto la
+        // actual. Si un atacante ya tenía una cookie/token robado y el usuario
+        // cambia la contraseña como respuesta, la sesión del atacante debe
+        // invalidarse — sino el cambio de contraseña no protege nada.
+        //
+        // Mantenemos la sesión actual (con la que se está haciendo este pedido)
+        // porque si no, el usuario legítimo también se cerraría al terminar
+        // este endpoint. currentAccessToken puede devolver null en algunos
+        // flujos raros — el null-check evita error y en ese caso revocamos
+        // todos los tokens (peor UX pero más seguro).
+        try {
+            $currentToken = $user->currentAccessToken();
+            if ($currentToken) {
+                $user->tokens()->where('id', '!=', $currentToken->id)->delete();
+            } else {
+                $user->tokens()->delete();
+            }
+        } catch (\Throwable $e) {
+            // Si Sanctum no está configurado como se espera, no bloqueamos el
+            // cambio de password — el log ya se hizo.
+        }
+
+        // H-024: log de éxito
+        try {
+            ActivityLog::registrar(
+                userId:    $user->id,
+                accion:    'password_actualizada',
+                ip:        $request->ip(),
+                empresaId: $user->empresa_id,
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort */ }
 
         return response()->json(['message' => 'Contraseña actualizada correctamente.']);
     }

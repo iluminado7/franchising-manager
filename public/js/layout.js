@@ -1,6 +1,19 @@
 // ── LAYOUT GLOBAL ─────────────────────────────────────────────
 // Se ejecuta en todas las páginas del panel
 
+// ── ESCAPE HELPER (H-020 fix) ────────────────────────────────
+// Cualquier string que venga del backend y se inyecte con innerHTML DEBE
+// pasar por esta función para prevenir XSS almacenado. Firma idéntica a la
+// usada en documentos.php/manuales.php/etc.
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // ── TEMA ─────────────────────────────────────────────────────
 function aplicarTema() {
   const esClaro = localStorage.getItem('tema') === 'claro';
@@ -33,6 +46,7 @@ function renderSidebar(rol) {
       { id: 'usuarios',    label: 'Usuarios',         href: 'usuarios.php',    icon: 'users'       },
       { id: 'manuales',    label: 'Manuales',         href: 'manuales.php',    icon: 'file-text'   },
       { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'      },
+      { id: 'aceptaciones', label: 'Aceptaciones',    href: 'aceptaciones.php', icon: 'check-circle' },
       { id: 'categorias',  label: 'Categorías',       href: 'categorias.php',  icon: 'tag'         },
       { id: 'planes',      label: 'Planes',           href: 'planes.php',      icon: 'credit-card' },
       { id: 'log',         label: 'Log de actividad', href: 'log.php',         icon: 'shield'      },
@@ -44,6 +58,7 @@ function renderSidebar(rol) {
       { id: 'franquicias', label: 'Franquicias', href: 'franquicias.php', icon: 'store'  },
       { id: 'usuarios',    label: 'Usuarios',    href: 'usuarios.php',    icon: 'users'     },
       { id: 'documentos',  label: 'Documentos',       href: 'documentos.php',  icon: 'folder'},
+      { id: 'aceptaciones', label: 'Aceptaciones',    href: 'aceptaciones.php', icon: 'check-circle' },
       { id: 'categorias',  label: 'Categorías',  href: 'categorias.php',  icon: 'tag'       },
       { id: 'perfil',      label: 'Mi perfil',   href: 'perfil.php',      icon: 'user'      },
     ],
@@ -66,6 +81,7 @@ function renderSidebar(rol) {
     'users':       `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
     'folder':      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
     'shield':      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+    'check-circle':`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
     'bell':        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
     'credit-card': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
     'user':        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
@@ -192,7 +208,7 @@ async function mostrarPopupNotificaciones() {
       <div style="padding:12px 0;border-bottom:1px solid rgba(44,44,44,.5);display:flex;gap:12px;align-items:flex-start">
         <div style="width:6px;height:6px;border-radius:50%;background:var(--dorado);flex-shrink:0;margin-top:5px"></div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:500;color:var(--blanco);margin-bottom:3px;line-height:1.3">${n.titulo}</div>
+          <div style="font-size:13px;font-weight:500;color:var(--blanco);margin-bottom:3px;line-height:1.3">${esc(n.titulo)}</div>
           <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${formatFechaNotif(n.created_at)}</div>
         </div>
       </div>
@@ -312,7 +328,7 @@ async function cargarNotificacionesPanel() {
         <div style="display:flex;gap:10px;align-items:flex-start">
           <div class="notif-dot" style="width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;background:${!n.leida ? 'var(--dorado)' : 'var(--gris2)'}"></div>
           <div style="flex:1">
-            <div class="notif-titulo" style="font-size:13px;font-weight:${!n.leida ? '500' : '400'};color:${!n.leida ? 'var(--blanco)' : 'var(--gris5)'};margin-bottom:4px;line-height:1.3">${n.titulo}</div>
+            <div class="notif-titulo" style="font-size:13px;font-weight:${!n.leida ? '500' : '400'};color:${!n.leida ? 'var(--blanco)' : 'var(--gris5)'};margin-bottom:4px;line-height:1.3">${esc(n.titulo)}</div>
             <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${formatFechaNotif(n.created_at)}</div>
           </div>
         </div>

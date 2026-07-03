@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\ManualController;
 use App\Http\Controllers\AcceptanceController;
 use App\Http\Controllers\NotificationController;
@@ -26,14 +27,25 @@ use App\Http\Middleware\EnsureActiveTenant;
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
 
+// H-025 fix: endpoint público (sin auth) para recibir reportes de violaciones
+// de Content-Security-Policy del navegador. Sin auth porque los navegadores no
+// mandan cookies con report-uri. Con throttle agresivo para evitar spam.
+Route::post('/csp-report', [CspReportController::class, 'receive'])
+    ->middleware('throttle:60,1');
+
 // ── Rutas protegidas ──────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function () {
 
     // Auth — todos los roles
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me',      [AuthController::class, 'me']);
-    Route::put('/me/email',    [AuthController::class, 'updateEmail']);
-    Route::put('/me/password', [AuthController::class, 'updatePassword']);
+    // H-011 fix: throttle en cambio de credenciales.
+    // 5 intentos por hora por IP+usuario. Suficiente para tipos humanos
+    // (varios intentos con current_password mal) pero bloquea brute-force.
+    Route::middleware('throttle:5,60')->group(function () {
+        Route::put('/me/email',    [AuthController::class, 'updateEmail']);
+        Route::put('/me/password', [AuthController::class, 'updatePassword']);
+    });
 
     // Notificaciones — todos los roles
     Route::get('/notificaciones',             [NotificationController::class, 'index']);
@@ -51,9 +63,6 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
     // Aceptaciones — franquiciado acepta
     Route::post('/versiones/{versionId}/aceptar', [AcceptanceController::class, 'aceptar']);
-
-    // Firmas físicas — franquiciado sube
-    Route::post('/versiones/{versionId}/firma-fisica', [PhysicalSignatureController::class, 'subir']);
 
     // Asignaciones individuales de manuales — lectura para todos
     Route::get('/empleados/{userId}/asignaciones', [ManualAssignmentController::class, 'porEmpleado']);
@@ -155,6 +164,14 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::get('/versiones/{versionId}/aceptaciones',   [AcceptanceController::class, 'porVersion']);
         Route::get('/versiones/{versionId}/firmas-fisicas', [PhysicalSignatureController::class, 'porVersion']);
 
+        // Feature "Aceptaciones" (pantalla nueva) — solo super_admin y franquiciante:
+        //   POST /versiones/{id}/firma-fisica  → subir PDF de firma (con user_id del socio en el body)
+        //   GET  /firmas-fisicas                → lista combinada de aceptaciones digitales + firmas
+        //   GET  /firmas-fisicas/socios-para-manual → dropdown de socios para el modal de subida
+        Route::post('/versiones/{versionId}/firma-fisica',      [PhysicalSignatureController::class, 'subir']);
+        Route::get('/firmas-fisicas',                           [PhysicalSignatureController::class, 'index']);
+        Route::get('/firmas-fisicas/socios-para-manual',        [PhysicalSignatureController::class, 'sociosParaManual']);
+
         // Versiones de manuales
         Route::get('/manuales/{id}/versiones', [ManualController::class, 'versiones']);
 
@@ -205,6 +222,12 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // Notas de manuales — lectura
         // (super_admin ve todas, franquiciante las de su empresa, franquiciado las suyas)
         Route::get('/manuales/{manualId}/notas', [ManualNoteController::class, 'porManual']);
+
+        // H-017 fix: descarga de firma física por endpoint autenticado.
+        // El controller valida acceso al manual + restricción por franquicia
+        // (super_admin: todas, franquiciante: de su empresa, franquiciado: solo la suya).
+        // Empleado queda bloqueado por el grupo del middleware.
+        Route::get('/firmas-fisicas/{id}/descargar', [PhysicalSignatureController::class, 'descargar']);
     });
 
     // ── SUPER ADMIN + FRANQUICIANTE (cambiar estado de notas) ─────────

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Acceptance;
 use App\Models\ManualVersion;
 use App\Models\ActivityLog;
+use App\Services\ManualAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -15,6 +16,16 @@ class AcceptanceController extends Controller
     {
         $user    = $request->user();
         $version = ManualVersion::findOrFail($versionId);
+
+        // H-001 fix: verificar que el usuario tenga acceso efectivo al manual.
+        // Antes, un franquiciado de empresa A podía aceptar versiones de
+        // manuales de empresa B enumerando IDs, contaminando el registro de
+        // compliance. Ahora el gate es idéntico al usado para leer el manual.
+        if (!ManualAccessService::usuarioTieneAccesoAlManual($user, $version->manual_id)) {
+            return response()->json([
+                'error' => 'Sin acceso a este manual.',
+            ], 403);
+        }
 
         if ($version->fueAceptadaPor($user->id)) {
             return response()->json([
@@ -59,11 +70,28 @@ class AcceptanceController extends Controller
         $version = ManualVersion::findOrFail($versionId);
         $user    = $request->user();
 
+        // H-001 fix (bug B): antes se hacía findOrFail sin validar que el
+        // franquiciante tuviera acceso al manual. El filtro por empresa_id en
+        // el query devolvía vacío, pero permitía enumeración de IDs para
+        // descubrir la existencia de manuales de otras empresas.
+        // Ahora bloqueamos explícitamente al franquiciante que no tenga el
+        // manual asignado. Super_admin pasa siempre.
+        if ($user->esFranquiciante()) {
+            if (!ManualAccessService::empresaTieneAccesoAlManual(
+                $version->manual_id,
+                $user->empresa_id
+            )) {
+                return response()->json([
+                    'error' => 'Sin acceso a este manual.',
+                ], 403);
+            }
+        }
+
         $query = $version->acceptances()
                          ->with('user.franchiseStaff.franquicia')
                          ->orderBy('aceptado_at', 'desc');
 
-        // Franquiciante solo ve aceptaciones de su empresa
+        // Franquiciante solo ve aceptaciones de su empresa (defensa en profundidad).
         if ($user->esFranquiciante()) {
             $query->where('empresa_id', $user->empresa_id);
         }

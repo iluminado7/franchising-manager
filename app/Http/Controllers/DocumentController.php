@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
@@ -94,23 +95,33 @@ class DocumentController extends Controller
     // notificarDocumento() no notifica a nadie en este punto (no hay asignaciones).
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+
+        // H-003 fix: resolver empresa_id ANTES de la validación para poder
+        // validar que franquicia_id pertenezca a esa empresa. Antes, cualquier
+        // franquicia existente en el sistema era aceptada, lo que permitía
+        // asociar el documento a una franquicia de otra empresa.
+        $empresaId = $user->esSuperAdmin()
+            ? ($request->empresa_id ?? null)
+            : $user->empresa_id;
+
         $request->validate([
             'archivo'              => 'required|file|mimes:pdf,doc,docx|max:20480',
             'titulo'               => 'required|string|max:200',
             'tipo'                 => 'required|in:contrato,politica,protocolo,circular,anexo,acta,otro',
-            'franquicia_id'        => 'nullable|integer|exists:franquicias,id',
+            'franquicia_id'        => [
+                'nullable', 'integer',
+                Rule::exists('franquicias', 'id')->where(
+                    fn($q) => $q->where('empresa_id', $empresaId)
+                ),
+            ],
             'visible_franquiciado' => 'nullable|boolean',
             'empresa_id'           => 'nullable|integer|exists:empresas,id',
             'nota'                 => 'nullable|string|max:500',
         ]);
 
-        $user    = $request->user();
         $archivo = $request->file('archivo');
         $hash    = hash_file('sha256', $archivo->getRealPath());
-
-        $empresaId = $user->esSuperAdmin()
-            ? ($request->empresa_id ?? null)
-            : $user->empresa_id;
 
         $disk = config('filesystems.default');
         $path = Storage::disk($disk)->putFile('documentos', $archivo);
@@ -174,11 +185,18 @@ class DocumentController extends Controller
             return response()->json(['error' => 'Sin permisos.'], 403);
         }
 
+        // H-003 fix: la franquicia debe pertenecer a la empresa del documento.
+        // El $documento->empresa_id ya está validado por el gate al inicio del método.
         $data = $request->validate([
             'titulo'               => 'sometimes|string|max:200',
             'tipo'                 => 'sometimes|in:contrato,politica,protocolo,circular,anexo,acta,otro',
             'visible_franquiciado' => 'sometimes|boolean',
-            'franquicia_id'        => 'nullable|integer|exists:franquicias,id',
+            'franquicia_id'        => [
+                'nullable', 'integer',
+                Rule::exists('franquicias', 'id')->where(
+                    fn($q) => $q->where('empresa_id', $documento->empresa_id)
+                ),
+            ],
         ]);
 
         $documento->update($data);
@@ -402,6 +420,8 @@ class DocumentController extends Controller
             if ($nombreAutor === '') {
                 $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
             }
+            // H-020 fix: sanitizar el nombre del autor (defense-in-depth).
+            $nombreAutor = strip_tags($nombreAutor);
 
             $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
             $notifSuper  = $superadmins->map(fn($uid) => [
@@ -412,7 +432,7 @@ class DocumentController extends Controller
                 'document_id'         => $documento->id,
                 'document_version_id' => null,
                 'category_id'         => null,
-                'titulo'              => "El franquiciante {$nombreAutor} eliminó el documento \"{$documento->titulo}\"",
+                'titulo'              => "El franquiciante {$nombreAutor} eliminó el documento \"" . strip_tags($documento->titulo ?? '') . "\"",
                 'created_at'          => now(),
             ])->toArray();
 
