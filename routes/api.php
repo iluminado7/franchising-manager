@@ -24,8 +24,11 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Middleware\EnsureActiveTenant;
 
 // ── Rutas públicas ────────────────────────────────────────────────────
+// H-014 fix: throttle compuesto (IP + email) — ver AppServiceProvider::boot().
+// Reemplaza el throttle simple por IP que permitía credential stuffing con IPs
+// rotadas.
 Route::post('/login', [AuthController::class, 'login'])
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:login');
 
 // H-025 fix: endpoint público (sin auth) para recibir reportes de violaciones
 // de Content-Security-Policy del navegador. Sin auth porque los navegadores no

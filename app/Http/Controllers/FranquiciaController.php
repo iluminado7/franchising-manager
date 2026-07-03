@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Franquicia;
 use App\Models\ActivityLog;
 use App\Models\ManualVersion;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class FranquiciaController extends Controller
 {
@@ -121,7 +123,43 @@ class FranquiciaController extends Controller
                       ->update(['es_sede_central' => 0]);
         }
 
+        // H-016 fix: detectar si esta operación está suspendiendo la franquicia
+        // (transición activa=true → activa=false). Antes, la suspensión dejaba
+        // los tokens Sanctum válidos hasta 8h; solo el middleware EnsureActiveTenant
+        // impedía el uso, lo que dejaba una ventana peligrosa si el middleware
+        // se desactivaba temporalmente. Ahora revocamos explícitamente.
+        $seSuspendio = array_key_exists('activa', $data)
+                       && $data['activa'] === false
+                       && (bool) $franquicia->activa === true;
+
         $franquicia->update($data);
+
+        if ($seSuspendio) {
+            // Revocar tokens de todos los usuarios asignados a esta franquicia.
+            $userIds = User::whereHas('franchiseStaff', fn($q) =>
+                $q->where('franquicia_id', $franquicia->id)
+            )->pluck('id');
+
+            if ($userIds->isNotEmpty()) {
+                // Borra tokens Sanctum en bulk (más eficiente que iterar).
+                DB::table('personal_access_tokens')
+                    ->where('tokenable_type', User::class)
+                    ->whereIn('tokenable_id', $userIds)
+                    ->delete();
+            }
+
+            try {
+                ActivityLog::registrar(
+                    userId:      $request->user()->id,
+                    accion:      'franquicia_suspendida_tokens_revocados',
+                    ip:          $request->ip(),
+                    empresaId:   $franquicia->empresa_id,
+                    entidadTipo: 'franquicias',
+                    entidadId:   $franquicia->id,
+                    userAgent:   $request->userAgent()
+                );
+            } catch (\Throwable $e) { /* best-effort */ }
+        }
 
         return response()->json($franquicia);
     }

@@ -19,24 +19,51 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        // H-014 fix: buscar sin filtro de 'activo' para poder loguear el motivo
+        // exacto del fallo (email inexistente vs cuenta suspendida vs password
+        // incorrecta). Al usuario le devolvemos siempre "credenciales incorrectas"
+        // para los primeros 3 casos, sin filtrar información a atacantes.
         $user = User::where('email', $request->email)
-                    ->where('activo', 1)
                     ->whereNull('deleted_at')
                     ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password_hash)) {
+        if (!$user) {
+            $this->logLoginFallido($request, null, null, 'login_fallido_email_inexistente');
+            throw ValidationException::withMessages([
+                'email' => ['Las credenciales no son correctas.'],
+            ]);
+        }
+
+        if (!Hash::check($request->password, $user->password_hash)) {
+            $this->logLoginFallido($request, $user->id, $user->empresa_id, 'login_fallido_password_incorrecta');
+            throw ValidationException::withMessages([
+                'email' => ['Las credenciales no son correctas.'],
+            ]);
+        }
+
+        if (!$user->activo) {
+            $this->logLoginFallido($request, $user->id, $user->empresa_id, 'login_fallido_cuenta_suspendida');
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales no son correctas.'],
             ]);
         }
 
         // Bloqueo por suspensión de empresa o sucursal (super_admin nunca se bloquea).
+        // Este mensaje SÍ es específico (histórico) porque el usuario legítimo
+        // necesita saber que su cuenta está bien y el problema es de la empresa.
         if (!$user->esSuperAdmin()) {
             $empresaSuspendida    = $user->empresa && !$user->empresa->activa;
             $franquicia           = optional($user->franchiseStaff)->franquicia;
             $franquiciaSuspendida = $franquicia && !$franquicia->activa;
 
-            if ($empresaSuspendida || $franquiciaSuspendida) {
+            if ($empresaSuspendida) {
+                $this->logLoginFallido($request, $user->id, $user->empresa_id, 'login_fallido_empresa_suspendida');
+                throw ValidationException::withMessages([
+                    'email' => ['Tu empresa o sucursal fue suspendida. Contactá al administrador.'],
+                ]);
+            }
+            if ($franquiciaSuspendida) {
+                $this->logLoginFallido($request, $user->id, $user->empresa_id, 'login_fallido_franquicia_suspendida');
                 throw ValidationException::withMessages([
                     'email' => ['Tu empresa o sucursal fue suspendida. Contactá al administrador.'],
                 ]);
@@ -247,6 +274,31 @@ class AuthController extends Controller
         } catch (\Throwable $e) { /* best-effort */ }
 
         return response()->json(['message' => 'Contraseña actualizada correctamente.']);
+    }
+
+    /**
+     * H-014 fix: registra un intento fallido de login para trazabilidad y
+     * detección de brute-force. Se llama antes de devolver 401/403.
+     *
+     * userId puede ser null cuando el email no existe. En ese caso solo queda
+     * el registro con ip y user_agent — útil para detectar spray attacks.
+     *
+     * Envuelto en try/catch: si el log falla (ej: FK con user_id inválido),
+     * no bloqueamos la respuesta al usuario.
+     */
+    private function logLoginFallido(Request $request, ?int $userId, ?int $empresaId, string $accion): void
+    {
+        try {
+            ActivityLog::registrar(
+                userId:    $userId,
+                accion:    $accion,
+                ip:        $request->ip(),
+                empresaId: $empresaId,
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) {
+            // best-effort
+        }
     }
 
     private function abilitiesPorRol(string $rol): array

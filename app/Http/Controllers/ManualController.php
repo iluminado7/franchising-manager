@@ -30,8 +30,17 @@ class ManualController extends Controller
             // Super admin: por defecto ve los no-eliminados + los eliminados por franquiciantes
             // (para él, el borrado de un franquiciante no es definitivo).
             // Con ?include_deleted=1 ve también los eliminados por super_admin.
+            //
+            // Fix aceptaciones: si el super_admin envía ?empresa_id=X, filtramos los
+            // manuales asignados a esa empresa. Sin el param, comportamiento anterior
+            // (todos los manuales del sistema con empresa como metadata).
             'super_admin' => Manual::with(['versionActiva', 'empresasAsignadas'])
                        ->when(!$includeDeleted, fn($q) => $q->visiblesParaSuperAdmin())
+                       ->when($request->filled('empresa_id'), fn($q) =>
+                           $q->whereHas('empresasAsignadas', fn($e) =>
+                               $e->where('empresa_id', (int) $request->query('empresa_id'))
+                           )
+                       )
                        ->orderBy('orden')
                        ->get()
                        ->map(function ($manual) {

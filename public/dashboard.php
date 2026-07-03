@@ -131,7 +131,9 @@ function configurarVistaSuperAdmin(empresas) {
   document.getElementById('stat-empresas').textContent = empresas.filter(e => e.activa).length;
 
   // Tarjetas clickeables → su sección con el filtro puesto
-  hacerClickeable('card-empresas',    `${BASE_PHP}/empresas.php`);
+  // Al clickear la tarjeta "Empresas activas", vamos a empresas.php con el
+  // filtro "Activas" ya aplicado (query param ?estado=activas leído por esa página).
+  hacerClickeable('card-empresas',    `${BASE_PHP}/empresas.php?estado=activas`);
   hacerClickeable('card-franquicias', `${BASE_PHP}/franquicias.php`);
   hacerClickeable('card-publicados',  `${BASE_PHP}/manuales.php?estado=publicado`);
   hacerClickeable('card-borradores',  `${BASE_PHP}/manuales.php?estado=borrador`);

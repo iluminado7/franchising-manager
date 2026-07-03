@@ -430,7 +430,9 @@ function filtrarOpcionesEmpresa() {
     aplicarFiltros();
   }
 
-  const coincidencias = todasLasEmpresas.filter(e => e.nombre.toLowerCase().includes(texto));
+  // Solo mostramos empresas activas en el autocomplete. todasLasEmpresas sigue
+  // conteniendo también las suspendidas para lookups por ID.
+  const coincidencias = todasLasEmpresas.filter(e => e.activa && e.nombre.toLowerCase().includes(texto));
 
   if (!coincidencias.length) {
     cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;

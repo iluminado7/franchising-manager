@@ -330,7 +330,11 @@ include 'layout/head.php';
 <script>
 let todasLasEmpresas = [];
 let todosLosPlanes   = [];
-let filtroActual     = 'todas';
+// Si venimos con ?estado=activas o ?estado=inactivas en la URL (ej: desde el
+// dashboard), arrancamos con ese filtro aplicado. Valores no reconocidos caen
+// al default 'todas'.
+const _paramEstado = new URLSearchParams(window.location.search).get('estado');
+let filtroActual   = ['todas', 'activas', 'inactivas'].includes(_paramEstado) ? _paramEstado : 'todas';
 let pendingToggle    = null;
 let emailsOriginales = []; // emails guardados de la empresa en edición
 
@@ -346,7 +350,23 @@ async function cargarDatos() {
     todosLosPlanes   = planes;
 
     poblarSelectPlanes();
-    renderTabla(empresas);
+
+    // Si arrancamos con un filtro no-default (por query param), sincronizamos el
+    // botón activo del tab y aplicamos el filtro sobre la lista cargada.
+    if (filtroActual !== 'todas') {
+      document.querySelectorAll('.filtro-btn').forEach(b => {
+        b.classList.remove('active');
+        // El onclick tiene la forma: filtrar('activas', this) — matcheamos por
+        // el nombre del filtro que va como primer argumento.
+        if (b.getAttribute('onclick')?.includes(`'${filtroActual}'`)) {
+          b.classList.add('active');
+        }
+      });
+      aplicarFiltros();
+    } else {
+      renderTabla(empresas);
+    }
+
     document.getElementById('page-sub').textContent =
       `${empresas.length} empresa(s) registrada(s)`;
 
