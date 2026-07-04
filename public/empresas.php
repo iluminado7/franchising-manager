@@ -30,7 +30,7 @@ include 'layout/head.php';
         <button class="filtro-btn" onclick="filtrar('activas', this)">Activas</button>
         <button class="filtro-btn" onclick="filtrar('inactivas', this)">Inactivas</button>
         <div style="margin-left:auto;position:relative">
-          <input type="text" id="inp-buscar" placeholder="Buscar empresa..." oninput="buscar(this.value)" class="buscar-input">
+          <input type="text" id="inp-buscar" placeholder="Buscar empresa..." oninput="filtrarOpcionesEmpresa()" class="buscar-input">
           <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
       </div>
@@ -493,7 +493,37 @@ function filtrar(tipo, btn) {
   btn.classList.add('active');
   aplicarFiltros();
 }
-function buscar(texto) { aplicarFiltros(texto); }
+
+function filtrarOpcionesEmpresa() {
+  const input = document.getElementById('inp-empresa');
+  const cont  = document.getElementById('empresa-opciones');
+  const texto = input.value.toLowerCase().trim();
+
+  // Si vació el campo y había una empresa elegida, vuelve a "todas".
+  if (texto === '' && empresaFiltroId !== '') {
+    empresaFiltroId = '';
+    document.getElementById('empresa-clear').style.display = 'none';
+    aplicarFiltros();
+  }
+
+  // Solo mostramos empresas activas en el autocomplete. todasLasEmpresas sigue
+  // conteniendo también las suspendidas para lookups por ID.
+  const coincidencias = todasLasEmpresas.filter(e => e.activa && e.nombre.toLowerCase().includes(texto));
+
+  if (!coincidencias.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    cont.style.display = 'block';
+    return;
+  }
+
+  cont.innerHTML = coincidencias.map(e => `
+    <div class="combo-opcion" onmousedown="seleccionarEmpresa(${e.id}, '${esc(e.nombre).replace(/'/g, "\\'")}')">
+      ${esc(e.nombre)}${e.activa ? '' : ' <span style="color:var(--gris4)">(suspendida)</span>'}
+    </div>`).join('');
+  cont.style.display = 'block';
+}
+
+
 function aplicarFiltros(texto = document.getElementById('inp-buscar').value) {
   let lista = [...todasLasEmpresas];
   if (filtroActual === 'activas')   lista = lista.filter(e => e.activa);
@@ -661,7 +691,7 @@ function agregarEmailRow(email = '', tipo = 'contacto', principal = false, email
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gris4);cursor:pointer;white-space:nowrap">
       <input type="checkbox" class="email-principal" ${principal ? 'checked' : ''}
         style="accent-color:var(--dorado);width:14px;height:14px">
-      Principal
+      Legal
     </label>
     <button type="button" class="btn-remove" onclick="this.closest('.email-row').remove()" title="Eliminar">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

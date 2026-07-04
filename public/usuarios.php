@@ -80,13 +80,14 @@ include 'layout/head.php';
               <th>Email</th>
               <th>Rol</th>
               <th>Empresa / Franquicia</th>
+              <th>Categorías</th>
               <th>DNI</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-body">
-            <tr><td colspan="7"><div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando usuarios...</div></td></tr>
+            <tr><td colspan="8"><div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando usuarios...</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -347,6 +348,25 @@ include 'layout/head.php';
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
+/* Chips de categorías en la tabla */
+.cat-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 260px; }
+.cat-chip {
+  display: inline-flex; align-items: center;
+  background: rgba(201,168,76,.10); color: var(--dorado);
+  border: 1px solid rgba(201,168,76,.28);
+  border-radius: 10px; padding: 2px 8px;
+  font-size: 10.5px; font-family: 'Roboto', sans-serif;
+  white-space: nowrap; max-width: 130px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.cat-chip.more {
+  cursor: pointer; background: transparent;
+  color: var(--gris5); border-color: var(--gris2);
+  transition: color .15s, border-color .15s;
+}
+.cat-chip.more:hover { color: var(--dorado); border-color: var(--dorado); }
+.cat-empty { color: var(--gris4); font-style: italic; font-size: 12px; font-family: 'Roboto', sans-serif; }
+
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
 .modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto; }
@@ -519,7 +539,7 @@ async function init() {
 
   } catch (e) {
     document.getElementById('tabla-body').innerHTML =
-      `<tr><td colspan="7"><div class="empty-state">Error al cargar usuarios.</div></td></tr>`;
+      `<tr><td colspan="8"><div class="empty-state">Error al cargar usuarios.</div></td></tr>`;
   }
 }
 
@@ -529,7 +549,7 @@ function renderTabla(lista) {
   document.getElementById('tabla-titulo').textContent = `${lista.length} resultado(s)`;
 
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Sin usuarios que mostrar.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Sin usuarios que mostrar.</div></td></tr>`;
     return;
   }
 
@@ -564,6 +584,7 @@ function renderTabla(lista) {
         <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
         <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
         <td>${contexto}</td>
+        <td>${renderCategoriasChips(u, nombre)}</td>
         <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
         <td><span class="estado-pill estado-pendiente">Eliminado</span></td>
         <td>
@@ -603,6 +624,7 @@ function renderTabla(lista) {
       <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
       <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
       <td>${contexto}</td>
+      <td>${renderCategoriasChips(u, nombre)}</td>
       <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
       <td><span class="estado-pill ${u.activo ? 'estado-completo' : 'estado-pendiente'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td>
@@ -627,6 +649,36 @@ function renderTabla(lista) {
       </td>
     </tr>`;
   }).join('');
+}
+
+// ── CHIPS DE CATEGORÍAS ───────────────────────────────────────
+// Solo el rol 'franquiciado' (UI: Socio comercial) tiene categorías.
+// 0 → "Sin categoría"; 1-2 → todos los chips; 3+ → los primeros 2 + "+N más"
+// clickeable que abre el modal de gestión existente.
+function renderCategoriasChips(u, nombre) {
+  if (u.rol !== 'franquiciado') return '<span class="cat-empty">—</span>';
+
+  const cats = Array.isArray(u.categorias) ? u.categorias : [];
+
+  if (!cats.length) return '<span class="cat-empty">Sin categoría</span>';
+
+  const MAX_VISIBLE = 2;
+  const visibles = cats.slice(0, MAX_VISIBLE);
+  const resto    = cats.length - MAX_VISIBLE;
+
+  const chips = visibles.map(c =>
+    `<span class="cat-chip" title="${esc(c.name)}">${esc(c.name)}</span>`
+  ).join('');
+
+  const more = resto > 0
+    ? `<span class="cat-chip more"
+             title="Ver todas las categorías de ${esc(nombre)}"
+             onclick="abrirModalCategorias(${u.id}, '${esc(nombre)}', ${u.empresa_id || 'null'})">
+         +${resto} más
+       </span>`
+    : '';
+
+  return `<div class="cat-chips">${chips}${more}</div>`;
 }
 
 // ── FILTROS ───────────────────────────────────────────────────

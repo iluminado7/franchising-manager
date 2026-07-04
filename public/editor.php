@@ -262,10 +262,10 @@ include 'layout/head.php';
             <div style="font-size:13px;font-weight:600;color:var(--error)">Advertencia importante</div>
           </div>
           <p style="font-size:13.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:0">
-            Estás por publicar una versión de un manual operativo. Toda modificación o creación de contenido que realices queda <strong style="color:var(--blanco)">bajo tu entera responsabilidad</strong> y puede tener <strong style="color:var(--blanco)">repercusiones legales</strong> para tu empresa y sus franquicias.
+            Estás por publicar una versión de un manual operativo. Toda modificación o creación de contenido que realices queda <strong style="color:var(--blanco)">bajo tu entera responsabilidad</strong> y puede tener <strong style="color:var(--blanco)">repercusiones legales</strong> para tu empresa, tus franquicias o demas socios comerciales.
           </p>
           <p style="font-size:13.5px;color:var(--gris5);line-height:1.7;font-family:'Montserrat',sans-serif;margin:10px 0 0">
-            Antes de continuar, te recomendamos <strong style="color:var(--blanco)">consultar con el equipo técnico</strong> o asesoría legal para validar los cambios.
+            Antes de continuar, te recomendamos <strong style="color:var(--blanco)">consultar con el equipo técnico</strong> o legal de <a href="goharv.com.ar"></a> para validar los cambios.
           </p>
         </div>
 
