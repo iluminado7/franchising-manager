@@ -56,6 +56,7 @@ include 'layout/head.php';
           <option value="circular">Circular</option>
           <option value="anexo">Anexo</option>
           <option value="acta">Acta</option>
+          <option value="procedimiento">Procedimiento</option>
           <option value="otro">Otro</option>
         </select>
 
@@ -163,6 +164,7 @@ include 'layout/head.php';
             <option value="circular">Circular</option>
             <option value="anexo">Anexo</option>
             <option value="acta">Acta</option>
+            <option value="procedimiento">Procedimiento</option>
             <option value="otro">Otro</option>
           </select>
         </div>
@@ -374,6 +376,7 @@ include 'layout/head.php';
           <option value="circular">Circular</option>
           <option value="anexo">Anexo</option>
           <option value="acta">Acta</option>
+          <option value="procedimiento">Procedimiento</option>
           <option value="otro">Otro</option>
         </select>
       </div>
@@ -484,6 +487,7 @@ include 'layout/head.php';
 .tipo-circular  { background: rgba(38,198,218,.12);  color: #26c6da;       border: 1px solid rgba(38,198,218,.25); }
 .tipo-anexo     { background: rgba(201,168,76,.12);  color: var(--dorado); border: 1px solid rgba(201,168,76,.25); }
 .tipo-acta      { background: rgba(76,175,80,.12);   color: var(--exito);  border: 1px solid rgba(76,175,80,.25); }
+.tipo-procedimiento { background: rgba(121,134,203,.12); color: #7986cb;      border: 1px solid rgba(121,134,203,.25); }
 .tipo-otro      { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
 
 /* ── Drop zone ────────────────────────────────────────────── */
@@ -1023,6 +1027,7 @@ function renderTabla(lista) {
       circular:  'tipo-circular',
       anexo:     'tipo-anexo',
       acta:      'tipo-acta',
+      procedimiento: 'tipo-procedimiento',
       otro:      'tipo-otro',
     };
     return `<span class="tipo-badge ${map[tipo] || 'tipo-otro'}">${tipo}</span>`;

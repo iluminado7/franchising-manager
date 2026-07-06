@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use HTMLPurifier;
 use HTMLPurifier_Config;
+use App\Http\Controllers\ManualImageController;
 use App\Models\Manual;
 use App\Models\ManualVersion;
 use App\Models\ManualEmpresaAssignment;
@@ -232,7 +233,11 @@ class ManualController extends Controller
     public function guardarBorrador(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'contenido_html' => 'required|string|max:5000000',
+            'contenido_html'  => 'required|string|max:5000000',
+            // Header/footer: opcionales, cada uno hasta 200KB. Suficiente para
+            // logo pegado como base64 (típico ~30KB) + texto legal.
+            'encabezado_html' => 'nullable|string|max:200000',
+            'pie_pagina_html' => 'nullable|string|max:200000',
         ]);
 
         $manual = Manual::findOrFail($id);
@@ -248,6 +253,24 @@ class ManualController extends Controller
                 return response()->json(['error' => 'Sin acceso a este manual.'], 403);
             }
         }
+
+        // Header/footer viven en 'manuals' (no en 'manual_versions') porque
+        // son identidad del manual, no versionables. Setter directo para no
+        // depender del $fillable del modelo Manual.
+        if ($request->has('encabezado_html')) {
+            $manual->encabezado_html = $request->encabezado_html
+                ? $this->sanitizarHtml($request->encabezado_html)
+                : null;
+        }
+        if ($request->has('pie_pagina_html')) {
+            $manual->pie_pagina_html = $request->pie_pagina_html
+                ? $this->sanitizarHtml($request->pie_pagina_html)
+                : null;
+        }
+        if ($manual->isDirty(['encabezado_html', 'pie_pagina_html'])) {
+            $manual->save();
+        }
+
         $borrador = ManualVersion::where('manual_id', $manual->id)
                                  ->where('es_activa', 0)
                                  ->where('version_number', 0)
@@ -270,6 +293,12 @@ class ManualController extends Controller
             ]);
         }
 
+        // Feature imágenes: limpiar imágenes que ya no están referenciadas en
+        // ninguna versión del manual ni en el header/footer.
+        try {
+            ManualImageController::limpiarHuerfanas($manual->id);
+        } catch (\Throwable $e) { /* best-effort — no bloquea el guardado */ }
+
         return response()->json(['message' => 'Borrador guardado.']);
     }
 
@@ -279,6 +308,8 @@ class ManualController extends Controller
         $request->validate([
             'contenido_html'   => 'required|string|max:5000000',
             'nota_publicacion' => 'nullable|string|max:2000',
+            'encabezado_html'  => 'nullable|string|max:200000',
+            'pie_pagina_html'  => 'nullable|string|max:200000',
         ]);
 
         $manual = Manual::findOrFail($id);
@@ -299,7 +330,30 @@ class ManualController extends Controller
             }
         }
 
+        // Header/footer: se guardan a nivel manual (identidad, no versionable).
+        // Se sanitizan con el mismo HTMLPurifier que contenido_html.
+        if ($request->has('encabezado_html')) {
+            $manual->encabezado_html = $request->encabezado_html
+                ? $this->sanitizarHtml($request->encabezado_html)
+                : null;
+        }
+        if ($request->has('pie_pagina_html')) {
+            $manual->pie_pagina_html = $request->pie_pagina_html
+                ? $this->sanitizarHtml($request->pie_pagina_html)
+                : null;
+        }
+        if ($manual->isDirty(['encabezado_html', 'pie_pagina_html'])) {
+            $manual->save();
+        }
+
         DB::transaction(function () use ($manual, $user, $html, $hash, $request, $notaPub) {
+
+            // Feature imágenes: limpiamos huérfanas al publicar. Se hace ANTES
+            // de crear la versión nueva para que la limpieza vea el estado
+            // "borrador anterior" y no la versión que estamos por crear.
+            try {
+                ManualImageController::limpiarHuerfanas($manual->id);
+            } catch (\Throwable $e) { /* best-effort */ }
 
             ManualVersion::where('manual_id', $manual->id)
                          ->where('es_activa', 1)
@@ -474,6 +528,16 @@ class ManualController extends Controller
     }
 
     // ── HTMLPurifier ──────────────────────────────────────────────────
+    //
+    // v2.4 (feature imágenes): además de permitir <img>, aplicamos un post-filtro
+    // que remueve cualquier <img> cuyo src NO empiece con /api/manuales-imagenes/
+    // o con data:image (para preview client-side ANTES de que el JS suba al server).
+    //
+    // Razón: si permitimos <img src="https://malware.com/x.gif"> queda un tracking
+    // pixel externo. La política es "solo imágenes servidas por nuestro sistema".
+    // El frontend intercepta paste/drag y sube al server ANTES de mostrar, así
+    // que en el HTML final que llega al backend NO debería haber data: URIs
+    // — pero por defensa las permitimos igual.
     private function sanitizarHtml(string $html): string
     {
         $config = HTMLPurifier_Config::createDefault();
@@ -485,12 +549,28 @@ class ManualController extends Controller
             'table[style],thead,tbody,tr,' .
             'th[style],td[style],' .
             'a[href|target],' .
-            'div[style],span[style]'
+            'div[style],span[style],' .
+            // v2.4: <img> con atributos seguros. Sin onerror/onload etc.
+            // (HTMLPurifier los strip automáticamente).
+            'img[src|alt|title|width|height|style]'
         );
 
-        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true]);
+        // Permitir data: URI para preview client-side. HTMLPurifier los sanitiza
+        // (solo formatos de imagen conocidos, no javascript: data:text/html etc).
+        $config->set('URI.AllowedSchemes', [
+            'http' => true, 'https' => true, 'data' => true,
+        ]);
         $config->set('CSS.AllowedProperties',
-            'text-align,font-weight,font-style,text-decoration,width,height'
+            'text-align,font-weight,font-style,text-decoration,width,height,' .
+            // color / background-color: para colores de texto y resaltado del
+            // editor (Opción C, paleta + picker). HTMLPurifier valida el valor
+            // (hex, rgb, rgba, nombres, transparent) y descarta lo inválido.
+            'color,background-color,' .
+            // Para img alignments: margin, float, max-width, font-size (en pt).
+            // OJO: 'display' NO se puede porque HTMLPurifier necesitaría config
+            // extra (CSS.AllowTricky) para soportarlo. Las imágenes son inline
+            // por default, y las alineaciones de párrafo usan text-align.
+            'margin,margin-left,margin-right,float,max-width,font-size'
         );
         $cacheDir = storage_path('app/htmlpurifier');
         if (!is_dir($cacheDir)) {
@@ -498,7 +578,42 @@ class ManualController extends Controller
         }
         $config->set('Cache.SerializerPath', $cacheDir);
 
-        return (new HTMLPurifier($config))->purify($html);
+        $html = (new HTMLPurifier($config))->purify($html);
+
+        // Post-filtro: remover <img> con src externos (no de nuestro sistema).
+        // Solo aceptamos:
+        //   - URLs que contengan el path /api/manuales-imagenes/{id}/descargar
+        //     (relativas o con subpath, ej: /manuales-franquiciantes/public/api/...)
+        //   - data:image/* URIs
+        // Cualquier otra cosa se descarta.
+        //
+        // La verificación es "contains" en vez de "startsWith" para soportar
+        // instalaciones en subpath (típico XAMPP local /manuales-franquiciantes/public).
+        // Igual sigue siendo seguro: la URL DEBE tener el path completo de nuestro
+        // endpoint. URLs a otros dominios no matchean el pattern.
+        $html = preg_replace_callback(
+            '#<img\s+[^>]*>#i',
+            function ($m) {
+                $tag = $m[0];
+                if (!preg_match('#src\s*=\s*["\']([^"\']+)["\']#i', $tag, $srcMatch)) {
+                    return ''; // sin src → descartar
+                }
+                $src = trim($srcMatch[1]);
+
+                // Aceptar si contiene el path exacto del endpoint (con o sin subpath).
+                // Regex: opcional http://host, luego el path /api/manuales-imagenes/N/descargar.
+                $esNuestraApi = (bool) preg_match(
+                    '#(?:^|/)api/manuales-imagenes/\d+/descargar(?:\?|$)#',
+                    $src
+                );
+                $esDataUri = str_starts_with($src, 'data:image/');
+
+                return ($esNuestraApi || $esDataUri) ? $tag : '';
+            },
+            $html
+        );
+
+        return $html;
     }
 
     // DELETE /api/manuales/{id}

@@ -108,7 +108,7 @@ class DocumentController extends Controller
         $request->validate([
             'archivo'              => 'required|file|mimes:pdf,doc,docx|max:20480',
             'titulo'               => 'required|string|max:200',
-            'tipo'                 => 'required|in:contrato,politica,protocolo,circular,anexo,acta,otro',
+            'tipo'                 => 'required|in:contrato,politica,protocolo,circular,anexo,acta,procedimiento,otro',
             'franquicia_id'        => [
                 'nullable', 'integer',
                 Rule::exists('franquicias', 'id')->where(
@@ -189,7 +189,7 @@ class DocumentController extends Controller
         // El $documento->empresa_id ya está validado por el gate al inicio del método.
         $data = $request->validate([
             'titulo'               => 'sometimes|string|max:200',
-            'tipo'                 => 'sometimes|in:contrato,politica,protocolo,circular,anexo,acta,otro',
+            'tipo'                 => 'sometimes|in:contrato,politica,protocolo,circular,anexo,acta,procedimiento,otro',
             'visible_franquiciado' => 'sometimes|boolean',
             'franquicia_id'        => [
                 'nullable', 'integer',

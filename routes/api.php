@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\ManualController;
+use App\Http\Controllers\ManualImageController;
 use App\Http\Controllers\AcceptanceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\FranquiciaController;
@@ -58,6 +59,10 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     // Manuales — lectura para todos los roles
     Route::get('/manuales',      [ManualController::class, 'index']);
     Route::get('/manuales/{id}', [ManualController::class, 'show']);
+
+    // Feature imágenes: descarga de imagen de manual. El controller valida
+    // que el usuario tenga acceso al manual antes de servir la imagen.
+    Route::get('/manuales-imagenes/{id}/descargar', [ManualImageController::class, 'descargar']);
 
     // Documentos — lectura para todos
     Route::get('/documentos',                [DocumentController::class, 'index']);
@@ -136,6 +141,10 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::put('/categorias/{id}',                [FranchiseCategoryController::class, 'update']);
         Route::post('/categorias/{id}/toggle-activa', [FranchiseCategoryController::class, 'toggleActiva']);
         Route::delete('/categorias/{id}',             [FranchiseCategoryController::class, 'destroy']);
+
+        // Feature imágenes: upload de imagen a un manual. Solo super_admin y
+        // franquiciante suben (validado también en el controller).
+        Route::post('/manuales/{manualId}/imagenes', [ManualImageController::class, 'upload']);
 
         // Manuales — escritura
         Route::post('/manuales',                  [ManualController::class, 'store']);

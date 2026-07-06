@@ -40,6 +40,51 @@ include 'layout/head.php';
 
         <div class="tb-sep"></div>
 
+        <!-- Color de texto -->
+        <div class="tb-color-wrap">
+          <button class="tb-color-btn" title="Color de texto"
+                  onmousedown="guardarRangeEditor()" onclick="toggleColorPop('texto', event)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16 11 6h1l5 10"/><line x1="7.5" y1="12.5" x2="15.5" y2="12.5"/></svg>
+            <span class="tb-color-bar" id="bar-color-texto" style="background:#c0392b"></span>
+          </button>
+          <div class="tb-color-pop" id="pop-color-texto" style="display:none">
+            <div class="tb-swatches" id="swatches-texto"></div>
+            <button type="button" class="tb-color-more"
+                    onmousedown="event.preventDefault()" onclick="abrirColorNativo('texto')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 0 0 0 20 3 3 0 0 0 3-3 2 2 0 0 1 2-2h1a4 4 0 0 0 4-4 10 10 0 0 0-10-11z"/></svg>
+              Más colores…
+            </button>
+          </div>
+        </div>
+
+        <!-- Color de resaltado -->
+        <div class="tb-color-wrap">
+          <button class="tb-color-btn" title="Color de resaltado"
+                  onmousedown="guardarRangeEditor()" onclick="toggleColorPop('fondo', event)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M6.5 15.5 13 9l4 4-6.5 6.5H6.5z"/><path d="M12 8l3-3 4 4-3 3"/></svg>
+            <span class="tb-color-bar" id="bar-color-fondo" style="background:#f1c40f"></span>
+          </button>
+          <div class="tb-color-pop" id="pop-color-fondo" style="display:none">
+            <button type="button" class="tb-color-none"
+                    onmousedown="event.preventDefault()" onclick="aplicarColor('fondo','transparent')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
+              Sin resaltado
+            </button>
+            <div class="tb-swatches" id="swatches-fondo"></div>
+            <button type="button" class="tb-color-more"
+                    onmousedown="event.preventDefault()" onclick="abrirColorNativo('fondo')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 0 0 0 20 3 3 0 0 0 3-3 2 2 0 0 1 2-2h1a4 4 0 0 0 4-4 10 10 0 0 0-10-11z"/></svg>
+              Más colores…
+            </button>
+          </div>
+        </div>
+
+        <!-- Inputs nativos ocultos (escape hatch: 16.7M colores) -->
+        <input type="color" id="input-color-texto" style="display:none"
+               onchange="aplicarColorDesdeInput('texto', this.value)">
+        <input type="color" id="input-color-fondo" style="display:none"
+               onchange="aplicarColorDesdeInput('fondo', this.value)">
+
         <button class="tb-btn" onclick="exec('insertUnorderedList')" title="Lista">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
@@ -88,6 +133,12 @@ include 'layout/head.php';
 
         <div class="tb-sep"></div>
 
+        <button class="tb-btn" onclick="insertarImagenDesdeArchivo('editor')" title="Insertar imagen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+
+        <span class="tb-sep"></span>
+
         <button class="tb-btn" onclick="exec('undo')" title="Deshacer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
         </button>
@@ -102,7 +153,110 @@ include 'layout/head.php';
       <!-- Área de escritura -->
       <div class="editor-scroll">
         <div class="editor-page">
+
+          <!-- Mini-editor: ENCABEZADO ────────────────────────── -->
+          <div class="mini-editor-wrap">
+            <div class="mini-editor-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              Encabezado (aparece en cada página al imprimir)
+            </div>
+            <div class="mini-toolbar">
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-header', 'bold')" title="Negrita"><b>B</b></button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-header', 'italic')" title="Cursiva"><i>I</i></button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-header', 'underline')" title="Subrayado"><u>U</u></button>
+              <span class="mini-sep"></span>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-header', 'justifyLeft')" title="Alinear izquierda">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+              </button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-header', 'justifyCenter')" title="Centrar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+              </button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-header', 'justifyRight')" title="Alinear derecha">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+              </button>
+              <span class="mini-sep"></span>
+              <select class="mini-select" onchange="setFontSizePt('editor-header', this.value); this.selectedIndex=0" title="Tamaño de fuente (pt)">
+                <option value="">Tamaño</option>
+                <option value="8">8 pt</option>
+                <option value="9">9 pt</option>
+                <option value="10">10 pt</option>
+                <option value="11">11 pt</option>
+                <option value="12">12 pt</option>
+                <option value="14">14 pt</option>
+                <option value="16">16 pt</option>
+                <option value="18">18 pt</option>
+                <option value="20">20 pt</option>
+                <option value="24">24 pt</option>
+                <option value="28">28 pt</option>
+                <option value="36">36 pt</option>
+                <option value="48">48 pt</option>
+                <option value="72">72 pt</option>
+              </select>
+              <span class="mini-sep"></span>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="insertarImagenDesdeArchivo('editor-header')" title="Insertar imagen">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </button>
+            </div>
+            <div class="mini-editor" id="editor-header" contenteditable="true" spellcheck="false"
+                 data-placeholder="Título del manual, logo institucional o texto legal..."
+                 oninput="marcarConCambios()"></div>
+          </div>
+
+          <div class="mini-separator">Contenido del manual</div>
+
+          <!-- Editor principal (contenido) ─────────────────────── -->
           <div class="editor-content" id="editor" contenteditable="true" spellcheck="false"></div>
+
+          <div class="mini-separator">Pie de página</div>
+
+          <!-- Mini-editor: PIE DE PÁGINA ─────────────────────── -->
+          <div class="mini-editor-wrap">
+            <div class="mini-editor-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>
+              Pie de página (aparece en cada página al imprimir)
+            </div>
+            <div class="mini-toolbar">
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-footer', 'bold')" title="Negrita"><b>B</b></button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-footer', 'italic')" title="Cursiva"><i>I</i></button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-footer', 'underline')" title="Subrayado"><u>U</u></button>
+              <span class="mini-sep"></span>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-footer', 'justifyLeft')" title="Alinear izquierda">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+              </button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-footer', 'justifyCenter')" title="Centrar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+              </button>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="execMini('editor-footer', 'justifyRight')" title="Alinear derecha">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+              </button>
+              <span class="mini-sep"></span>
+              <select class="mini-select" onchange="setFontSizePt('editor-footer', this.value); this.selectedIndex=0" title="Tamaño de fuente (pt)">
+                <option value="">Tamaño</option>
+                <option value="8">8 pt</option>
+                <option value="9">9 pt</option>
+                <option value="10">10 pt</option>
+                <option value="11">11 pt</option>
+                <option value="12">12 pt</option>
+                <option value="14">14 pt</option>
+                <option value="16">16 pt</option>
+                <option value="18">18 pt</option>
+                <option value="20">20 pt</option>
+                <option value="24">24 pt</option>
+                <option value="28">28 pt</option>
+                <option value="36">36 pt</option>
+                <option value="48">48 pt</option>
+                <option value="72">72 pt</option>
+              </select>
+              <span class="mini-sep"></span>
+              <button class="mini-btn" onmousedown="event.preventDefault()" onclick="insertarImagenDesdeArchivo('editor-footer')" title="Insertar imagen">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </button>
+            </div>
+            <div class="mini-editor" id="editor-footer" contenteditable="true" spellcheck="false"
+                 data-placeholder="Texto legal, número de página, información de contacto..."
+                 oninput="marcarConCambios()"></div>
+          </div>
+
         </div>
       </div>
 
@@ -425,6 +579,42 @@ include 'layout/head.php';
 .tb-select:hover { border-color: var(--gris3); }
 .tb-select option { background: var(--gris1); }
 
+/* Color de texto / resaltado — botón con paleta desplegable */
+.tb-color-wrap { position: relative; display: inline-flex; }
+.tb-color-btn {
+  width: 30px; height: 30px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; background: transparent; border: none; border-radius: 5px;
+  color: var(--gris4); cursor: pointer; transition: background .12s, color .12s;
+}
+.tb-color-btn:hover { background: var(--gris2); color: var(--blanco); }
+.tb-color-btn svg { width: 14px; height: 12px; }
+.tb-color-bar { display: block; width: 16px; height: 3px; border-radius: 2px; background: var(--dorado); }
+.tb-color-pop {
+  position: absolute; top: calc(100% + 5px); left: 0; z-index: 60;
+  width: 176px; padding: 9px;
+  background: var(--gris1); border: 1px solid var(--gris2);
+  border-radius: 9px; box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+.tb-swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.tb-swatch {
+  width: 100%; aspect-ratio: 1; padding: 0; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.14); border-radius: 5px;
+  transition: transform .1s, border-color .1s;
+}
+.tb-swatch:hover { transform: scale(1.12); border-color: var(--dorado); }
+.tb-color-more, .tb-color-none {
+  width: 100%; padding: 6px; cursor: pointer;
+  background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
+  color: var(--gris5); font-family: 'Roboto', sans-serif; font-size: 11px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: border-color .12s, color .12s;
+}
+.tb-color-more { margin-top: 8px; }
+.tb-color-none { margin-bottom: 8px; }
+.tb-color-more:hover, .tb-color-none:hover { border-color: var(--gris3); color: var(--blanco); }
+.tb-color-more svg, .tb-color-none svg { width: 12px; height: 12px; }
+
 /* Área de escritura */
 .editor-scroll {
   flex: 1;
@@ -454,6 +644,149 @@ include 'layout/head.php';
 
 .editor-content:empty::before {
   content: 'Comenzá a escribir o importá un archivo .docx desde el panel derecho...';
+}
+
+/* ══════════════════════════════════════════════════════════
+   Mini-editores: header y footer
+   ══════════════════════════════════════════════════════════ */
+.mini-editor-wrap {
+  margin-bottom: 8px;
+  border: 1px dashed var(--gris3);
+  border-radius: 6px;
+  background: rgba(0,0,0,.02);
+}
+.mini-editor-label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--gris5);
+  font-family: 'Roboto', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid var(--gris2);
+  background: rgba(0,0,0,.03);
+  border-radius: 6px 6px 0 0;
+}
+.mini-toolbar {
+  display: flex; align-items: center; gap: 3px;
+  padding: 4px 8px;
+  background: var(--gris1);
+  border-bottom: 1px solid var(--gris2);
+  flex-wrap: wrap;
+}
+.mini-btn {
+  background: transparent; border: 1px solid transparent;
+  color: var(--gris5); cursor: pointer;
+  padding: 3px 8px; border-radius: 4px;
+  font-family: 'Roboto', sans-serif; font-size: 11px;
+  min-width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.mini-btn:hover { background: var(--gris2); color: var(--blanco); }
+.mini-btn:active { background: rgba(201,168,76,.15); }
+.mini-sep { width: 1px; height: 14px; background: var(--gris2); margin: 0 2px; }
+.mini-select {
+  background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
+  border-radius: 4px; padding: 2px 6px; font-size: 11px; height: 24px;
+  font-family: 'Roboto', sans-serif; cursor: pointer;
+}
+.mini-select option { background: var(--gris1); }
+
+.mini-editor {
+  min-height: 80px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 12px 16px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  color: var(--blanco);
+}
+.mini-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--gris3);
+  font-style: italic;
+  pointer-events: none;
+}
+.mini-editor:focus { background: rgba(255,255,255,.02); }
+
+.mini-separator {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 10px;
+  color: var(--gris4);
+  font-family: 'Roboto', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.mini-separator::before, .mini-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gris2), transparent);
+}
+
+/* Imágenes dentro de los editables: nunca romper el layout */
+.editor-content img, .mini-editor img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+  margin: 4px 0;
+  cursor: pointer; /* indicar que son clickeables para el toolbar contextual */
+}
+
+/* Imagen actualmente seleccionada (con toolbar contextual activo) */
+.editor-content img.img-seleccionada,
+.mini-editor img.img-seleccionada {
+  outline: 2px solid var(--dorado);
+  outline-offset: 2px;
+}
+
+/* Toolbar contextual flotante */
+.img-toolbar {
+  position: fixed;
+  z-index: 500;
+  background: var(--gris1);
+  border: 1px solid var(--gris3);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  font-family: 'Roboto', sans-serif;
+}
+.img-toolbar button {
+  background: transparent;
+  border: none;
+  color: var(--blanco);
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+}
+.img-toolbar button:hover { background: var(--gris2); }
+.img-toolbar-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--gris3);
+  margin: 0 2px;
+}
+.img-toolbar-danger { color: var(--error) !important; }
+.img-toolbar-danger:hover { background: rgba(226,92,92,.15) !important; }
+.mini-editor img {
+  max-height: 60px; /* Los mini-editores son chicos, forzamos altura razonable */
+}
+
+/* Placeholder del editor principal */
+.editor-content:empty::before {
   color: var(--gris3);
   font-style: italic;
   pointer-events: none;
@@ -757,6 +1090,22 @@ function cargarVersion(version) {
   estado.htmlOriginal = version.contenido_html || '';
   document.getElementById('editor').innerHTML = version.contenido_html || '';
 
+  // Header/footer viven en el manual (no en la versión). Se cargan al inicio
+  // y no cambian entre versiones. Guardamos los originales para detección
+  // de cambios.
+  // FIX: usar estado.manual (que se guarda en cargarManual()) porque el
+  // parámetro manual NO está en scope acá — solo llega la version.
+  const headerHtml = estado.manual?.encabezado_html || '';
+  const footerHtml = estado.manual?.pie_pagina_html || '';
+  estado.headerOriginal = headerHtml;
+  estado.footerOriginal = footerHtml;
+  document.getElementById('editor-header').innerHTML = headerHtml;
+  document.getElementById('editor-footer').innerHTML = footerHtml;
+
+  // Feature imágenes: setear listeners de paste/drop en los 3 editables.
+  // Se hace una sola vez después de cargar el contenido.
+  setupTodosLosImagenListeners();
+
   document.getElementById('st-version').textContent =
     `v${version.version_number}`;
 
@@ -833,6 +1182,12 @@ async function importarDocx(file) {
   const warningsEl = document.getElementById('import-warnings');
   resultEl.style.display = warningsEl.style.display = 'none';
 
+  // Contadores para reportar al usuario al final.
+  let imagenesSubidas = 0;
+  let imagenesFallidas = 0;
+
+  mostrarToast('Convirtiendo documento...', 'exito');
+
   try {
     const ab = await file.arrayBuffer();
     const result = await mammoth.convertToHtml({ arrayBuffer: ab }, {
@@ -844,7 +1199,26 @@ async function importarDocx(file) {
         "p[style-name='Título 2'] => h2:fresh",
         "p[style-name='Título 3'] => h3:fresh",
         "p[style-name='Title']    => h1:fresh",
-      ]
+      ],
+      // Handler de imágenes: cada imagen del docx se sube al server y en el
+      // HTML queda la URL de nuestro endpoint autenticado. Si el upload falla,
+      // la imagen se pierde pero la conversión sigue con las demás.
+      convertImage: mammoth.images.imgElement(async function(image) {
+        try {
+          const contentType = image.contentType || 'image/png';
+          const buffer      = await image.read('base64');
+          const blob        = base64AImageBlob(buffer, contentType);
+          const url         = await subirImagen(blob);
+          imagenesSubidas++;
+          return { src: url };
+        } catch (err) {
+          console.warn('Error al subir imagen del docx:', err);
+          imagenesFallidas++;
+          // Devolver src vacío hace que la imagen no se renderice pero la
+          // conversión sigue con las demás.
+          return { src: '' };
+        }
+      })
     });
 
     document.getElementById('editor').innerHTML = result.value;
@@ -855,7 +1229,10 @@ async function importarDocx(file) {
     tmp.innerHTML = result.value;
     const words = (tmp.innerText || '').trim().split(/\s+/).filter(Boolean).length;
 
-    resultEl.textContent   = `✓ ${file.name} — ${words.toLocaleString('es-AR')} palabras importadas`;
+    let resumen = `✓ ${file.name} — ${words.toLocaleString('es-AR')} palabras importadas`;
+    if (imagenesSubidas > 0) resumen += ` · ${imagenesSubidas} imagen(es) subidas`;
+    if (imagenesFallidas > 0) resumen += ` · ⚠ ${imagenesFallidas} imagen(es) no pudieron subirse`;
+    resultEl.textContent   = resumen;
     resultEl.style.display = 'block';
 
     if (result.messages.length) {
@@ -867,8 +1244,290 @@ async function importarDocx(file) {
     mostrarToast('Documento importado correctamente.', 'exito');
 
   } catch (err) {
+    console.error('Error importarDocx:', err);
     mostrarToast('Error al convertir el archivo.', 'error');
   }
+}
+
+// ══════════════════════════════════════════════════════════
+// FEATURE IMÁGENES — helpers y listeners
+// ══════════════════════════════════════════════════════════
+
+// Sube un Blob (imagen) al backend y devuelve la URL relativa que hay
+// que meter en el src del <img>. La URL apunta a nuestro endpoint
+// autenticado (/api/manuales-imagenes/{id}/descargar) — el sanitizador
+// del backend solo permite src que empiecen con /api/manuales-imagenes/
+// o con data:image, así que cualquier otra URL sería descartada.
+async function subirImagen(blob) {
+  const fd = new FormData();
+  fd.append('archivo', blob, blob.name || 'imagen.png');
+  const res = await fetch(`${API}/manuales/${MANUAL_ID}/imagenes`, {
+    method: 'POST',
+    credentials: 'include',
+    body: fd,
+  });
+  if (!res.ok) {
+    let msg = 'Error al subir imagen';
+    try { const data = await res.json(); msg = data.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+
+  // FIX: el backend devuelve URL relativa a la raíz del dominio
+  // (/api/manuales-imagenes/N/descargar). En setups con subpath (XAMPP en
+  // /manuales-franquiciantes/public), esa URL genera 404 porque apunta a
+  // localhost/api/... en vez de localhost/manuales-franquiciantes/public/api/...
+  //
+  // La variable global API ya tiene el path base correcto. Reemplazamos el
+  // prefijo /api por el valor de API. Así el src del <img> queda con URL
+  // completa que resuelve correctamente en todos los entornos.
+  //
+  // Backend sanitizador acepta URLs que empiecen con /api/manuales-imagenes/
+  // o data:image/. También acepta URLs absolutas con http/https, entonces
+  // ${API}/manuales-imagenes/N/descargar pasa el filtro porque conserva el
+  // path /api/manuales-imagenes/ (aunque tenga http://host: prefijo).
+  //
+  // WAIT: revisar sanitizador — el filtro exige que empiece EXACTAMENTE con
+  // '/api/manuales-imagenes/'. Una URL http://.../api/... NO va a pasar.
+  // Solución: si API es solo un path (empieza con /), concatenar simple.
+  // Si es URL absoluta (http://), usar tal cual (el filtro backend hay que
+  // ajustar). Por ahora asumimos API es un path relativo tipo
+  // '/manuales-franquiciantes/public/api' — el más común en el proyecto.
+  if (data.url.startsWith('/api/')) {
+    // Reemplazar /api al inicio por el path base completo de API.
+    // API típicamente es '/manuales-franquiciantes/public/api'.
+    return API + data.url.substring(4); // quita '/api' del inicio y concatena
+  }
+  return data.url;
+}
+
+// Convierte una cadena base64 (sin prefijo data:) en un Blob del contentType
+// especificado. Usado por el handler de Mammoth.
+function base64AImageBlob(base64, contentType) {
+  const binary = atob(base64);
+  const bytes  = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: contentType });
+}
+
+// Setea listeners de paste y drop en un editable, para subir imágenes
+// automáticamente al server cuando el usuario las pegue o arrastre.
+function setupImagenListeners(editableId) {
+  const el = document.getElementById(editableId);
+  if (!el) return;
+
+  // Paste: interceptar imágenes del portapapeles (Ctrl+V con imagen).
+  el.addEventListener('paste', async (e) => {
+    const items = e.clipboardData?.items || [];
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        if (!blob) continue;
+        await procesarYInsertarImagen(el, blob);
+        return; // procesamos una sola imagen por paste
+      }
+    }
+    // Si no había imagen, dejamos que el paste normal siga (texto/html).
+  });
+
+  // Drag & drop: interceptar imágenes arrastradas desde el sistema de archivos.
+  el.addEventListener('dragover', (e) => {
+    if (e.dataTransfer?.types?.includes('Files')) {
+      e.preventDefault();
+    }
+  });
+  el.addEventListener('drop', async (e) => {
+    const files = Array.from(e.dataTransfer?.files || []);
+    const imagenes = files.filter(f => f.type.startsWith('image/'));
+    if (imagenes.length === 0) return;
+    e.preventDefault();
+    for (const file of imagenes) {
+      await procesarYInsertarImagen(el, file);
+    }
+  });
+}
+
+// Sube la imagen y la inserta en el editor en la posición del cursor.
+// Mientras sube, muestra toast. Si falla, muestra error.
+//
+// IMPORTANTE: no usamos execCommand('insertImage', url) porque en Chrome
+// éste comando a veces convierte la URL en data URI (base64 inline) — bug
+// conocido del navegador. En su lugar creamos el <img> manualmente y lo
+// insertamos con range.insertNode() en la posición del cursor.
+async function procesarYInsertarImagen(editorEl, blob) {
+  mostrarToast('Subiendo imagen...', 'exito');
+  try {
+    const url = await subirImagen(blob);
+
+    editorEl.focus();
+
+    // Crear el <img> con la URL del server (no base64).
+    const img = document.createElement('img');
+    img.src   = url;
+    img.alt   = '';
+
+    // Insertar en la posición del cursor. Si no hay selección adentro del
+    // editable, insertamos al final.
+    const sel = window.getSelection();
+    let inserted = false;
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (editorEl.contains(range.commonAncestorContainer)) {
+        range.deleteContents();
+        range.insertNode(img);
+        // Mover el cursor después de la imagen para que el usuario pueda seguir escribiendo.
+        range.setStartAfter(img);
+        range.setEndAfter(img);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        inserted = true;
+      }
+    }
+    if (!inserted) {
+      editorEl.appendChild(img);
+    }
+
+    marcarConCambios();
+    mostrarToast('Imagen subida.', 'exito');
+  } catch (err) {
+    console.error('procesarYInsertarImagen:', err);
+    mostrarToast(err.message || 'Error al subir la imagen.', 'error');
+  }
+}
+
+// Se llama al cargar la página, después de que existan los 3 editables.
+function setupTodosLosImagenListeners() {
+  setupImagenListeners('editor');
+  setupImagenListeners('editor-header');
+  setupImagenListeners('editor-footer');
+  setupToolbarContextualImagen();
+}
+
+// Abre un file dialog para seleccionar una imagen del disco, la sube al server
+// y la inserta en el editor especificado.
+function insertarImagenDesdeArchivo(editorId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    document.body.removeChild(input);
+    if (!file) return;
+
+    // Validación básica en cliente (el backend también valida).
+    if (!file.type.startsWith('image/')) {
+      mostrarToast('El archivo debe ser una imagen.', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      mostrarToast('La imagen supera el máximo de 5 MB.', 'error');
+      return;
+    }
+
+    const editorEl = document.getElementById(editorId);
+    if (!editorEl) return;
+    editorEl.focus();
+    await procesarYInsertarImagen(editorEl, file);
+  });
+
+  input.click();
+}
+
+// ══════════════════════════════════════════════════════════
+// Toolbar contextual de imagen (resize + eliminar)
+// ══════════════════════════════════════════════════════════
+let imagenActiva = null;
+
+function setupToolbarContextualImagen() {
+  // Un solo listener global de click captura todo:
+  //   - Click en imagen dentro de editable → mostrar toolbar
+  //   - Click fuera → ocultar
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+
+    // ¿Click en una imagen dentro de un editable?
+    if (target.tagName === 'IMG' && target.closest('.editor-content, .mini-editor')) {
+      seleccionarImagen(target);
+      return;
+    }
+
+    // ¿Click en el toolbar de imagen? No hacer nada — los botones tienen sus handlers.
+    if (target.closest('#img-toolbar')) return;
+
+    // Click en cualquier otro lado → deseleccionar
+    deseleccionarImagen();
+  });
+
+  // Reposicionar toolbar al hacer scroll o resize de ventana.
+  window.addEventListener('scroll', reposicionarToolbarImagen, true);
+  window.addEventListener('resize', reposicionarToolbarImagen);
+}
+
+function seleccionarImagen(img) {
+  // Quitar highlight de imagen previa
+  if (imagenActiva && imagenActiva !== img) {
+    imagenActiva.classList.remove('img-seleccionada');
+  }
+  imagenActiva = img;
+  img.classList.add('img-seleccionada');
+  reposicionarToolbarImagen();
+}
+
+function deseleccionarImagen() {
+  if (!imagenActiva) return;
+  imagenActiva.classList.remove('img-seleccionada');
+  imagenActiva = null;
+  document.getElementById('img-toolbar').style.display = 'none';
+}
+
+function reposicionarToolbarImagen() {
+  const toolbar = document.getElementById('img-toolbar');
+  if (!imagenActiva || !toolbar) return;
+
+  const rect = imagenActiva.getBoundingClientRect();
+  toolbar.style.display = 'flex';
+
+  // Medimos el toolbar para centrar horizontalmente
+  const tbRect = toolbar.getBoundingClientRect();
+
+  // Preferimos colocar el toolbar arriba de la imagen.
+  // Si no hay espacio arriba (imagen en el tope de la pantalla), lo ponemos abajo.
+  const espacioArriba = rect.top;
+  const arriba = espacioArriba > tbRect.height + 12;
+
+  const top = arriba
+    ? rect.top - tbRect.height - 8
+    : rect.bottom + 8;
+
+  // Centrar horizontalmente sobre la imagen, sin salirse del viewport.
+  let left = rect.left + (rect.width / 2) - (tbRect.width / 2);
+  left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
+
+  toolbar.style.top  = `${top}px`;
+  toolbar.style.left = `${left}px`;
+}
+
+function setearImagenAncho(porcentaje) {
+  if (!imagenActiva) return;
+  imagenActiva.style.width  = `${porcentaje}%`;
+  imagenActiva.style.height = 'auto'; // preservar proporción
+  marcarConCambios();
+  // Reposicionar toolbar porque el tamaño cambió
+  setTimeout(reposicionarToolbarImagen, 50);
+}
+
+function eliminarImagenSeleccionada() {
+  if (!imagenActiva) return;
+  const img = imagenActiva;
+  deseleccionarImagen();
+  img.remove();
+  marcarConCambios();
+  // Nota: el archivo del server queda huérfano hasta el próximo guardado,
+  // cuando limpiarHuerfanas() del backend lo detecta y borra.
 }
 
 // ── EDITOR ────────────────────────────────────────────────────
@@ -880,11 +1539,211 @@ function exec(cmd, val = null) {
   actualizarEstadoToolbar();
 }
 
+// Como exec() pero contra un mini-editor específico (header/footer).
+// Preserva el foco en el mini-editor antes de aplicar el comando.
+function execMini(editorId, cmd, val = null) {
+  const el = document.getElementById(editorId);
+  if (!el) return;
+  el.focus();
+  document.execCommand(cmd, false, val);
+  marcarConCambios();
+}
+
+// Aplica un tamaño de fuente en pt (como Word) a la selección actual del
+// mini-editor especificado. No usa execCommand('fontSize', ...) porque este
+// solo acepta 1-7 (categorías HTML de <font size="X">, deprecadas).
+//
+// En su lugar, envuelve la selección en un <span style="font-size: Xpt">.
+// Fallback: si surroundContents falla (por selección multi-elemento), usa
+// execCommand y convierte los <font size="7"> resultantes a spans.
+function setFontSizePt(editorId, pt) {
+  if (!pt) return;
+  const el = document.getElementById(editorId);
+  if (!el) return;
+
+  el.focus();
+
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) {
+    // Sin cursor todavía. Aplicar el próximo tipeo.
+    return aplicarProximoFontSize(el, pt);
+  }
+
+  const range = sel.getRangeAt(0);
+
+  // Verificar que el cursor esté dentro del editable correcto.
+  if (!el.contains(range.commonAncestorContainer)) {
+    return aplicarProximoFontSize(el, pt);
+  }
+
+  if (range.collapsed) {
+    // Sin texto seleccionado, solo cursor. Insertamos un <span> vacío con el
+    // tamaño y ponemos el cursor adentro. Cualquier tipeo siguiente hereda el
+    // estilo. Es como funciona Word.
+    aplicarProximoFontSize(el, pt, range);
+    marcarConCambios();
+    return;
+  }
+
+  // Hay texto seleccionado. Envolver en <span>.
+  try {
+    const span = document.createElement('span');
+    span.style.fontSize = `${pt}pt`;
+    range.surroundContents(span);
+  } catch (e) {
+    // surroundContents falla cuando la selección abarca elementos parciales.
+    // Fallback: usar execCommand con size=7 y luego reemplazar los <font>.
+    document.execCommand('fontSize', false, '7');
+    el.querySelectorAll('font[size="7"]').forEach(f => {
+      const s = document.createElement('span');
+      s.style.fontSize = `${pt}pt`;
+      s.innerHTML = f.innerHTML;
+      f.replaceWith(s);
+    });
+  }
+
+  marcarConCambios();
+}
+
+// Helper: inserta un <span> vacío con el font-size deseado en la posición
+// del cursor (o al final del editable si no hay cursor), y coloca el cursor
+// adentro. El siguiente tipeo hereda el estilo del span.
+function aplicarProximoFontSize(el, pt, existingRange) {
+  const span = document.createElement('span');
+  span.style.fontSize = `${pt}pt`;
+  // Un zero-width space para que el span no colapse hasta que el usuario tipee.
+  span.appendChild(document.createTextNode('\u200B'));
+
+  const sel = window.getSelection();
+  let range;
+  if (existingRange && el.contains(existingRange.commonAncestorContainer)) {
+    range = existingRange;
+  } else {
+    range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false); // al final
+  }
+
+  range.insertNode(span);
+
+  // Mover el cursor DENTRO del span, después del ZWSP.
+  const inside = document.createRange();
+  inside.setStart(span.firstChild, 1);
+  inside.setEnd(span.firstChild, 1);
+  sel.removeAllRanges();
+  sel.addRange(inside);
+
+  marcarConCambios();
+}
+
 function formatBlock(tag) {
   if (!tag) return;
   document.getElementById('editor').focus();
   document.execCommand('formatBlock', false, tag);
   marcarConCambios();
+}
+
+// ── COLOR: texto y resaltado (Opción C: paleta + picker nativo) ────────
+// Paleta homogénea: neutros + dorado de marca + cálidos + fríos.
+const COLORES_PALETA = [
+  '#000000','#434343','#666666','#999999','#cccccc','#ffffff',
+  '#c9a84c','#c0392b','#e67e22','#f1c40f',
+  '#27ae60','#2980b9','#3498db','#8e44ad'
+];
+
+// La selección se pierde cuando el foco sale del editable (al abrir el popover
+// o el picker nativo). Guardamos el Range en el mousedown del botón —ANTES de
+// perder foco— y lo restauramos justo antes de aplicar el color.
+let colorSavedRange = null;
+
+function guardarRangeEditor() {
+  const editor = document.getElementById('editor');
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0);
+    if (editor.contains(r.commonAncestorContainer)) {
+      colorSavedRange = r.cloneRange();
+      return;
+    }
+  }
+  colorSavedRange = null;
+}
+
+function restaurarRangeEditor() {
+  const editor = document.getElementById('editor');
+  editor.focus();
+  if (!colorSavedRange) return;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(colorSavedRange);
+}
+
+// Aplica color de 'texto' o de 'fondo' (resaltado) a la selección guardada.
+// styleWithCSS=true fuerza <span style="color:…"> en vez de <font color> —
+// crítico porque HTMLPurifier conserva span[style] pero NO <font>.
+function aplicarColor(tipo, color) {
+  restaurarRangeEditor();
+  try { document.execCommand('styleWithCSS', false, true); } catch (e) {}
+  if (tipo === 'texto') {
+    document.execCommand('foreColor', false, color);
+  } else {
+    // hiliteColor es el nombre estándar; backColor es el fallback legacy.
+    if (!document.execCommand('hiliteColor', false, color)) {
+      document.execCommand('backColor', false, color);
+    }
+  }
+  if (color !== 'transparent') {
+    const bar = document.getElementById('bar-color-' + tipo);
+    if (bar) bar.style.background = color;
+  }
+  cerrarColorPops();
+  actualizarContador();
+  marcarConCambios();
+}
+
+function aplicarColorDesdeInput(tipo, color) {
+  aplicarColor(tipo, color);
+}
+
+function abrirColorNativo(tipo) {
+  cerrarColorPops();
+  document.getElementById('input-color-' + tipo).click();
+}
+
+function toggleColorPop(tipo, ev) {
+  ev.stopPropagation();
+  const pop = document.getElementById('pop-color-' + tipo);
+  const abierto = pop.style.display === 'block';
+  cerrarColorPops();
+  if (!abierto) pop.style.display = 'block';
+}
+
+function cerrarColorPops() {
+  document.querySelectorAll('.tb-color-pop').forEach(p => p.style.display = 'none');
+}
+
+// Cerrar los popovers al hacer click fuera del grupo de color.
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.tb-color-wrap')) cerrarColorPops();
+});
+
+// Genera los swatches de ambas paletas. Los botones usan mousedown+preventDefault
+// para no robar el foco/selección del editor antes de aplicar el color.
+function generarSwatches() {
+  ['texto', 'fondo'].forEach(tipo => {
+    const cont = document.getElementById('swatches-' + tipo);
+    if (!cont) return;
+    COLORES_PALETA.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-swatch';
+      b.style.background = c;
+      b.title = c;
+      b.addEventListener('mousedown', ev => ev.preventDefault());
+      b.addEventListener('click', () => aplicarColor(tipo, c));
+      cont.appendChild(b);
+    });
+  });
 }
 
 function insertarTabla() {
@@ -951,11 +1810,47 @@ function actualizarEstadoToolbar() {
 
 document.addEventListener('selectionchange', actualizarEstadoToolbar);
 
+// Actualiza el select de tamaño de los mini-editores para reflejar el tamaño
+// de fuente aplicado al elemento donde está el cursor. Si el cursor está en
+// texto sin font-size explícito, muestra "Tamaño" (default).
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const node = sel.anchorNode;
+  if (!node) return;
+
+  // Encontrar el editor (header o footer) que contiene el cursor.
+  let ancestor = node.nodeType === 3 ? node.parentElement : node;
+  const miniEditor = ancestor?.closest('.mini-editor');
+  if (!miniEditor) return;
+
+  // Encontrar el select de tamaño correspondiente a este mini-editor.
+  const wrap = miniEditor.closest('.mini-editor-wrap');
+  const select = wrap?.querySelector('.mini-select');
+  if (!select) return;
+
+  // Buscar en los padres hasta el editable el font-size explícito.
+  let pt = '';
+  let cur = ancestor;
+  while (cur && cur !== miniEditor) {
+    const fs = cur.style?.fontSize || '';
+    if (fs.endsWith('pt')) {
+      pt = fs.replace('pt', '');
+      break;
+    }
+    cur = cur.parentElement;
+  }
+
+  // Setear el select (o volver a "Tamaño" si no hay pt explícito).
+  select.value = pt || '';
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('editor').addEventListener('input', () => {
     actualizarContador();
     marcarConCambios();
   });
+  generarSwatches();
 });
 
 function actualizarContador() {
@@ -989,6 +1884,8 @@ async function guardarBorrador() {
   try {
     await apiFetch('POST', `/manuales/${MANUAL_ID}/borrador`, {
       contenido_html: html,
+      encabezado_html: document.getElementById('editor-header').innerHTML.trim() || null,
+      pie_pagina_html: document.getElementById('editor-footer').innerHTML.trim() || null,
     });
     marcarSinCambios();
     mostrarToast('Borrador guardado correctamente.', 'exito');
@@ -1053,7 +1950,11 @@ async function publicar() {
     const notaInput = document.getElementById('pub-nota');
     const nota = notaInput ? notaInput.value.trim() : '';
 
-    const body = { contenido_html: html };
+    const body = {
+      contenido_html:  html,
+      encabezado_html: document.getElementById('editor-header').innerHTML.trim() || null,
+      pie_pagina_html: document.getElementById('editor-footer').innerHTML.trim() || null,
+    };
     if (nota) body.nota_publicacion = nota;
 
     const res = await apiFetch('POST', `/manuales/${MANUAL_ID}/publicar`, body);
@@ -1444,5 +2345,18 @@ async function guardarDatosManual() {
 
 document.addEventListener('DOMContentLoaded', () => init());
 </script>
+
+<!-- Toolbar contextual: aparece al clickear una imagen en cualquier editable.
+     Permite cambiar el tamaño (25/50/75/100%) o eliminar la imagen. -->
+<div id="img-toolbar" class="img-toolbar" style="display:none">
+  <button type="button" onclick="setearImagenAncho(25)" title="25% del ancho">25%</button>
+  <button type="button" onclick="setearImagenAncho(50)" title="50% del ancho">50%</button>
+  <button type="button" onclick="setearImagenAncho(75)" title="75% del ancho">75%</button>
+  <button type="button" onclick="setearImagenAncho(100)" title="100% del ancho">100%</button>
+  <span class="img-toolbar-sep"></span>
+  <button type="button" onclick="eliminarImagenSeleccionada()" title="Eliminar imagen" class="img-toolbar-danger">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+  </button>
+</div>
 
 <?php include 'layout/footer.php'; ?>

@@ -79,9 +79,9 @@ body {
 .doc-content strong { font-weight: 700; color: #111; }
 .doc-content em     { font-style: italic; }
 .doc-content u      { text-decoration: underline; }
-.doc-content table  { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; font-family: 'Roboto', sans-serif; }
-.doc-content td, .doc-content th { border: 1px solid #E0DDD6; padding: 9px 14px; text-align: left; }
-.doc-content th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Archivo', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+#doc-content-wrap table  { width: 100%; border-collapse: collapse; border: 1px solid #E0DDD6; margin: 16px 0; font-size: 13px; font-family: 'Roboto', sans-serif; }
+#doc-content-wrap td, #doc-content-wrap th { border: 1px solid #E0DDD6; padding: 9px 14px; text-align: left; }
+#doc-content-wrap th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Archivo', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
 
 .doc-footer { width: 100%; max-width: 800px; margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -136,6 +136,86 @@ body {
 ::-webkit-scrollbar-thumb { background: #D0CDC6; border-radius: 3px; }
 
 @media (max-width: 860px) { .doc-page { padding: 40px 28px; } }
+
+/* ══════════════════════════════════════════════════════════
+   Header y footer del manual
+   ══════════════════════════════════════════════════════════ */
+.doc-header {
+  padding: 16px 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #e8e8e8;
+  color: #444;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: 'Roboto', sans-serif;
+}
+.doc-footer-manual {
+  padding: 16px 24px;
+  margin-top: 32px;
+  border-top: 1px solid #e8e8e8;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: 'Roboto', sans-serif;
+}
+.doc-header img, .doc-footer-manual img { max-width: 100%; max-height: 60px; height: auto; }
+.doc-header p, .doc-footer-manual p { margin: 0 0 4px; }
+.doc-header p:last-child, .doc-footer-manual p:last-child { margin-bottom: 0; }
+
+/* ══════════════════════════════════════════════════════════
+   Impresión: header/footer fijos que se repiten en cada página.
+   Chrome/Edge/Safari respetan position:fixed en @media print
+   como "repetir en cada página".
+   ══════════════════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: A4;
+    margin: 3cm 2cm 3cm 2cm; /* top/right/bottom/left — deja espacio a header y footer */
+  }
+
+  /* Ocultar todo lo que no sea el contenido del manual (topbars, sidebars, botones) */
+  .doc-topbar, .doc-footer, #estado-aceptacion-wrap, #btn-aceptar-wrap,
+  .app-topbar, .app-sidebar, .watermark-container { display: none !important; }
+
+  .app-layout, .app-body, .lectura-layout, main { display: block !important; }
+
+  .doc-page {
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    max-width: none !important;
+  }
+
+  /* Header: fijo arriba en cada página impresa */
+  .doc-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    margin: 0;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ccc;
+    background: white;
+    color: #333;
+    page-break-after: avoid;
+  }
+
+  /* Footer: fijo abajo en cada página impresa */
+  .doc-footer-manual {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    margin: 0;
+    padding: 10px 20px;
+    border-top: 1px solid #ccc;
+    background: white;
+    color: #333;
+    page-break-before: avoid;
+  }
+
+  /* Body a color negro y letras oscuras para impresión legible */
+  body, #doc-content-wrap, #doc-content-wrap * {
+    color: #000 !important;
+    background: white !important;
+  }
+}
 
 /* Notas / Sugerencias (vista franquiciado) */
 .notas-box {
@@ -197,12 +277,19 @@ body {
     </div>
 
     <div class="doc-page">
-      <div id="doc-content-wrap">
+
+      <!-- Encabezado del manual (mostrado en pantalla y en impresión) -->
+      <div id="doc-header" class="doc-header" style="display:none"></div>
+
+      <div id="doc-content-wrap" class="doc-content">
         <div class="loading-doc">
           <div class="spinner-doc"></div>
           Cargando manual...
         </div>
       </div>
+
+      <!-- Pie de página del manual (mostrado en pantalla y en impresión) -->
+      <div id="doc-footer" class="doc-footer-manual" style="display:none"></div>
     </div>
 
     <div class="doc-footer" id="doc-footer" style="display:none">
@@ -300,6 +387,19 @@ async function init() {
 
     versionActivaId = version.id;
     yaAceptado      = manual.mi_aceptacion || false;
+
+    // Header/footer del manual: si tienen contenido, mostrarlos; si vienen
+    // vacíos, dejar el div oculto para que no ocupe espacio en blanco.
+    const headerEl = document.getElementById('doc-header');
+    const footerEl = document.getElementById('doc-footer');
+    if (manual.encabezado_html && manual.encabezado_html.trim()) {
+      headerEl.innerHTML = manual.encabezado_html;
+      headerEl.style.display = 'block';
+    }
+    if (manual.pie_pagina_html && manual.pie_pagina_html.trim()) {
+      footerEl.innerHTML = manual.pie_pagina_html;
+      footerEl.style.display = 'block';
+    }
 
     document.title = `${manual.titulo} — Cerrajería Leonardo`;
     // v2.3: me.perfil ya no existe; empresa.nombre viene anidado en /me
