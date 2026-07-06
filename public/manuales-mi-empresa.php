@@ -409,7 +409,7 @@ function renderTabla(lista) {
 
   tbody.innerHTML = lista.map(m => {
     const version    = m.version_activa?.[0] || null;
-    const verNum     = version ? `v${version.version_number}` : '—';
+    const verNum     = version ? `v${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))}` : '—';
     const fecha      = version ? formatFecha(version.publicado_at) : formatFecha(m.created_at);
     const fechaLabel = version ? 'Publicado' : 'Creado';
 
@@ -784,7 +784,7 @@ function renderNotas(notas) {
   const estadoLabel = { pendiente: 'Pendiente', leida: 'Leída', resuelta: 'Resuelta' };
 
   body.innerHTML = notas.map(n => {
-    const version = n.version ? `v${n.version.version_number}` : 'Sin versión publicada';
+    const version = n.version ? `v${n.version.version_label || (n.version.version_number + '.' + (n.version.version_minor ?? 0))}` : 'Sin versión publicada';
 
     // v2.3: release notes son inmutables. Sin botón Editar, sin estado, sin acciones.
     if (n.tipo === 'release') {

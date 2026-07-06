@@ -17,6 +17,7 @@ class ManualVersion extends Model
     protected $fillable = [
         'manual_id',
         'version_number',
+        'version_minor',
         'contenido_html',
         'contenido_hash',
         'publicado_por',
@@ -28,7 +29,11 @@ class ManualVersion extends Model
     protected $casts = [
         'es_activa'      => 'boolean',
         'version_number' => 'integer',
+        'version_minor'  => 'integer',
     ];
+
+    // version_label ("3.1") disponible en las respuestas JSON (historial, version activa).
+    protected $appends = ['version_label'];
 
     // ── Relaciones ───────────────────────────────────────────────────
 
@@ -89,5 +94,11 @@ class ManualVersion extends Model
     public function tieneNotaPublicacion(): bool
     {
         return !empty($this->nota_publicacion);
+    }
+
+    // Etiqueta de version en formato mayor.menor, p. ej. "3.1".
+    public function getVersionLabelAttribute(): string
+    {
+        return $this->version_number . '.' . ($this->version_minor ?? 0);
     }
 }

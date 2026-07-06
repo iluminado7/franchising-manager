@@ -230,7 +230,7 @@ function renderTabla(lista) {
 
   tbody.innerHTML = lista.map(m => {
     const version  = m.version_activa?.[0] || null;
-    const verNum   = version ? `v${version.version_number}` : '—';
+    const verNum   = version ? `v${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))}` : '—';
     const fecha    = version ? formatFecha(version.publicado_at) : formatFecha(m.created_at);
     const aceptado = m.mi_aceptacion || false;
 

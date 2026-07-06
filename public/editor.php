@@ -18,6 +18,12 @@ include 'layout/head.php';
 
       <!-- Barra de formato -->
       <div class="toolbar" id="toolbar">
+        <button class="tb-btn" onclick="toggleBuscador()" id="btn-buscar" title="Buscar en el documento (Ctrl+F)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
+
+        <div class="tb-sep"></div>
+
         <select class="tb-select" onchange="formatBlock(this.value); this.value=''" id="sel-heading">
           <option value="">Formato</option>
           <option value="h1">Título 1</option>
@@ -148,6 +154,23 @@ include 'layout/head.php';
 
         <div style="flex:1"></div>
         <span id="word-count" style="font-size:11px;color:var(--gris3);font-family:'Roboto',sans-serif">0 palabras</span>
+      </div>
+
+      <!-- Buscador en el documento -->
+      <div class="find-bar" id="find-bar" style="display:none">
+        <svg class="find-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input type="text" id="find-input" class="find-input" placeholder="Buscar en el documento…" autocomplete="off" spellcheck="false">
+        <span class="find-count" id="find-count">0/0</span>
+        <div class="find-sep"></div>
+        <button class="find-nav" title="Anterior (Shift+Enter)" onclick="buscarNav(-1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button class="find-nav" title="Siguiente (Enter)" onclick="buscarNav(1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button class="find-close" title="Cerrar (Esc)" onclick="cerrarBuscador()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <!-- Área de escritura -->
@@ -346,7 +369,7 @@ include 'layout/head.php';
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Guardar borrador
           </button>
-          <button class="btn btn-success" onclick="abrirModalPublicar()" id="btn-publicar" style="width:100%;justify-content:center" disabled>
+          <button class="btn btn-success" onclick="abrirModalVersion()" id="btn-publicar" style="width:100%;justify-content:center" disabled>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
             Publicar versión
           </button>
@@ -383,6 +406,35 @@ include 'layout/head.php';
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ELEGIR TIPO DE VERSIÓN ───────────────────────────── -->
+<div class="modal-overlay" id="modal-version" onclick="if(event.target===this)cerrarModalVersion()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>¿Qué tipo de cambio es?</h3>
+      <button class="modal-close" onclick="cerrarModalVersion()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13.5px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:16px">
+        Elegí cómo numerar esta publicación según la magnitud de los cambios respecto de la versión actual (<span id="ver-actual-label" style="color:var(--blanco);font-weight:600">—</span>).
+      </p>
+      <div class="ver-opciones">
+        <button class="ver-opcion" onclick="elegirTipoCambio('menor')">
+          <div class="ver-opcion-num" id="ver-opcion-menor">v0.0</div>
+          <div class="ver-opcion-titulo">Cambio menor</div>
+          <div class="ver-opcion-desc">Correcciones, ajustes de redacción o cambios que no alteran el fondo del manual.</div>
+        </button>
+        <button class="ver-opcion" onclick="elegirTipoCambio('mayor')">
+          <div class="ver-opcion-num" id="ver-opcion-mayor">v0.0</div>
+          <div class="ver-opcion-titulo">Cambio mayor</div>
+          <div class="ver-opcion-desc">Modificaciones sustanciales de contenido, cláusulas o estructura del manual.</div>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -543,7 +595,42 @@ include 'layout/head.php';
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
+
+/* Buscador en el documento (lupa) */
+.find-bar {
+  position: absolute; top: 12px; right: 24px; z-index: 40;
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 8px;
+  background: var(--gris1); border: 1px solid var(--gris2);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+.find-ico { width: 15px; height: 15px; color: var(--gris4); flex-shrink: 0; margin: 0 2px; }
+.find-input {
+  width: 190px; padding: 5px 6px;
+  background: transparent; border: none; outline: none;
+  color: var(--blanco); font-family: 'Roboto', sans-serif; font-size: 13px;
+}
+.find-input::placeholder { color: var(--gris4); }
+.find-count {
+  font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif;
+  min-width: 38px; text-align: center; white-space: nowrap;
+}
+.find-sep { width: 1px; height: 18px; background: var(--gris2); margin: 0 3px; }
+.find-nav, .find-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0;
+  background: transparent; border: none; border-radius: 6px;
+  color: var(--gris5); cursor: pointer; transition: background .12s, color .12s;
+}
+.find-nav:hover, .find-close:hover { background: var(--gris2); color: var(--blanco); }
+.find-nav svg, .find-close svg { width: 14px; height: 14px; }
+
+/* Resaltado de coincidencias — pintado por la Custom Highlight API,
+   no inserta nodos en el DOM, así el contenido guardado no se altera. */
+::highlight(doc-find)        { background-color: rgba(255, 213, 79, .35); }
+::highlight(doc-find-active) { background-color: rgba(255, 179, 0, .85); color: #1a1a1a; }
 
 /* Toolbar */
 .toolbar {
@@ -870,6 +957,19 @@ include 'layout/head.php';
 .version-autor { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .version-tag   { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(201,168,76,.15); color: var(--dorado); margin-top: 4px; }
 
+/* Modal elegir tipo de version (menor / mayor) */
+.ver-opciones { display: flex; flex-direction: column; gap: 10px; }
+.ver-opcion {
+  text-align: left; width: 100%; cursor: pointer;
+  background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
+  border-radius: 10px; padding: 14px 16px;
+  transition: border-color .15s, background .15s;
+}
+.ver-opcion:hover { border-color: var(--dorado); background: rgba(201,168,76,.06); }
+.ver-opcion-num    { font-size: 18px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; margin-bottom: 2px; }
+.ver-opcion-titulo { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 4px; }
+.ver-opcion-desc   { font-size: 12.5px; color: var(--gris4); line-height: 1.5; font-family: 'Roboto', sans-serif; }
+
 /* Modal */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
@@ -1007,6 +1107,7 @@ let estado = {
   versiones:     [],
   htmlOriginal:  '',
   modificado:    false,
+  tipoCambio:    'mayor',   // elegido en el modal de version antes de publicar
 };
 
 // v2.3 — categorías activas de la empresa del manual + ids actualmente asignados
@@ -1107,13 +1208,13 @@ function cargarVersion(version) {
   setupTodosLosImagenListeners();
 
   document.getElementById('st-version').textContent =
-    `v${version.version_number}`;
+    `v${verNum(version)}`;
 
   actualizarContador();
   habilitarEditor();
   marcarSinCambios();
   document.querySelectorAll('.version-item').forEach(el => el.classList.remove('cargada'));
-  const id = version.version_number === 0 ? 'borrador' : `v${version.version_number}`;
+  const id = version.version_number === 0 ? 'borrador' : `v${verNum(version)}`;
   const itemEl = document.querySelector(`.version-item[data-version="${id}"]`);
   if (itemEl) itemEl.classList.add('cargada');
 }
@@ -1144,11 +1245,11 @@ function renderVersiones(versiones) {
   `] : [];
 
   el.innerHTML = [...versiones]
-    .sort((a, b) => b.version_number - a.version_number)
+    .sort((a, b) => (b.version_number - a.version_number) || ((b.version_minor ?? 0) - (a.version_minor ?? 0)))
     .map(v => `
-      <div class="version-item ${v.es_activa ? 'activa' : ''}" data-version="v${v.version_number}" onclick='cargarVersionDesdeJSON(${JSON.stringify(v)})'>
+      <div class="version-item ${v.es_activa ? 'activa' : ''}" data-version="v${verNum(v)}" onclick='cargarVersionDesdeJSON(${JSON.stringify(v)})'>
         <div class="version-item-header">
-          <span class="version-num">v${v.version_number}</span>
+          <span class="version-num">v${verNum(v)}</span>
           <span class="version-fecha">${formatFecha(v.publicado_at)}</span>
         </div>
         <div class="version-autor">${v.publicado_por?.system_admin?.nombre || 'Sistema'}</div>
@@ -1845,12 +1946,170 @@ document.addEventListener('selectionchange', () => {
   select.value = pt || '';
 });
 
+// ── BUSCADOR EN EL DOCUMENTO (estilo Word) ─────────────────────────────
+// Resalta coincidencias con la CSS Custom Highlight API: pinta a partir de
+// objetos Range SIN insertar nada en el DOM, por lo que el innerHTML que se
+// guarda no se ve afectado. Se limpia al cerrar la barra.
+let findMatches = [];
+let findIndex   = -1;
+const findSupported =
+  (typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight !== 'undefined');
+
+function toggleBuscador() {
+  const bar = document.getElementById('find-bar');
+  if (bar.style.display === 'flex') cerrarBuscador();
+  else abrirBuscador();
+}
+
+function abrirBuscador() {
+  const bar = document.getElementById('find-bar');
+  bar.style.display = 'flex';
+  const input = document.getElementById('find-input');
+  // Si hay texto seleccionado en el editor, lo usamos como término inicial.
+  const sel = window.getSelection();
+  const selText = sel && !sel.isCollapsed ? sel.toString().trim() : '';
+  if (selText && selText.length <= 60) input.value = selText;
+  input.focus();
+  input.select();
+  if (input.value) ejecutarBusqueda();
+}
+
+function cerrarBuscador() {
+  document.getElementById('find-bar').style.display = 'none';
+  limpiarHighlights();
+  findMatches = [];
+  findIndex = -1;
+  document.getElementById('editor').focus();
+}
+
+function limpiarHighlights() {
+  if (!findSupported) return;
+  CSS.highlights.delete('doc-find');
+  CSS.highlights.delete('doc-find-active');
+}
+
+function ejecutarBusqueda() {
+  const term = document.getElementById('find-input').value;
+  limpiarHighlights();
+  findMatches = [];
+  findIndex = -1;
+
+  const countEl = document.getElementById('find-count');
+  if (!term) { countEl.textContent = '0/0'; return; }
+  if (!findSupported) { countEl.textContent = 'N/D'; return; }
+
+  const editor = document.getElementById('editor');
+
+  // Recorremos los nodos de texto y armamos el texto completo con un mapa de
+  // offsets, para poder encontrar coincidencias que crucen varios nodos
+  // (p. ej. texto partido por un <span> de color).
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  let full = '';
+  let node;
+  while ((node = walker.nextNode())) {
+    nodes.push({ node, start: full.length });
+    full += node.nodeValue;
+  }
+  if (!nodes.length) { countEl.textContent = '0/0'; return; }
+
+  const hay    = full.toLowerCase();
+  const needle = term.toLowerCase();
+  const L      = needle.length;
+
+  // Mapea una posición global del texto a { node, offset }.
+  const locate = (pos) => {
+    for (let i = 0; i < nodes.length; i++) {
+      const s = nodes[i].start;
+      const e = s + nodes[i].node.nodeValue.length;
+      if (pos <= e) return { node: nodes[i].node, offset: pos - s };
+    }
+    const last = nodes[nodes.length - 1];
+    return { node: last.node, offset: last.node.nodeValue.length };
+  };
+
+  let from = 0, idx;
+  while ((idx = hay.indexOf(needle, from)) !== -1) {
+    const a = locate(idx);
+    const b = locate(idx + L);
+    try {
+      const r = document.createRange();
+      r.setStart(a.node, a.offset);
+      r.setEnd(b.node, b.offset);
+      findMatches.push(r);
+    } catch (e) { /* rango inválido: se ignora */ }
+    from = idx + L;
+  }
+
+  if (findMatches.length) {
+    CSS.highlights.set('doc-find', new Highlight(...findMatches));
+    findIndex = 0;
+    activarMatch(0);
+  } else {
+    actualizarFindCount();
+  }
+}
+
+function activarMatch(i) {
+  if (!findMatches.length) return;
+  findIndex = (i + findMatches.length) % findMatches.length;
+  const activo = findMatches[findIndex];
+  if (findSupported) {
+    const hActive = new Highlight(activo);
+    hActive.priority = 1; // se dibuja encima del resaltado general
+    CSS.highlights.set('doc-find-active', hActive);
+  }
+  scrollARange(activo);
+  actualizarFindCount();
+}
+
+function buscarNav(dir) {
+  if (!findMatches.length) return;
+  activarMatch(findIndex + dir);
+}
+
+function actualizarFindCount() {
+  const el = document.getElementById('find-count');
+  el.textContent = findMatches.length ? `${findIndex + 1}/${findMatches.length}` : '0/0';
+}
+
+// Centra la coincidencia activa dentro del área scrolleable del editor.
+function scrollARange(range) {
+  const scroll = document.querySelector('.editor-scroll');
+  if (!scroll) return;
+  const rr = range.getBoundingClientRect();
+  if (!rr.height && !rr.width) return;
+  const sr = scroll.getBoundingClientRect();
+  const relTop = rr.top - sr.top + scroll.scrollTop;
+  const target = relTop - (scroll.clientHeight / 2) + (rr.height / 2);
+  scroll.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+}
+
+function initBuscador() {
+  const input = document.getElementById('find-input');
+  input.addEventListener('input', ejecutarBusqueda);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')       { e.preventDefault(); buscarNav(e.shiftKey ? -1 : 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); cerrarBuscador(); }
+  });
+  // Ctrl+F / Cmd+F abre el buscador del documento (en vez del del navegador).
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      abrirBuscador();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('editor').addEventListener('input', () => {
     actualizarContador();
     marcarConCambios();
+    // Si el buscador está abierto, re-buscamos para reflejar el texto editado.
+    if (document.getElementById('find-bar').style.display === 'flex') ejecutarBusqueda();
   });
   generarSwatches();
+  initBuscador();
 });
 
 function actualizarContador() {
@@ -1898,6 +2157,55 @@ async function guardarBorrador() {
 }
 
 // ── PUBLICAR ──────────────────────────────────────────────────
+// Etiqueta de version "numero.minor" (fallback si el backend no mando version_label).
+function verNum(v) {
+  if (!v) return '';
+  return v.version_label || (v.version_number + '.' + (v.version_minor ?? 0));
+}
+
+// Paso 1 del publicado: elegir si el cambio es menor (sube el minor) o mayor
+// (sube el numero). Se calcula sobre la version activa. En la primera
+// publicacion no hay nada que elegir -> va directo a v1.0.
+function abrirModalVersion() {
+  const html = document.getElementById('editor').innerHTML.trim();
+  if (!html) { mostrarToast('El contenido no puede estar vacío.', 'error'); return; }
+
+  const activa = estado.versiones.find(v => v.es_activa == 1 && v.version_number > 0);
+
+  // Primera publicacion real: no se pregunta, el backend crea v1.0.
+  if (!activa) {
+    estado.tipoCambio = 'mayor';
+    abrirModalPublicar();
+    return;
+  }
+
+  const baseNumber = activa.version_number;
+  const maxMinorBase = Math.max(
+    ...estado.versiones
+      .filter(v => v.version_number === baseNumber)
+      .map(v => v.version_minor ?? 0)
+  );
+  const maxNumber = Math.max(
+    ...estado.versiones.filter(v => v.version_number > 0).map(v => v.version_number)
+  );
+
+  document.getElementById('ver-actual-label').textContent = 'v' + verNum(activa);
+  document.getElementById('ver-opcion-menor').textContent = `v${baseNumber}.${maxMinorBase + 1}`;
+  document.getElementById('ver-opcion-mayor').textContent = `v${maxNumber + 1}.0`;
+
+  document.getElementById('modal-version').classList.add('open');
+}
+
+function elegirTipoCambio(tipo) {
+  estado.tipoCambio = tipo;
+  cerrarModalVersion();
+  abrirModalPublicar();   // paso 2: aviso legal (franquiciante) o confirmacion (admin)
+}
+
+function cerrarModalVersion() {
+  document.getElementById('modal-version').classList.remove('open');
+}
+
 function abrirModalPublicar() {
   const esFranquiciante = rolUsuario === 'franquiciante';
 
@@ -1954,6 +2262,7 @@ async function publicar() {
       contenido_html:  html,
       encabezado_html: document.getElementById('editor-header').innerHTML.trim() || null,
       pie_pagina_html: document.getElementById('editor-footer').innerHTML.trim() || null,
+      tipo_cambio:     estado.tipoCambio || 'mayor',
     };
     if (nota) body.nota_publicacion = nota;
 
@@ -1974,10 +2283,10 @@ async function publicar() {
     // Marcar la nueva versión activa como cargada
     const nuevaActiva = todasVersiones.find(v => v.es_activa == 1);
     if (nuevaActiva) {
-        document.getElementById('st-version').textContent = `v${nuevaActiva.version_number}`;
+        document.getElementById('st-version').textContent = `v${verNum(nuevaActiva)}`;
         setTimeout(() => {
             document.querySelectorAll('.version-item').forEach(el => el.classList.remove('cargada'));
-            const itemEl = document.querySelector(`.version-item[data-version="v${nuevaActiva.version_number}"]`);
+            const itemEl = document.querySelector(`.version-item[data-version="v${verNum(nuevaActiva)}"]`);
             if (itemEl) itemEl.classList.add('cargada');
         }, 100);
     }
@@ -2218,7 +2527,7 @@ function renderNotas(notas) {
   }
 
   el.innerHTML = notas.map(n => {
-    const ver = n.version?.version_number ? `<span class="nota-ver">v${n.version.version_number}</span>` : '';
+    const ver = n.version?.version_number ? `<span class="nota-ver">v${verNum(n.version)}</span>` : '';
 
     // v2.3: release notes (mensajes del publicador). Sin estado ni acciones, son inmutables.
     if (n.tipo === 'release') {

@@ -57,20 +57,20 @@ body {
   padding: 72px 80px; min-height: 600px;
 }
 .doc-content {
-  font-family: 'Lora', 'Georgia', serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 15px; line-height: 1.85; color: #2A2A2A;
 }
 .doc-content h1 {
-  font-family: 'Archivo', sans-serif; font-size: 26px; font-weight: 700;
+  font-family: 'Roboto', sans-serif; font-size: 26px; font-weight: 700;
   color: #111; margin: 0 0 20px; padding-bottom: 14px;
   border-bottom: 2px solid #E8E4DC; line-height: 1.2;
 }
 .doc-content h2 {
-  font-family: 'Archivo', sans-serif; font-size: 18px; font-weight: 600;
+  font-family: 'Roboto', sans-serif; font-size: 18px; font-weight: 600;
   color: #1A1A1A; margin: 32px 0 12px;
 }
 .doc-content h3 {
-  font-family: 'Archivo', sans-serif; font-size: 15px; font-weight: 600;
+  font-family: 'Roboto', sans-serif; font-size: 15px; font-weight: 600;
   color: #333; margin: 20px 0 8px;
 }
 .doc-content p  { margin: 0 0 12px; }
@@ -81,7 +81,52 @@ body {
 .doc-content u      { text-decoration: underline; }
 #doc-content-wrap table  { width: 100%; border-collapse: collapse; border: 1px solid #E0DDD6; margin: 16px 0; font-size: 13px; font-family: 'Roboto', sans-serif; }
 #doc-content-wrap td, #doc-content-wrap th { border: 1px solid #E0DDD6; padding: 9px 14px; text-align: left; }
-#doc-content-wrap th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Archivo', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+#doc-content-wrap th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Roboto', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+
+/* Imagenes del contenido: nunca desbordan el ancho de la hoja. !important
+   para ganar a dimensiones inline que puedan venir de Word o del editor. */
+#doc-content-wrap img { max-width: 100% !important; height: auto !important; }
+
+/* Buscador en el documento */
+.doc-find-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  background: transparent; border: 1px solid #E0DDD6; border-radius: 8px;
+  color: #666; cursor: pointer; transition: all .15s;
+}
+.doc-find-btn:hover { border-color: var(--dorado); color: #1A1A1A; }
+.doc-find-btn svg { width: 15px; height: 15px; }
+.find-bar {
+  position: fixed; top: 72px; right: 28px; z-index: 500;
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 8px;
+  background: #FFFFFF; border: 1px solid #E0DDD6;
+  border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.15);
+}
+.find-ico { width: 15px; height: 15px; color: #999; flex-shrink: 0; margin: 0 2px; }
+.find-input {
+  width: 190px; padding: 5px 6px;
+  background: transparent; border: none; outline: none;
+  color: #1A1A1A; font-family: 'Roboto', sans-serif; font-size: 13px;
+}
+.find-input::placeholder { color: #aaa; }
+.find-count {
+  font-size: 11px; color: #999; font-family: 'Roboto', sans-serif;
+  min-width: 38px; text-align: center; white-space: nowrap;
+}
+.find-sep { width: 1px; height: 18px; background: #E0DDD6; margin: 0 3px; }
+.find-nav, .find-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0;
+  background: transparent; border: none; border-radius: 6px;
+  color: #666; cursor: pointer; transition: background .12s, color .12s;
+}
+.find-nav:hover, .find-close:hover { background: #F0EDE6; color: #1A1A1A; }
+.find-nav svg, .find-close svg { width: 14px; height: 14px; }
+
+/* Resaltado por Custom Highlight API: no inserta nodos en el DOM. */
+::highlight(doc-find)        { background-color: rgba(255, 213, 79, .45); }
+::highlight(doc-find-active) { background-color: rgba(255, 179, 0, .9); color: #1a1a1a; }
 
 .doc-footer { width: 100%; max-width: 800px; margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -174,7 +219,7 @@ body {
   }
 
   /* Ocultar todo lo que no sea el contenido del manual (topbars, sidebars, botones) */
-  .doc-topbar, .doc-footer, #estado-aceptacion-wrap, #btn-aceptar-wrap,
+  .doc-topbar, .doc-footer, .find-bar, #estado-aceptacion-wrap, #btn-aceptar-wrap,
   .app-topbar, .app-sidebar, .watermark-container { display: none !important; }
 
   .app-layout, .app-body, .lectura-layout, main { display: block !important; }
@@ -273,7 +318,27 @@ body {
         <span id="doc-version">—</span>
         <span style="color:#ccc">·</span>
         <span id="doc-fecha">—</span>
+        <button class="doc-find-btn" onclick="toggleBuscador()" title="Buscar en el documento (Ctrl+F)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
       </div>
+    </div>
+
+    <!-- Buscador en el documento -->
+    <div class="find-bar" id="find-bar" style="display:none">
+      <svg class="find-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input type="text" id="find-input" class="find-input" placeholder="Buscar en el documento…" autocomplete="off" spellcheck="false">
+      <span class="find-count" id="find-count">0/0</span>
+      <div class="find-sep"></div>
+      <button class="find-nav" title="Anterior (Shift+Enter)" onclick="buscarNav(-1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </button>
+      <button class="find-nav" title="Siguiente (Enter)" onclick="buscarNav(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <button class="find-close" title="Cerrar (Esc)" onclick="cerrarBuscador()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
 
     <div class="doc-page">
@@ -404,7 +469,7 @@ async function init() {
     document.title = `${manual.titulo} — Cerrajería Leonardo`;
     // v2.3: me.perfil ya no existe; empresa.nombre viene anidado en /me
     document.getElementById('doc-empresa').textContent = me.empresa?.nombre || '—';
-    document.getElementById('doc-version').textContent  = `v${version.version_number}`;
+    document.getElementById('doc-version').textContent  = `v${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))}`;
     document.getElementById('doc-fecha').textContent    = formatFecha(version.publicado_at);
 
     document.getElementById('doc-content-wrap').innerHTML =
@@ -446,7 +511,7 @@ async function init() {
 
       document.getElementById('modal-manual-nombre').textContent  = manual.titulo;
       document.getElementById('modal-manual-version').textContent =
-        `Versión ${version.version_number} · Publicado el ${formatFecha(version.publicado_at)}`;
+        `Versión ${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))} · Publicado el ${formatFecha(version.publicado_at)}`;
     }
 
     if (rolUsuario === 'franquiciado') cargarNotas();
@@ -593,7 +658,148 @@ document.addEventListener('keydown', (e) => {
     }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
-document.addEventListener('DOMContentLoaded', () => init());
+// ── BUSCADOR EN EL DOCUMENTO ─────────────────────
+// Resalta con la CSS Custom Highlight API (sin tocar el DOM). El contenido
+// de lectura no se edita, y el scroll es el de la ventana.
+let findMatches = [];
+let findIndex   = -1;
+const findSupported =
+  (typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight !== 'undefined');
+
+function toggleBuscador() {
+  const bar = document.getElementById('find-bar');
+  if (bar.style.display === 'flex') cerrarBuscador();
+  else abrirBuscador();
+}
+
+function abrirBuscador() {
+  document.getElementById('find-bar').style.display = 'flex';
+  const input = document.getElementById('find-input');
+  const sel = window.getSelection();
+  const selText = sel && !sel.isCollapsed ? sel.toString().trim() : '';
+  if (selText && selText.length <= 60) input.value = selText;
+  input.focus();
+  input.select();
+  if (input.value) ejecutarBusqueda();
+}
+
+function cerrarBuscador() {
+  document.getElementById('find-bar').style.display = 'none';
+  limpiarHighlights();
+  findMatches = [];
+  findIndex = -1;
+}
+
+function limpiarHighlights() {
+  if (!findSupported) return;
+  CSS.highlights.delete('doc-find');
+  CSS.highlights.delete('doc-find-active');
+}
+
+function ejecutarBusqueda() {
+  const term = document.getElementById('find-input').value;
+  limpiarHighlights();
+  findMatches = [];
+  findIndex = -1;
+
+  const countEl = document.getElementById('find-count');
+  if (!term) { countEl.textContent = '0/0'; return; }
+  if (!findSupported) { countEl.textContent = 'N/D'; return; }
+
+  const cont = document.getElementById('doc-content-wrap');
+  const walker = document.createTreeWalker(cont, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  let full = '';
+  let node;
+  while ((node = walker.nextNode())) {
+    nodes.push({ node, start: full.length });
+    full += node.nodeValue;
+  }
+  if (!nodes.length) { countEl.textContent = '0/0'; return; }
+
+  const hay    = full.toLowerCase();
+  const needle = term.toLowerCase();
+  const L      = needle.length;
+
+  const locate = (pos) => {
+    for (let i = 0; i < nodes.length; i++) {
+      const s = nodes[i].start;
+      const e = s + nodes[i].node.nodeValue.length;
+      if (pos <= e) return { node: nodes[i].node, offset: pos - s };
+    }
+    const last = nodes[nodes.length - 1];
+    return { node: last.node, offset: last.node.nodeValue.length };
+  };
+
+  let from = 0, idx;
+  while ((idx = hay.indexOf(needle, from)) !== -1) {
+    const a = locate(idx);
+    const b = locate(idx + L);
+    try {
+      const r = document.createRange();
+      r.setStart(a.node, a.offset);
+      r.setEnd(b.node, b.offset);
+      findMatches.push(r);
+    } catch (e) { /* rango invalido: se ignora */ }
+    from = idx + L;
+  }
+
+  if (findMatches.length) {
+    CSS.highlights.set('doc-find', new Highlight(...findMatches));
+    findIndex = 0;
+    activarMatch(0);
+  } else {
+    actualizarFindCount();
+  }
+}
+
+function activarMatch(i) {
+  if (!findMatches.length) return;
+  findIndex = (i + findMatches.length) % findMatches.length;
+  const activo = findMatches[findIndex];
+  if (findSupported) {
+    const hActive = new Highlight(activo);
+    hActive.priority = 1;
+    CSS.highlights.set('doc-find-active', hActive);
+  }
+  scrollARange(activo);
+  actualizarFindCount();
+}
+
+function buscarNav(dir) {
+  if (!findMatches.length) return;
+  activarMatch(findIndex + dir);
+}
+
+function actualizarFindCount() {
+  const el = document.getElementById('find-count');
+  el.textContent = findMatches.length ? (findIndex + 1) + '/' + findMatches.length : '0/0';
+}
+
+// El scroll de la vista de lectura es el de la ventana.
+function scrollARange(range) {
+  const rect = range.getBoundingClientRect();
+  if (!rect.height && !rect.width) return;
+  const target = rect.top + window.scrollY - (window.innerHeight / 2) + (rect.height / 2);
+  window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+}
+
+function initBuscador() {
+  const input = document.getElementById('find-input');
+  input.addEventListener('input', ejecutarBusqueda);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')       { e.preventDefault(); buscarNav(e.shiftKey ? -1 : 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); cerrarBuscador(); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      abrirBuscador();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => { init(); initBuscador(); });
 </script>
 
 <?php include 'layout/footer.php'; ?>

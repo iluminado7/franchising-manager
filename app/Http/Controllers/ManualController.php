@@ -310,6 +310,7 @@ class ManualController extends Controller
             'nota_publicacion' => 'nullable|string|max:2000',
             'encabezado_html'  => 'nullable|string|max:200000',
             'pie_pagina_html'  => 'nullable|string|max:200000',
+            'tipo_cambio'      => 'nullable|in:mayor,menor',
         ]);
 
         $manual = Manual::findOrFail($id);
@@ -346,117 +347,157 @@ class ManualController extends Controller
             $manual->save();
         }
 
-        DB::transaction(function () use ($manual, $user, $html, $hash, $request, $notaPub) {
+        try {
+            DB::transaction(function () use ($manual, $user, $html, $hash, $request, $notaPub) {
 
-            // Feature imágenes: limpiamos huérfanas al publicar. Se hace ANTES
-            // de crear la versión nueva para que la limpieza vea el estado
-            // "borrador anterior" y no la versión que estamos por crear.
-            try {
-                ManualImageController::limpiarHuerfanas($manual->id);
-            } catch (\Throwable $e) { /* best-effort */ }
-
-            ManualVersion::where('manual_id', $manual->id)
-                         ->where('es_activa', 1)
-                         ->update(['es_activa' => 0]);
-
-            $ultimaVersion = ManualVersion::where('manual_id', $manual->id)
-                                          ->max('version_number') ?? 0;
-
-            $version = ManualVersion::create([
-                'manual_id'        => $manual->id,
-                'version_number'   => $ultimaVersion + 1,
-                'contenido_html'   => $html,
-                'contenido_hash'   => $hash,
-                'publicado_por'    => $user->id,
-                'publicado_at'     => now(),
-                'es_activa'        => 1,
-                'nota_publicacion' => $notaPub,
-            ]);
-
-            $manual->update(['estado' => 'publicado']);
-
-            // v2.3: notificar SOLO a usuarios con asignación efectiva al manual
-            // (categoría activa OR individual). Si nadie tiene asignación, no
-            // se notifica a nadie — el manual queda publicado pero invisible
-            // hasta que el franquiciante lo asigne explícitamente.
-            //
-            // Antes (legacy): notificaba a TODOS los franquiciados de TODAS las
-            // empresas asignadas, sin importar si podían verlo.
-            $tipo = $ultimaVersion === 0 ? 'nuevo_manual' : 'modificacion_manual';
-
-            $userIds = $this->usuariosConAccesoAlManual($manual->id);
-
-            // H-020 fix (defense in depth): strip_tags remueve cualquier marcado HTML
-            // del título antes de guardarlo en la notificación. Combinado con el escape
-            // en frontend (layout.js), cierra el vector de XSS almacenado.
-            $tituloManual = strip_tags($manual->titulo ?? '');
-
-            if ($userIds->isNotEmpty()) {
-                $notificaciones = $userIds->map(fn($uid) => [
-                    'user_id'             => $uid,
-                    'tipo'                => $tipo,
-                    'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
-                    'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
-                    'document_id'         => null,
-                    'document_version_id' => null,
-                    'category_id'         => null,
-                    'titulo'              => $tipo === 'nuevo_manual'
-                                            ? "Nuevo manual: {$tituloManual}"
-                                            : "Manual actualizado: {$tituloManual} (v{$version->version_number})",
-                    'created_at'          => now(),
-                ])->toArray();
-
+                // Feature imágenes: limpiamos huérfanas al publicar. Se hace ANTES
+                // de crear la versión nueva para que la limpieza vea el estado
+                // "borrador anterior" y no la versión que estamos por crear.
                 try {
-                    Notification::insert($notificaciones);
+                    ManualImageController::limpiarHuerfanas($manual->id);
                 } catch (\Throwable $e) { /* best-effort */ }
-            }
 
-            $esFranq = $user->esFranquiciante();
+                // Capturamos la version activa ANTES de desactivarla: su numero es
+                // la base de un cambio menor (v3.x -> v3.(x+1)).
+                $activaActual = ManualVersion::where('manual_id', $manual->id)
+                                             ->where('es_activa', 1)
+                                             ->first();
 
-            // Si publica un franquiciante: avisar a los super_admin.
-            // v2.3: usamos $user->nombreCompleto() en lugar de buscar en franchiseStaff
-            // (que para un franquiciante siempre era NULL — bug pre-existente).
-            if ($esFranq) {
-                $nombreAutor = $user->nombreCompleto();
-                if ($nombreAutor === '') {
-                    $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
+                ManualVersion::where('manual_id', $manual->id)
+                             ->where('es_activa', 1)
+                             ->update(['es_activa' => 0]);
+
+                // max(version_number) ignora el borrador (v0); 0 si no hay publicadas.
+                $ultimaVersion = ManualVersion::where('manual_id', $manual->id)
+                                              ->max('version_number') ?? 0;
+
+                // Calculo mayor/menor de la version a crear:
+                //  - primera publicacion    -> v1.0
+                //  - menor (sobre la activa) -> mismo numero, minor = max(minor) + 1
+                //  - mayor (default)         -> numero + 1, minor 0
+                if ($ultimaVersion === 0) {
+                    $nuevoNumber = 1;
+                    $nuevoMinor  = 0;
+                } elseif ($request->tipo_cambio === 'menor' && $activaActual) {
+                    $nuevoNumber = $activaActual->version_number;
+                    $nuevoMinor  = (ManualVersion::where('manual_id', $manual->id)
+                                        ->where('version_number', $nuevoNumber)
+                                        ->max('version_minor') ?? 0) + 1;
+                } else {
+                    $nuevoNumber = $ultimaVersion + 1;
+                    $nuevoMinor  = 0;
                 }
-                // H-020 fix: sanitizar el nombre del autor también (viene de la DB
-                // y es controlable por el usuario en su perfil o al crearse).
-                $nombreAutor = strip_tags($nombreAutor);
 
-                $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
-                $notifSuper  = $superadmins->map(fn($uid) => [
-                    'user_id'             => $uid,
-                    'tipo'                => 'modificacion_manual',
-                    'manual_id'           => null,
-                    'manual_version_id'   => $version->id,
-                    'document_id'         => null,
-                    'document_version_id' => null,
-                    'category_id'         => null,
-                    'titulo'              => "El franquiciante {$nombreAutor} publicó una nueva versión de {$tituloManual} (v{$version->version_number})",
-                    'created_at'          => now(),
-                ])->toArray();
-                try {
-                    if (!empty($notifSuper)) {
-                        Notification::insert($notifSuper);
+                $version = ManualVersion::create([
+                    'manual_id'        => $manual->id,
+                    'version_number'   => $nuevoNumber,
+                    'version_minor'    => $nuevoMinor,
+                    'contenido_html'   => $html,
+                    'contenido_hash'   => $hash,
+                    'publicado_por'    => $user->id,
+                    'publicado_at'     => now(),
+                    'es_activa'        => 1,
+                    'nota_publicacion' => $notaPub,
+                ]);
+
+                // Etiqueta mayor.menor para notificaciones ("v3.1").
+                $versionLabel = $version->version_number . '.' . $version->version_minor;
+
+                $manual->update(['estado' => 'publicado']);
+
+                // v2.3: notificar SOLO a usuarios con asignación efectiva al manual
+                // (categoría activa OR individual). Si nadie tiene asignación, no
+                // se notifica a nadie — el manual queda publicado pero invisible
+                // hasta que el franquiciante lo asigne explícitamente.
+                //
+                // Antes (legacy): notificaba a TODOS los franquiciados de TODAS las
+                // empresas asignadas, sin importar si podían verlo.
+                $tipo = $ultimaVersion === 0 ? 'nuevo_manual' : 'modificacion_manual';
+
+                $userIds = $this->usuariosConAccesoAlManual($manual->id);
+
+                // H-020 fix (defense in depth): strip_tags remueve cualquier marcado HTML
+                // del título antes de guardarlo en la notificación. Combinado con el escape
+                // en frontend (layout.js), cierra el vector de XSS almacenado.
+                $tituloManual = strip_tags($manual->titulo ?? '');
+
+                if ($userIds->isNotEmpty()) {
+                    $notificaciones = $userIds->map(fn($uid) => [
+                        'user_id'             => $uid,
+                        'tipo'                => $tipo,
+                        'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
+                        'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
+                        'document_id'         => null,
+                        'document_version_id' => null,
+                        'category_id'         => null,
+                        'titulo'              => $tipo === 'nuevo_manual'
+                                                ? "Nuevo manual: {$tituloManual}"
+                                                : "Manual actualizado: {$tituloManual} (v{$versionLabel})",
+                        'created_at'          => now(),
+                    ])->toArray();
+
+                    try {
+                        Notification::insert($notificaciones);
+                    } catch (\Throwable $e) { /* best-effort */ }
+                }
+
+                $esFranq = $user->esFranquiciante();
+
+                // Si publica un franquiciante: avisar a los super_admin.
+                // v2.3: usamos $user->nombreCompleto() en lugar de buscar en franchiseStaff
+                // (que para un franquiciante siempre era NULL — bug pre-existente).
+                if ($esFranq) {
+                    $nombreAutor = $user->nombreCompleto();
+                    if ($nombreAutor === '') {
+                        $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
                     }
-                } catch (\Throwable $e) { /* best-effort */ }
-            }
+                    // H-020 fix: sanitizar el nombre del autor también (viene de la DB
+                    // y es controlable por el usuario en su perfil o al crearse).
+                    $nombreAutor = strip_tags($nombreAutor);
 
-            ActivityLog::registrar(
-                userId:      $user->id,
-                accion:      $esFranq ? 'version_publicada_franquiciante' : 'manual_publicado',
-                ip:          $request->ip(),
-                entidadTipo: 'manual_versions',
-                entidadId:   $version->id,
-                detalle:     [
-                    'manual_titulo' => $manual->titulo,
-                    'version'       => $version->version_number,
-                ],
-                userAgent:   $request->userAgent()
-            );
-        });
+                    $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
+                    $notifSuper  = $superadmins->map(fn($uid) => [
+                        'user_id'             => $uid,
+                        'tipo'                => 'modificacion_manual',
+                        'manual_id'           => null,
+                        'manual_version_id'   => $version->id,
+                        'document_id'         => null,
+                        'document_version_id' => null,
+                        'category_id'         => null,
+                        'titulo'              => "El franquiciante {$nombreAutor} publicó una nueva versión de {$tituloManual} (v{$versionLabel})",
+                        'created_at'          => now(),
+                    ])->toArray();
+                    try {
+                        if (!empty($notifSuper)) {
+                            Notification::insert($notifSuper);
+                        }
+                    } catch (\Throwable $e) { /* best-effort */ }
+                }
+
+                ActivityLog::registrar(
+                    userId:      $user->id,
+                    accion:      $esFranq ? 'version_publicada_franquiciante' : 'manual_publicado',
+                    ip:          $request->ip(),
+                    entidadTipo: 'manual_versions',
+                    entidadId:   $version->id,
+                    detalle:     [
+                        'manual_titulo' => $manual->titulo,
+                        'version'       => $version->version_number,
+                    ],
+                    userAgent:   $request->userAgent()
+                );
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Violacion del UNIQUE uq_mv_manual_version: dos publicaciones que
+            // calcularon el mismo numero.minor casi a la vez. Mensaje claro en
+            // vez de un 500 crudo.
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'error' => 'Esa version ya existe para este manual. Actualiza la pagina e intenta de nuevo.',
+                ], 409);
+            }
+            throw $e;
+        }
 
         return response()->json([
             'message' => 'Manual publicado correctamente.',
