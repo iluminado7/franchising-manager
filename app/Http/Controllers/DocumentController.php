@@ -139,6 +139,7 @@ class DocumentController extends Controller
             DocumentVersion::create([
                 'document_id'         => $doc->id,
                 'version_number'      => 1,
+                'version_minor'       => 0,
                 'previous_version_id' => null,   // v2.3: primera versión, sin antecesora
                 'archivo_url'         => $path,
                 'archivo_hash'        => $hash,
@@ -238,8 +239,9 @@ class DocumentController extends Controller
         }
 
         $request->validate([
-            'archivo' => 'required|file|mimes:pdf,doc,docx|max:20480',
-            'nota'    => 'nullable|string|max:500',
+            'archivo'     => 'required|file|mimes:pdf,doc,docx|max:20480',
+            'nota'        => 'nullable|string|max:500',
+            'tipo_cambio' => 'nullable|in:mayor,menor',
         ]);
 
         $archivo = $request->file('archivo');
@@ -247,50 +249,69 @@ class DocumentController extends Controller
         $disk    = config('filesystems.default');
         $path    = Storage::disk($disk)->putFile('documentos', $archivo);
 
-        $nuevaVersion = DB::transaction(function () use ($documento, $user, $request, $archivo, $hash, $path) {
-            // v2.3: lock pesimista sobre la versión activa actual.
-            // Evita race conditions cuando dos uploads concurrentes leerían
-            // el mismo es_activa = 1 y romperían el UNIQUE generado uq_dv_es_activa.
-            $activaAnterior = DocumentVersion::where('document_id', $documento->id)
-                                             ->where('es_activa', 1)
-                                             ->lockForUpdate()
-                                             ->first();
+        try {
+            $nuevaVersion = DB::transaction(function () use ($documento, $user, $request, $archivo, $hash, $path) {
+                // v2.3: lock pesimista sobre la versión activa actual.
+                // Evita race conditions cuando dos uploads concurrentes leerían
+                // el mismo es_activa = 1 y romperían el UNIQUE generado uq_dv_es_activa.
+                $activaAnterior = DocumentVersion::where('document_id', $documento->id)
+                                                 ->where('es_activa', 1)
+                                                 ->lockForUpdate()
+                                                 ->first();
 
-            // Desactivar la anterior (si existe). El UNIQUE generado pasa a NULL
-            // en esa fila al cambiar es_activa a 0.
-            if ($activaAnterior) {
-                $activaAnterior->update(['es_activa' => 0]);
+                // Desactivar la anterior (si existe). El UNIQUE generado pasa a NULL
+                // en esa fila al cambiar es_activa a 0.
+                if ($activaAnterior) {
+                    $activaAnterior->update(['es_activa' => 0]);
+                }
+
+                // Cálculo mayor/menor. Contamos también las eliminadas (no hay trait
+                // SoftDeletes) para no reutilizar un número ya usado y romper el UNIQUE.
+                //  - menor (sobre la activa) → mismo número, minor = max(minor) + 1
+                //  - mayor (default)         → max(número) + 1, minor 0
+                $maxNumber = DocumentVersion::where('document_id', $documento->id)
+                                ->max('version_number') ?? 0;
+
+                if ($request->tipo_cambio === 'menor' && $activaAnterior) {
+                    $nuevoNumber = $activaAnterior->version_number;
+                    $nuevoMinor  = (DocumentVersion::where('document_id', $documento->id)
+                                        ->where('version_number', $nuevoNumber)
+                                        ->max('version_minor') ?? 0) + 1;
+                } else {
+                    $nuevoNumber = $maxNumber + 1;
+                    $nuevoMinor  = 0;
+                }
+
+                return DocumentVersion::create([
+                    'document_id'         => $documento->id,
+                    'version_number'      => $nuevoNumber,
+                    'version_minor'       => $nuevoMinor,
+                    'previous_version_id' => $activaAnterior?->id,   // v2.3: cadena de versiones
+                    'archivo_url'         => $path,
+                    'archivo_hash'        => $hash,
+                    'mime_type'           => $archivo->getMimeType(),
+                    'tamano_bytes'        => $archivo->getSize(),
+                    'nota'                => $request->nota,
+                    'es_activa'           => 1,
+                    'subido_por'          => $user->id,
+                    'subido_at'           => now(),
+                ]);
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Violación del UNIQUE uq_doc_version: dos uploads que calcularon el
+            // mismo número.minor casi a la vez. Mensaje claro en vez de un 500.
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'error' => 'Esa versión ya existe para este documento. Actualizá la página e intentá de nuevo.',
+                ], 409);
             }
-
-            // Siguiente número de versión: MAX(existente) + 1.
-            // Importante: contamos también las eliminadas para no reutilizar
-            // un version_number ya usado (rompería el UNIQUE de document_id, version_number).
-            // El modelo no usa el trait SoftDeletes, así que un where directo
-            // ya devuelve TODAS las versiones (incluso las que tienen deleted_at).
-            $next = (
-                DocumentVersion::where('document_id', $documento->id)
-                    ->max('version_number')
-            ) + 1;
-
-            return DocumentVersion::create([
-                'document_id'         => $documento->id,
-                'version_number'      => $next,
-                'previous_version_id' => $activaAnterior?->id,   // v2.3: cadena de versiones
-                'archivo_url'         => $path,
-                'archivo_hash'        => $hash,
-                'mime_type'           => $archivo->getMimeType(),
-                'tamano_bytes'        => $archivo->getSize(),
-                'nota'                => $request->nota,
-                'es_activa'           => 1,
-                'subido_por'          => $user->id,
-                'subido_at'           => now(),
-            ]);
-        });
+            throw $e;
+        }
 
         // v2.3: notifica con tipo nueva_version_documento (con document_version_id)
         $this->notificarDocumento(
             $documento,
-            "Nueva versión disponible: {$documento->titulo} (v{$nuevaVersion->version_number})",
+            "Nueva versión disponible: {$documento->titulo} (v{$nuevaVersion->version_label})",
             $nuevaVersion
         );
 

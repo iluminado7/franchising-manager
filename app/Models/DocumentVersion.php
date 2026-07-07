@@ -16,6 +16,7 @@ class DocumentVersion extends Model
     protected $fillable = [
         'document_id',
         'version_number',
+        'version_minor',
         'previous_version_id',
         'archivo_url',
         'archivo_hash',
@@ -33,9 +34,13 @@ class DocumentVersion extends Model
         'es_activa'      => 'boolean',
         'tamano_bytes'   => 'integer',
         'version_number' => 'integer',
+        'version_minor'  => 'integer',
         'subido_at'      => 'datetime',
         'deleted_at'     => 'datetime',
     ];
+
+    // version_label ("3.1") disponible en las respuestas JSON (historial, version activa).
+    protected $appends = ['version_label'];
 
     // ── Relaciones ───────────────────────────────────────────────────
 
@@ -100,5 +105,11 @@ class DocumentVersion extends Model
         return $query
         ->where('es_activa', 1)
         ->whereNull('deleted_at');
+    }
+
+    // Etiqueta de version en formato mayor.menor, p. ej. "3.1".
+    public function getVersionLabelAttribute(): string
+    {
+        return $this->version_number . '.' . ($this->version_minor ?? 0);
     }
 }

@@ -329,6 +329,22 @@ include 'layout/head.php';
       </div>
 
       <div class="form-group">
+        <label class="form-label">Tipo de cambio *</label>
+        <div class="tipo-cambio-grid">
+          <button type="button" class="tipo-cambio-opt" id="tc-menor" onclick="setTipoCambio('menor')">
+            <div class="tc-num" id="tc-num-menor">v0.0</div>
+            <div class="tc-titulo">Cambio menor</div>
+            <div class="tc-desc">Correcciones o ajustes que no alteran el fondo del documento.</div>
+          </button>
+          <button type="button" class="tipo-cambio-opt" id="tc-mayor" onclick="setTipoCambio('mayor')">
+            <div class="tc-num" id="tc-num-mayor">v0.0</div>
+            <div class="tc-titulo">Cambio mayor</div>
+            <div class="tc-desc">Modificaciones sustanciales del contenido del documento.</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Nota (opcional)</label>
         <textarea id="version-nota" maxlength="500" rows="3" class="form-input" placeholder="Describí qué cambió en esta versión (opcional)..." style="resize:vertical;font-family:'Roboto',sans-serif"></textarea>
         <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Podés agregar o editar la nota más tarde.</div>
@@ -642,6 +658,19 @@ include 'layout/head.php';
 /* ── Form inputs (modal subir versión) ─────────────────────── */
 
 
+  /* Modal subir version: opciones de tipo de cambio (menor/mayor) */
+  .tipo-cambio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tipo-cambio-opt {
+    text-align: left; cursor: pointer;
+    background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
+    border-radius: 10px; padding: 12px 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .tipo-cambio-opt:hover { border-color: var(--gris3); }
+  .tipo-cambio-opt.active { border-color: var(--dorado); background: rgba(201,168,76,.08); }
+  .tc-num    { font-size: 17px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; margin-bottom: 2px; }
+  .tc-titulo { font-size: 13px; font-weight: 600; color: var(--blanco); margin-bottom: 3px; }
+  .tc-desc   { font-size: 11.5px; color: var(--gris4); line-height: 1.45; font-family: 'Roboto', sans-serif; }
 </style>
 
 <script>
@@ -656,6 +685,8 @@ let mostrarVersionesEliminadas = false;
 let empresaFiltroId   = ''; // filtro activo del combobox de empresa (super_admin)
 let documentoActivo   = null; // documento padre cargado en la vista detalle
 let archivoVersion    = null; // archivo seleccionado para subir nueva versión
+let versionesDoc      = [];   // versiones del documento en el detalle (para calcular menor/mayor)
+let tipoCambioVersion = 'mayor'; // elección del modal de subir versión
 
 // v2.3 — categorías activas de la empresa actual (para los modales de subir/editar)
 let categoriasEmpresa = []; // [{ id, name, description, is_active, empresa_id }]
@@ -1046,7 +1077,7 @@ function renderTabla(lista) {
     const va = Array.isArray(d.version_activa) ? d.version_activa[0] : d.version_activa;
     const mime  = va?.mime_type     || '';
     const bytes = va?.tamano_bytes  || 0;
-    const vNum  = va?.version_number;
+    const vNum  = va ? fmtVer(va) : null;
 
     const empresaCol = rolUsuario === 'super_admin'
       ? `<td style="font-size:12px;color:var(--gris4)">${esc(d.empresa?.nombre || '—')}</td>` : '';
@@ -1542,7 +1573,7 @@ async function verDocumento(id) {
 
   // Renderizar header del documento
   const va     = Array.isArray(doc.version_activa) ? doc.version_activa[0] : doc.version_activa;
-  const vNum   = va?.version_number;
+  const vNum   = va ? fmtVer(va) : null;
   const tipo   = doc.tipo ? doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1) : '—';
   const empOj  = doc.empresa?.nombre ? `<span>${esc(doc.empresa.nombre)}</span><span class="sep">·</span>` : '';
   const franq  = doc.franquicia?.nombre
@@ -1602,6 +1633,7 @@ async function cargarVersiones(docId) {
       ? `/documentos/${docId}/versiones?include_deleted=1`
       : `/documentos/${docId}/versiones`;
     const versiones = await apiFetch('GET', url);
+    versionesDoc = versiones;
     const activas = versiones.filter(v => !v.deleted_at).length;
     const elim    = versiones.length - activas;
     document.getElementById('versiones-titulo').textContent =
@@ -1666,7 +1698,7 @@ function renderVersiones(versiones) {
       const autorBorrado = nombreAutor(v.deleted_by);
       return `<div class="version-card eliminada">
         <div class="version-numero">
-          <div class="num">v${v.version_number}</div>
+          <div class="num">v${fmtVer(v)}</div>
           <div class="version-eliminada-pill">Eliminada</div>
         </div>
         <div>
@@ -1682,7 +1714,7 @@ function renderVersiones(versiones) {
         </div>
         <div class="version-acciones">
           ${puedeAdministrar ? `
-          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}')" class="accion-btn" style="color:var(--dorado)">
+          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${fmtVer(v)}')" class="accion-btn" style="color:var(--dorado)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Restaurar
           </a>` : ''}
@@ -1710,7 +1742,7 @@ function renderVersiones(versiones) {
 
     return `<div class="version-card">
       <div class="version-numero">
-        <div class="num">v${v.version_number}</div>
+        <div class="num">v${fmtVer(v)}</div>
         ${vigente ? `<div class="version-vigente-pill">Vigente</div>` : ''}
       </div>
       <div>
@@ -1735,7 +1767,7 @@ function renderVersiones(versiones) {
           Descargar
         </a>
         ${puedeEliminar ? `
-        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
+        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${fmtVer(v)}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
@@ -1903,12 +1935,31 @@ function cancelarEditarNota(versionId) {
 //   MODAL SUBIR NUEVA VERSIÓN
 // ══════════════════════════════════════════════════
 
+function setTipoCambio(tipo) {
+  tipoCambioVersion = tipo;
+  document.getElementById('tc-menor').classList.toggle('active', tipo === 'menor');
+  document.getElementById('tc-mayor').classList.toggle('active', tipo === 'mayor');
+}
+
 function abrirModalSubirVersion() {
   if (!documentoActivo) return;
   resetDropZoneVersion();
   document.getElementById('version-nota').value = '';
   document.getElementById('version-error').textContent = '';
   document.getElementById('version-error').style.display = 'none';
+
+  // Opciones menor/mayor calculadas desde el historial ya cargado. El backend
+  // recalcula y tiene la ultima palabra; esto es la vista previa para el usuario.
+  const va = versionesDoc.find(v => v.es_activa && !v.deleted_at)
+          || (Array.isArray(documentoActivo.version_activa) ? documentoActivo.version_activa[0] : documentoActivo.version_activa);
+  const nums = versionesDoc.length ? versionesDoc : (va ? [va] : []);
+  const maxNumber  = nums.length ? Math.max(...nums.map(v => v.version_number || 0)) : (va?.version_number || 0);
+  const baseNumber = va?.version_number ?? maxNumber;
+  const maxMinorBase = Math.max(0, ...nums.filter(v => v.version_number === baseNumber).map(v => v.version_minor ?? 0));
+  document.getElementById('tc-num-menor').textContent = `v${baseNumber}.${maxMinorBase + 1}`;
+  document.getElementById('tc-num-mayor').textContent = `v${maxNumber + 1}.0`;
+  setTipoCambio('mayor');
+
   document.getElementById('modal-subir-version').classList.add('open');
 }
 
@@ -1950,6 +2001,7 @@ async function subirNuevaVersion() {
   fd.append('archivo', archivoVersion);
   const nota = document.getElementById('version-nota').value.trim();
   if (nota) fd.append('nota', nota);
+  fd.append('tipo_cambio', tipoCambioVersion);
 
   try {
     const res = await fetch(API + `/documentos/${documentoActivo.id}/version`, {
@@ -2033,6 +2085,12 @@ const data = text ? JSON.parse(text) : {};
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+// Etiqueta de version "numero.minor" (fallback si falta version_label).
+function fmtVer(v) {
+  if (!v) return '';
+  return v.version_label || (v.version_number + '.' + (v.version_minor ?? 0));
+}
+
 function formatFecha(str) {
   if (!str) return '—';
   const d = new Date(str);
