@@ -354,7 +354,7 @@ body {
       </div>
 
       <!-- Pie de página del manual (mostrado en pantalla y en impresión) -->
-      <div id="doc-footer" class="doc-footer-manual" style="display:none"></div>
+      <div id="doc-footer-manual" class="doc-footer-manual" style="display:none"></div>
     </div>
 
     <div class="doc-footer" id="doc-footer" style="display:none">
@@ -456,7 +456,7 @@ async function init() {
     // Header/footer del manual: si tienen contenido, mostrarlos; si vienen
     // vacíos, dejar el div oculto para que no ocupe espacio en blanco.
     const headerEl = document.getElementById('doc-header');
-    const footerEl = document.getElementById('doc-footer');
+    const footerEl = document.getElementById('doc-footer-manual');
     if (manual.encabezado_html && manual.encabezado_html.trim()) {
       headerEl.innerHTML = manual.encabezado_html;
       headerEl.style.display = 'block';

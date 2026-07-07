@@ -329,22 +329,6 @@ include 'layout/head.php';
       </div>
 
       <div class="form-group">
-        <label class="form-label">Tipo de cambio *</label>
-        <div class="tipo-cambio-grid">
-          <button type="button" class="tipo-cambio-opt" id="tc-menor" onclick="setTipoCambio('menor')">
-            <div class="tc-num" id="tc-num-menor">v0.0</div>
-            <div class="tc-titulo">Cambio menor</div>
-            <div class="tc-desc">Correcciones o ajustes que no alteran el fondo del documento.</div>
-          </button>
-          <button type="button" class="tipo-cambio-opt" id="tc-mayor" onclick="setTipoCambio('mayor')">
-            <div class="tc-num" id="tc-num-mayor">v0.0</div>
-            <div class="tc-titulo">Cambio mayor</div>
-            <div class="tc-desc">Modificaciones sustanciales del contenido del documento.</div>
-          </button>
-        </div>
-      </div>
-
-      <div class="form-group">
         <label class="form-label">Nota (opcional)</label>
         <textarea id="version-nota" maxlength="500" rows="3" class="form-input" placeholder="Describí qué cambió en esta versión (opcional)..." style="resize:vertical;font-family:'Roboto',sans-serif"></textarea>
         <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">Podés agregar o editar la nota más tarde.</div>
@@ -658,19 +642,6 @@ include 'layout/head.php';
 /* ── Form inputs (modal subir versión) ─────────────────────── */
 
 
-  /* Modal subir version: opciones de tipo de cambio (menor/mayor) */
-  .tipo-cambio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .tipo-cambio-opt {
-    text-align: left; cursor: pointer;
-    background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
-    border-radius: 10px; padding: 12px 14px;
-    transition: border-color .15s, background .15s;
-  }
-  .tipo-cambio-opt:hover { border-color: var(--gris3); }
-  .tipo-cambio-opt.active { border-color: var(--dorado); background: rgba(201,168,76,.08); }
-  .tc-num    { font-size: 17px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; margin-bottom: 2px; }
-  .tc-titulo { font-size: 13px; font-weight: 600; color: var(--blanco); margin-bottom: 3px; }
-  .tc-desc   { font-size: 11.5px; color: var(--gris4); line-height: 1.45; font-family: 'Roboto', sans-serif; }
 </style>
 
 <script>
@@ -685,11 +656,12 @@ let mostrarVersionesEliminadas = false;
 let empresaFiltroId   = ''; // filtro activo del combobox de empresa (super_admin)
 let documentoActivo   = null; // documento padre cargado en la vista detalle
 let archivoVersion    = null; // archivo seleccionado para subir nueva versión
-let versionesDoc      = [];   // versiones del documento en el detalle (para calcular menor/mayor)
-let tipoCambioVersion = 'mayor'; // elección del modal de subir versión
 
 // v2.3 — categorías activas de la empresa actual (para los modales de subir/editar)
 let categoriasEmpresa = []; // [{ id, name, description, is_active, empresa_id }]
+let usuariosEmpresa   = []; // socios comerciales de la empresa (con .categorias)
+let docCatsCompletas  = { 'doc': new Set(), 'edit-doc': new Set() }; // cats "completas" por modal
+let docUsuariosSel    = { 'doc': new Set(), 'edit-doc': new Set() }; // user_ids individuales por modal
 
 // v2.3: cats activas de la empresa actualmente filtrada (para el select "Por visibilidad")
 let categoriasFiltro = [];
@@ -770,7 +742,7 @@ async function cargarFranquicias(empresaId) {
 
 // v2.3 — Helpers para el bloque de categorías visibles en los modales
 async function cargarCategoriasDeEmpresa(empresaId) {
-  if (!empresaId) { categoriasEmpresa = []; return; }
+  if (!empresaId) { categoriasEmpresa = []; usuariosEmpresa = []; return; }
   try {
     const url = (rolUsuario === 'super_admin')
       ? `/categorias?empresa_id=${empresaId}&activa=1`
@@ -780,12 +752,24 @@ async function cargarCategoriasDeEmpresa(empresaId) {
   } catch {
     categoriasEmpresa = [];
   }
+  // Socios comerciales de la empresa (con sus categorias) para las sublistas.
+  try {
+    const uUrl = (rolUsuario === 'super_admin') ? `/usuarios?empresa_id=${empresaId}` : `/usuarios`;
+    const users = await apiFetch('GET', uUrl);
+    usuariosEmpresa = users || [];
+  } catch {
+    usuariosEmpresa = [];
+  }
 }
 
-function renderListaCategoriasModal(prefix, idsMarcadas) {
+function renderListaCategoriasModal(prefix, idsMarcadas, usuariosAsignados = new Set()) {
   // prefix: 'doc' o 'edit-doc'
   const cont = document.getElementById(`${prefix}-categorias-lista`);
   if (!cont) return;
+
+  // Estado inicial del modal: cats asignadas van "completas"; usuarios sueltos aparte.
+  docCatsCompletas[prefix] = new Set(idsMarcadas);
+  docUsuariosSel[prefix]   = new Set(usuariosAsignados);
 
   if (!categoriasEmpresa.length) {
     cont.innerHTML = `<div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:8px 0">
@@ -796,15 +780,22 @@ function renderListaCategoriasModal(prefix, idsMarcadas) {
   }
 
   cont.innerHTML = categoriasEmpresa.map(c => `
-    <label style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;cursor:pointer;border-radius:5px;transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
-      <input type="checkbox" data-cat-id="${c.id}" ${idsMarcadas.has(c.id) ? 'checked' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onCambioCheckboxCategoria('${prefix}')">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
-        ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+    <div class="cat-item-wrap" data-cat-wrap="${c.id}">
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px">
+        <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica-doc" style="margin:0;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onToggleCatDoc('${prefix}', ${c.id})">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleCheckCatDoc('${prefix}', ${c.id})">
+          <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)} <span style="color:var(--gris4);font-weight:400;font-size:11px">(${usuariosDeCategoria(c.id).length})</span></div>
+          ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+        </div>
+        <button type="button" class="cat-chevron" data-chevron="${c.id}" onclick="onToggleSublistaDoc('${prefix}', ${c.id})" style="display:none;background:none;border:none;color:var(--gris4);cursor:pointer;font-size:12px;padding:2px 6px">▾</button>
       </div>
-    </label>
+      <div class="cat-sublista" data-sublista="${c.id}" style="display:none;margin:2px 0 8px 26px;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid var(--gris2);border-radius:6px">
+        ${sublistaUsuariosDocHTML(prefix, c.id)}
+      </div>
+    </div>
   `).join('');
 
+  precargarSeleccionesDoc(prefix);
   actualizarBotonSelTodas(prefix);
   actualizarWarningCategorias(prefix);
 }
@@ -821,16 +812,16 @@ function onCambioCheckboxCategoria(prefix) {
 }
 
 function toggleSeleccionarTodasCategorias(prefix) {
-  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]`);
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista .cat-especifica-doc`);
   if (!checkboxes.length) return;
   const todosMarcados = Array.from(checkboxes).every(cb => cb.checked);
-  checkboxes.forEach(cb => { cb.checked = !todosMarcados; });
+  checkboxes.forEach(cb => { cb.checked = !todosMarcados; onToggleCatDoc(prefix, parseInt(cb.dataset.catId, 10)); });
   actualizarBotonSelTodas(prefix);
   actualizarWarningCategorias(prefix);
 }
 
 function actualizarBotonSelTodas(prefix) {
-  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]`);
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista .cat-especifica-doc`);
   const btn = document.getElementById(`${prefix}-btn-sel-todas`);
   if (!btn) return;
   if (!checkboxes.length) { btn.style.display = 'none'; return; }
@@ -840,15 +831,153 @@ function actualizarBotonSelTodas(prefix) {
 }
 
 function actualizarWarningCategorias(prefix) {
-  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]`);
+  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista .cat-especifica-doc`);
   const algunaMarcada = Array.from(checkboxes).some(cb => cb.checked);
   const warn = document.getElementById(`${prefix}-categorias-warning`);
   if (warn) warn.style.display = (checkboxes.length && !algunaMarcada) ? 'block' : 'none';
 }
 
 function leerCategoriasSeleccionadas(prefix) {
-  const checkboxes = document.querySelectorAll(`#${prefix}-categorias-lista input[type=checkbox]:checked`);
-  return Array.from(checkboxes).map(cb => parseInt(cb.dataset.catId, 10));
+  return [...docCatsCompletas[prefix]];
+}
+
+// user_ids individuales, excluyendo los cubiertos por una categoria completa.
+function leerUsuariosSeleccionados(prefix) {
+  const cubiertos = new Set();
+  docCatsCompletas[prefix].forEach(catId => usuariosDeCategoria(catId).forEach(u => cubiertos.add(u.id)));
+  return [...docUsuariosSel[prefix]].filter(uid => !cubiertos.has(uid));
+}
+
+// Usuarios (socios comerciales) que tienen una categoria dada.
+function usuariosDeCategoria(catId) {
+  return usuariosEmpresa.filter(u => (u.categorias || []).some(c => c.id === catId));
+}
+
+// HTML de la sublista de usuarios de una categoria.
+function sublistaUsuariosDocHTML(prefix, catId) {
+  const us = usuariosDeCategoria(catId);
+  if (!us.length) {
+    return `<div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">Sin usuarios en esta categoría.</div>`;
+  }
+  const todos = `
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 2px;cursor:pointer;border-bottom:1px solid var(--gris2);margin-bottom:4px">
+      <input type="checkbox" data-todos="${catId}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodosDoc('${prefix}', ${catId})">
+      <span style="font-size:12px;color:var(--dorado);font-weight:600">Seleccionar todos</span>
+    </label>`;
+  const items = us.map(u => `
+    <label style="display:flex;align-items:center;gap:8px;padding:3px 2px;cursor:pointer">
+      <input type="checkbox" data-user-cat="${catId}" data-user-id="${u.id}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleUsuarioDoc('${prefix}', ${u.id})">
+      <span style="font-size:12px;color:var(--blanco)">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</span>
+    </label>`).join('');
+  return todos + items;
+}
+
+// Aplica el estado (docCatsCompletas / docUsuariosSel) al DOM de un modal.
+function precargarSeleccionesDoc(prefix) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  if (!scope) return;
+  categoriasEmpresa.forEach(c => {
+    const catId    = c.id;
+    const completa = docCatsCompletas[prefix].has(catId);
+    const tieneInd = usuariosDeCategoria(catId).some(u => docUsuariosSel[prefix].has(u.id));
+    const cb  = scope.querySelector(`.cat-especifica-doc[data-cat-id="${catId}"]`);
+    const sub = scope.querySelector(`.cat-sublista[data-sublista="${catId}"]`);
+    const chv = scope.querySelector(`[data-chevron="${catId}"]`);
+    const tod = sub ? sub.querySelector(`[data-todos="${catId}"]`) : null;
+    if (completa || tieneInd) {
+      if (cb) cb.checked = true;
+      if (sub) sub.style.display = 'block';
+      if (chv) { chv.style.display = ''; chv.textContent = '▾'; }
+      if (tod) tod.checked = completa;
+    }
+  });
+  sincronizarChecksDoc(prefix);
+}
+
+function toggleCheckCatDoc(prefix, catId) {
+  const cb = document.querySelector(`#${prefix}-categorias-lista .cat-especifica-doc[data-cat-id="${catId}"]`);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  onToggleCatDoc(prefix, catId);
+}
+
+// Marcar/desmarcar categoria: despliega sublista y activa "seleccionar todos".
+function onToggleCatDoc(prefix, catId) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  const cb  = scope.querySelector(`.cat-especifica-doc[data-cat-id="${catId}"]`);
+  const sub = scope.querySelector(`.cat-sublista[data-sublista="${catId}"]`);
+  const chv = scope.querySelector(`[data-chevron="${catId}"]`);
+  const tod = sub ? sub.querySelector(`[data-todos="${catId}"]`) : null;
+  if (cb.checked) {
+    sub.style.display = 'block'; chv.style.display = ''; chv.textContent = '▾';
+    if (tod) tod.checked = true;
+    docCatsCompletas[prefix].add(catId);
+  } else {
+    sub.style.display = 'none'; chv.style.display = 'none';
+    if (tod) tod.checked = false;
+    docCatsCompletas[prefix].delete(catId);
+    usuariosDeCategoria(catId).forEach(u => docUsuariosSel[prefix].delete(u.id));
+  }
+  actualizarSublistaDoc(prefix, catId);
+  sincronizarChecksDoc(prefix);
+  actualizarWarningCategorias(prefix);
+  actualizarBotonSelTodas(prefix);
+}
+
+function onToggleSublistaDoc(prefix, catId) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  const sub = scope.querySelector(`.cat-sublista[data-sublista="${catId}"]`);
+  const chv = scope.querySelector(`[data-chevron="${catId}"]`);
+  const oculto = sub.style.display === 'none';
+  sub.style.display = oculto ? 'block' : 'none';
+  chv.textContent = oculto ? '▾' : '▸';
+}
+
+// "Seleccionar todos" = la categoria va completa (dinamica). Opcion A.
+function onToggleTodosDoc(prefix, catId) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  const on = scope.querySelector(`.cat-sublista[data-sublista="${catId}"] [data-todos="${catId}"]`).checked;
+  if (on) {
+    docCatsCompletas[prefix].add(catId);
+    usuariosDeCategoria(catId).forEach(u => docUsuariosSel[prefix].delete(u.id));
+  } else {
+    docCatsCompletas[prefix].delete(catId);
+  }
+  actualizarSublistaDoc(prefix, catId);
+  sincronizarChecksDoc(prefix);
+}
+
+function onToggleUsuarioDoc(prefix, userId) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  const cb = scope.querySelector(`[data-user-id="${userId}"]`);
+  if (cb.checked) docUsuariosSel[prefix].add(userId);
+  else docUsuariosSel[prefix].delete(userId);
+  sincronizarChecksDoc(prefix);
+}
+
+function actualizarSublistaDoc(prefix, catId) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  const completa = docCatsCompletas[prefix].has(catId);
+  scope.querySelectorAll(`[data-user-cat="${catId}"]`).forEach(cb => {
+    const uid = parseInt(cb.dataset.userId, 10);
+    if (completa) { cb.checked = true; cb.disabled = true; }
+    else { cb.disabled = false; cb.checked = docUsuariosSel[prefix].has(uid); }
+  });
+}
+
+// Refleja el set individual en todos los checks del modal + cada "seleccionar todos".
+function sincronizarChecksDoc(prefix) {
+  const scope = document.getElementById(`${prefix}-categorias-lista`);
+  if (!scope) return;
+  scope.querySelectorAll('[data-user-id]').forEach(cb => {
+    const catId = parseInt(cb.dataset.userCat, 10);
+    if (docCatsCompletas[prefix].has(catId)) { cb.checked = true; cb.disabled = true; return; }
+    cb.disabled = false;
+    cb.checked = docUsuariosSel[prefix].has(parseInt(cb.dataset.userId, 10));
+  });
+  scope.querySelectorAll('[data-todos]').forEach(cbT => {
+    cbT.checked = docCatsCompletas[prefix].has(parseInt(cbT.dataset.todos, 10));
+  });
 }
 
 async function onEmpresaChange() {
@@ -1077,7 +1206,7 @@ function renderTabla(lista) {
     const va = Array.isArray(d.version_activa) ? d.version_activa[0] : d.version_activa;
     const mime  = va?.mime_type     || '';
     const bytes = va?.tamano_bytes  || 0;
-    const vNum  = va ? fmtVer(va) : null;
+    const vNum  = va?.version_number;
 
     const empresaCol = rolUsuario === 'super_admin'
       ? `<td style="font-size:12px;color:var(--gris4)">${esc(d.empresa?.nombre || '—')}</td>` : '';
@@ -1289,6 +1418,7 @@ async function subirDocumento() {
       const catsSeleccionadas = leerCategoriasSeleccionadas('doc');
       try {
         await apiFetch('PUT', `/documentos/${res.id}/categorias`, { category_ids: catsSeleccionadas });
+        await apiFetch('PUT', `/documentos/${res.id}/usuarios`, { user_ids: leerUsuariosSeleccionados('doc') });
       } catch (errCat) {
         // Si falla el sync, el documento ya está creado: avisamos pero no abortamos.
         mostrarToast('Documento subido, pero falló la asignación de categorías. Editalo para reintentar.', 'error');
@@ -1465,13 +1595,20 @@ async function abrirModalEditarDoc(id) {
   // v2.3: cargar categorías de la empresa del doc + las asignadas actualmente
   await cargarCategoriasDeEmpresa(doc.empresa_id);
   let idsAsignadas = new Set();
+  let usuariosAsignados = new Set();
   try {
     const asignadas = await apiFetch('GET', `/documentos/${id}/categorias`);
     idsAsignadas = new Set((asignadas || []).map(c => c.id));
   } catch {
     // Si el endpoint falla (ej. no existe), seguimos con set vacío — el usuario puede asignar de cero.
   }
-  renderListaCategoriasModal('edit-doc', idsAsignadas);
+  try {
+    const asigU = await apiFetch('GET', `/documentos/${id}/usuarios`);
+    usuariosAsignados = new Set((asigU || []).map(a => a.user_id));
+  } catch {
+    // Sin asignaciones individuales o endpoint no disponible: set vacío.
+  }
+  renderListaCategoriasModal('edit-doc', idsAsignadas, usuariosAsignados);
   // Mostrar/ocultar wrap según el toggle actual
   document.getElementById('edit-doc-categorias-wrap').style.display =
     document.getElementById('edit-doc-visible').checked ? 'block' : 'none';
@@ -1525,6 +1662,7 @@ async function guardarEdicionDocumento() {
       const catsSeleccionadas = leerCategoriasSeleccionadas('edit-doc');
       try {
         await apiFetch('PUT', `/documentos/${documentoEditandoId}/categorias`, { category_ids: catsSeleccionadas });
+        await apiFetch('PUT', `/documentos/${documentoEditandoId}/usuarios`, { user_ids: leerUsuariosSeleccionados('edit-doc') });
       } catch (errCat) {
         mostrarToast('Cambios guardados, pero falló la sincronización de categorías.', 'error');
       }
@@ -1573,7 +1711,7 @@ async function verDocumento(id) {
 
   // Renderizar header del documento
   const va     = Array.isArray(doc.version_activa) ? doc.version_activa[0] : doc.version_activa;
-  const vNum   = va ? fmtVer(va) : null;
+  const vNum   = va?.version_number;
   const tipo   = doc.tipo ? doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1) : '—';
   const empOj  = doc.empresa?.nombre ? `<span>${esc(doc.empresa.nombre)}</span><span class="sep">·</span>` : '';
   const franq  = doc.franquicia?.nombre
@@ -1633,7 +1771,6 @@ async function cargarVersiones(docId) {
       ? `/documentos/${docId}/versiones?include_deleted=1`
       : `/documentos/${docId}/versiones`;
     const versiones = await apiFetch('GET', url);
-    versionesDoc = versiones;
     const activas = versiones.filter(v => !v.deleted_at).length;
     const elim    = versiones.length - activas;
     document.getElementById('versiones-titulo').textContent =
@@ -1698,7 +1835,7 @@ function renderVersiones(versiones) {
       const autorBorrado = nombreAutor(v.deleted_by);
       return `<div class="version-card eliminada">
         <div class="version-numero">
-          <div class="num">v${fmtVer(v)}</div>
+          <div class="num">v${v.version_number}</div>
           <div class="version-eliminada-pill">Eliminada</div>
         </div>
         <div>
@@ -1714,7 +1851,7 @@ function renderVersiones(versiones) {
         </div>
         <div class="version-acciones">
           ${puedeAdministrar ? `
-          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${fmtVer(v)}')" class="accion-btn" style="color:var(--dorado)">
+          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}')" class="accion-btn" style="color:var(--dorado)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Restaurar
           </a>` : ''}
@@ -1742,7 +1879,7 @@ function renderVersiones(versiones) {
 
     return `<div class="version-card">
       <div class="version-numero">
-        <div class="num">v${fmtVer(v)}</div>
+        <div class="num">v${v.version_number}</div>
         ${vigente ? `<div class="version-vigente-pill">Vigente</div>` : ''}
       </div>
       <div>
@@ -1767,7 +1904,7 @@ function renderVersiones(versiones) {
           Descargar
         </a>
         ${puedeEliminar ? `
-        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${fmtVer(v)}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
+        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
@@ -1935,31 +2072,12 @@ function cancelarEditarNota(versionId) {
 //   MODAL SUBIR NUEVA VERSIÓN
 // ══════════════════════════════════════════════════
 
-function setTipoCambio(tipo) {
-  tipoCambioVersion = tipo;
-  document.getElementById('tc-menor').classList.toggle('active', tipo === 'menor');
-  document.getElementById('tc-mayor').classList.toggle('active', tipo === 'mayor');
-}
-
 function abrirModalSubirVersion() {
   if (!documentoActivo) return;
   resetDropZoneVersion();
   document.getElementById('version-nota').value = '';
   document.getElementById('version-error').textContent = '';
   document.getElementById('version-error').style.display = 'none';
-
-  // Opciones menor/mayor calculadas desde el historial ya cargado. El backend
-  // recalcula y tiene la ultima palabra; esto es la vista previa para el usuario.
-  const va = versionesDoc.find(v => v.es_activa && !v.deleted_at)
-          || (Array.isArray(documentoActivo.version_activa) ? documentoActivo.version_activa[0] : documentoActivo.version_activa);
-  const nums = versionesDoc.length ? versionesDoc : (va ? [va] : []);
-  const maxNumber  = nums.length ? Math.max(...nums.map(v => v.version_number || 0)) : (va?.version_number || 0);
-  const baseNumber = va?.version_number ?? maxNumber;
-  const maxMinorBase = Math.max(0, ...nums.filter(v => v.version_number === baseNumber).map(v => v.version_minor ?? 0));
-  document.getElementById('tc-num-menor').textContent = `v${baseNumber}.${maxMinorBase + 1}`;
-  document.getElementById('tc-num-mayor').textContent = `v${maxNumber + 1}.0`;
-  setTipoCambio('mayor');
-
   document.getElementById('modal-subir-version').classList.add('open');
 }
 
@@ -2001,7 +2119,6 @@ async function subirNuevaVersion() {
   fd.append('archivo', archivoVersion);
   const nota = document.getElementById('version-nota').value.trim();
   if (nota) fd.append('nota', nota);
-  fd.append('tipo_cambio', tipoCambioVersion);
 
   try {
     const res = await fetch(API + `/documentos/${documentoActivo.id}/version`, {
@@ -2085,12 +2202,6 @@ const data = text ? JSON.parse(text) : {};
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
-// Etiqueta de version "numero.minor" (fallback si falta version_label).
-function fmtVer(v) {
-  if (!v) return '';
-  return v.version_label || (v.version_number + '.' + (v.version_minor ?? 0));
-}
-
 function formatFecha(str) {
   if (!str) return '—';
   const d = new Date(str);

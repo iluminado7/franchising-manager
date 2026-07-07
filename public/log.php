@@ -297,8 +297,7 @@ async function init() {
     // Poblar filtro de usuarios
     const sel = document.getElementById('filtro-usuario');
     usuarios.forEach(u => {
-      const perfil = u.system_admin || u.franchise_staff;
-      const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}` : u.email;
+      const nombre = nombreUsuario(u);
       const opt    = document.createElement('option');
       opt.value       = u.id;
       opt.textContent = nombre;
@@ -411,8 +410,8 @@ function aplicarFiltros() {
     if (texto) {
       const haystack = [
         l.accion, l.ip_address,
-        l.user?.system_admin?.nombre || '',
-        l.user?.franchise_staff?.nombre || '',
+        l.user?.nombre || '',
+        l.user?.apellido || '',
         l.user?.email || '',
         JSON.stringify(l.detalle || ''),
       ].join(' ').toLowerCase();
@@ -471,8 +470,7 @@ function renderTabla() {
     }
     tbody.innerHTML = pagina.map((l, i) => {
       const d = l.detalle ? (typeof l.detalle === 'string' ? JSON.parse(l.detalle) : l.detalle) : {};
-      const perfil = l.user?.franchise_staff || l.user?.system_admin;
-      const nombre = perfil ? `${perfil.nombre} ${perfil.apellido}` : (l.user?.email || `#${l.user_id}`);
+      const nombre = nombreUsuario(l.user, l.user_id);
       const empresa = l.empresa?.nombre || l.user?.empresa?.nombre || '—';
       return `<tr style="cursor:pointer" onclick="verDetalle(${inicio + i})" title="Ver detalle">
         <td style="font-family:'Roboto',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">${formatFechaHora(l.created_at)}</td>
@@ -504,10 +502,7 @@ function renderTabla() {
   }
 
   tbody.innerHTML = pagina.map((l, i) => {
-    const perfil = l.user?.system_admin || l.user?.franchise_staff;
-    const nombre = perfil
-      ? `${perfil.nombre} ${perfil.apellido}`
-      : l.user?.email || `Usuario #${l.user_id}`;
+    const nombre = nombreUsuario(l.user, l.user_id);
     const rol    = l.user?.rol || '';
 
     return `<tr style="cursor:pointer" onclick="verDetalle(${inicio + i})" title="Ver detalle">
@@ -549,10 +544,7 @@ function cambiarPagina(dir) {
 // ── DETALLE ───────────────────────────────────────────────────
 function verDetalle(idx) {
   const l      = logsFiltrados[idx];
-  const perfil = l.user?.system_admin || l.user?.franchise_staff;
-  const nombre = perfil
-    ? `${perfil.nombre} ${perfil.apellido}`
-    : l.user?.email || `Usuario #${l.user_id}`;
+  const nombre = nombreUsuario(l.user, l.user_id);
 
   document.getElementById('detalle-body').innerHTML = `
     <div class="detalle-row">
@@ -601,10 +593,7 @@ function cerrarDetalle() {
 function exportarCSV() {
   const cabecera = ['Fecha', 'Usuario', 'Email', 'Rol', 'Accion', 'Entidad', 'IP'];
   const filas    = logsFiltrados.map(l => {
-    const perfil = l.user?.system_admin || l.user?.franchise_staff;
-    const nombre = perfil
-      ? `${perfil.nombre} ${perfil.apellido}`
-      : l.user?.email || `#${l.user_id}`;
+    const nombre = nombreUsuario(l.user, l.user_id);
     return [
       formatFechaHora(l.created_at),
       nombre,
@@ -668,6 +657,14 @@ function formatFechaHora(str) {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', second: '2-digit'
   });
+}
+
+// v2.3: el nombre del usuario vive en la tabla users (nombre/apellido), no en
+// system_admin/franchise_staff. Fallback a email y luego a #id.
+function nombreUsuario(u, fallbackId) {
+  if (!u) return fallbackId ? `Usuario #${fallbackId}` : '—';
+  const nom = `${u.nombre || ''} ${u.apellido || ''}`.trim();
+  return nom || u.email || (fallbackId ? `Usuario #${fallbackId}` : '—');
 }
 
 function esc(str) {

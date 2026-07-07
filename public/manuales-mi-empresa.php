@@ -345,6 +345,9 @@ let miEmpresaId      = null;
 
 // v2.3 — categorías activas de la empresa del franquiciante
 let categoriasEmpresa = [];
+let usuariosEmpresa   = [];          // socios comerciales de la empresa (con .categorias)
+let catsCompletas     = new Set();   // category_ids marcados como "toda la categoria"
+let usuariosSelManual = new Set();   // user_ids marcados individualmente
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -363,6 +366,13 @@ async function init() {
       categoriasEmpresa = (cats || []).filter(c => c.is_active);
     } catch {
       categoriasEmpresa = [];
+    }
+    // Socios comerciales de mi empresa (con sus categorias) para las sublistas.
+    try {
+      const users = await apiFetch('GET', '/usuarios');
+      usuariosEmpresa = users || [];
+    } catch {
+      usuariosEmpresa = [];
     }
 
     await cargarManuales();
@@ -468,6 +478,7 @@ function abrirModalNuevo() {
   htmlImportado = '';
   seleccionarModo('scratch');
 
+  catsCompletas.clear(); usuariosSelManual.clear();
   // v2.3: renderizar la lista de categorías (ya cargadas en init)
   renderListaCategoriasManual();
 
@@ -505,13 +516,19 @@ function renderListaCategoriasManual() {
 
     <div id="cats-especificas">
       ${categoriasEmpresa.map(c => `
-        <label class="cat-item" style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;cursor:pointer;border-radius:5px;transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
-          <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
-            ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+        <div class="cat-item-wrap" data-cat-wrap="${c.id}">
+          <div class="cat-item" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px">
+            <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica" style="margin:0;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onToggleCategoriaManual(${c.id})">
+            <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleCheckCat(${c.id})">
+              <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)} <span style="color:var(--gris4);font-weight:400;font-size:11px">(${usuariosDeCategoria(c.id).length})</span></div>
+              ${c.description ? `<div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif;line-height:1.4">${esc(c.description)}</div>` : ''}
+            </div>
+            <button type="button" class="cat-chevron" data-chevron="${c.id}" onclick="onToggleSublista(${c.id})" style="display:none;background:none;border:none;color:var(--gris4);cursor:pointer;font-size:12px;padding:2px 6px">▾</button>
           </div>
-        </label>
+          <div class="cat-sublista" data-sublista="${c.id}" style="display:none;margin:2px 0 8px 26px;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid var(--gris2);border-radius:6px">
+            ${sublistaUsuariosHTML(c.id)}
+          </div>
+        </div>
       `).join('')}
     </div>
   `;
@@ -520,8 +537,9 @@ function renderListaCategoriasManual() {
 function onToggleTodaLaEmpresa() {
   const checked = document.getElementById('cat-toda-empresa').checked;
   const cats    = document.querySelectorAll('.cat-especifica');
+  if (checked) { catsCompletas.clear(); usuariosSelManual.clear(); }
   cats.forEach(cb => {
-    if (checked) cb.checked = false;
+    if (checked) { cb.checked = false; onToggleCategoriaManual(parseInt(cb.dataset.catId, 10)); }
     cb.disabled = checked;
   });
   document.querySelectorAll('#cats-especificas .cat-item').forEach(el => {
@@ -533,11 +551,126 @@ function onToggleTodaLaEmpresa() {
 function leerCategoriasManualSeleccionadas() {
   const todaLaEmpresa = document.getElementById('cat-toda-empresa')?.checked;
   if (todaLaEmpresa) {
+    // "Toda la empresa": enviamos todas las cats activas de la empresa
     return categoriasEmpresa.map(c => c.id);
   }
-  const checks = document.querySelectorAll('.cat-especifica:checked');
-  return Array.from(checks).map(cb => parseInt(cb.dataset.catId, 10));
+  // Categorias con "seleccionar todos" activo (van completas, dinamicas).
+  return [...catsCompletas];
 }
+
+// user_ids marcados individualmente, excluyendo los ya cubiertos por una
+// categoria completa (evita duplicar; el acceso es OR de todas formas).
+function leerUsuariosManualSeleccionados() {
+  if (document.getElementById('cat-toda-empresa')?.checked) return [];
+  const cubiertos = new Set();
+  catsCompletas.forEach(catId => usuariosDeCategoria(catId).forEach(u => cubiertos.add(u.id)));
+  return [...usuariosSelManual].filter(uid => !cubiertos.has(uid));
+}
+
+// Usuarios (socios comerciales) que tienen una categoria dada.
+function usuariosDeCategoria(catId) {
+  return usuariosEmpresa.filter(u => (u.categorias || []).some(c => c.id === catId));
+}
+
+// HTML de la sublista de usuarios de una categoria.
+function sublistaUsuariosHTML(catId) {
+  const us = usuariosDeCategoria(catId);
+  if (!us.length) {
+    return `<div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">Sin usuarios en esta categoría.</div>`;
+  }
+  const todos = `
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 2px;cursor:pointer;border-bottom:1px solid var(--gris2);margin-bottom:4px">
+      <input type="checkbox" data-todos="${catId}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleSeleccionarTodos(${catId})">
+      <span style="font-size:12px;color:var(--dorado);font-weight:600">Seleccionar todos</span>
+    </label>`;
+  const items = us.map(u => `
+    <label style="display:flex;align-items:center;gap:8px;padding:3px 2px;cursor:pointer">
+      <input type="checkbox" data-user-cat="${catId}" data-user-id="${u.id}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleUsuario(${u.id})">
+      <span style="font-size:12px;color:var(--blanco)">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</span>
+    </label>`).join('');
+  return todos + items;
+}
+
+// Click en el texto de la categoria = togglear su checkbox.
+function toggleCheckCat(catId) {
+  const cb = document.querySelector(`.cat-especifica[data-cat-id="${catId}"]`);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  onToggleCategoriaManual(catId);
+}
+
+// Marcar/desmarcar categoria: despliega la sublista y activa "seleccionar todos".
+function onToggleCategoriaManual(catId) {
+  const cb  = document.querySelector(`.cat-especifica[data-cat-id="${catId}"]`);
+  const sub = document.querySelector(`.cat-sublista[data-sublista="${catId}"]`);
+  const chv = document.querySelector(`[data-chevron="${catId}"]`);
+  const todos = sub.querySelector(`[data-todos="${catId}"]`);
+  if (cb.checked) {
+    sub.style.display = 'block'; chv.style.display = ''; chv.textContent = '▾';
+    if (todos) { todos.checked = true; }
+    catsCompletas.add(catId);
+  } else {
+    sub.style.display = 'none'; chv.style.display = 'none';
+    if (todos) todos.checked = false;
+    catsCompletas.delete(catId);
+    usuariosDeCategoria(catId).forEach(u => usuariosSelManual.delete(u.id));
+  }
+  actualizarSublista(catId);
+  sincronizarChecksUsuarios();
+}
+
+// Chevron: colapsa/expande la sublista sin tocar la seleccion.
+function onToggleSublista(catId) {
+  const sub = document.querySelector(`.cat-sublista[data-sublista="${catId}"]`);
+  const chv = document.querySelector(`[data-chevron="${catId}"]`);
+  const oculto = sub.style.display === 'none';
+  sub.style.display = oculto ? 'block' : 'none';
+  chv.textContent = oculto ? '▾' : '▸';
+}
+
+// "Seleccionar todos" = la categoria va completa (dinamica). Opcion A.
+function onToggleSeleccionarTodos(catId) {
+  const on = document.querySelector(`[data-todos="${catId}"]`).checked;
+  if (on) {
+    catsCompletas.add(catId);
+    usuariosDeCategoria(catId).forEach(u => usuariosSelManual.delete(u.id));
+  } else {
+    catsCompletas.delete(catId);
+  }
+  actualizarSublista(catId);
+  sincronizarChecksUsuarios();
+}
+
+// Usuario individual: marca/desmarca globalmente (afecta todas sus categorias).
+function onToggleUsuario(userId) {
+  const cb = document.querySelector(`[data-user-id="${userId}"]`);
+  if (cb.checked) usuariosSelManual.add(userId);
+  else usuariosSelManual.delete(userId);
+  sincronizarChecksUsuarios();
+}
+
+// Estado de los checks de usuario de UNA categoria: si esta completa, todos
+// marcados+deshabilitados; si no, editables segun el set individual.
+function actualizarSublista(catId) {
+  const completa = catsCompletas.has(catId);
+  document.querySelectorAll(`[data-user-cat="${catId}"]`).forEach(cb => {
+    const uid = parseInt(cb.dataset.userId, 10);
+    if (completa) { cb.checked = true; cb.disabled = true; }
+    else { cb.disabled = false; cb.checked = usuariosSelManual.has(uid); }
+  });
+}
+
+// Refleja el set individual en TODOS los checks de usuario (Pepe en 2 cats),
+// respetando las categorias completas, y recalcula cada "seleccionar todos".
+function sincronizarChecksUsuarios() {
+  document.querySelectorAll('[data-user-id]').forEach(cb => {
+    const catId = parseInt(cb.dataset.userCat, 10);
+    if (catsCompletas.has(catId)) { cb.checked = true; cb.disabled = true; return; }
+    cb.disabled = false;
+    cb.checked = usuariosSelManual.has(parseInt(cb.dataset.userId, 10));
+  });
+}
+
 
 function seleccionarModo(modo) {
   modoImport = modo;
@@ -603,8 +736,12 @@ async function crearManual() {
 
     // v2.3: sync de categorías a las que va dirigido el manual
     const catsSeleccionadas = leerCategoriasManualSeleccionadas();
+    const usersSeleccionados = leerUsuariosManualSeleccionados();
     try {
       await apiFetch('PUT', `/manuales/${manual.id}/categorias`, { category_ids: catsSeleccionadas });
+      if (usersSeleccionados.length) {
+        await apiFetch('PUT', `/manuales/${manual.id}/usuarios`, { user_ids: usersSeleccionados });
+      }
     } catch (errCat) {
       console.warn('Falló sync de categorías:', errCat);
     }

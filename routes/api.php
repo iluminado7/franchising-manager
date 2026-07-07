@@ -201,6 +201,10 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::put('/manuales/{manualId}/categorias',                 [ManualCategoryAssignmentController::class, 'sincronizar']);
         Route::delete('/manuales/{manualId}/categorias/{categoryId}', [ManualCategoryAssignmentController::class, 'desasignar']);
 
+        // ── Asignación de manuales a usuarios individuales ──────────
+        Route::get('/manuales/{manualId}/usuarios', [ManualAssignmentController::class, 'porManual']);
+        Route::put('/manuales/{manualId}/usuarios', [ManualAssignmentController::class, 'sincronizarPorManual']);
+
         // ── Asignación de documentos a categorías ───────────────────
         Route::get('/documentos/{documentId}/categorias',                 [DocumentAssignmentController::class, 'listarCategorias']);
         Route::post('/documentos/{documentId}/categorias',                [DocumentAssignmentController::class, 'asignarCategoria']);
