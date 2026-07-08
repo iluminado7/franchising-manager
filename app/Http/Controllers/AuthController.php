@@ -162,6 +162,7 @@ class AuthController extends Controller
             'apellido'                  => $user->apellido,
             'dni'                       => $user->dni,
             'celular'                   => $user->celular,
+            'avatar_url'                => $user->avatar_url,
             'empresa_id'                => $user->empresa_id,
             'empresa'                   => $empresa,
             'perfil'                    => $perfil,

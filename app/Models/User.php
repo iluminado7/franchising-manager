@@ -53,6 +53,11 @@ class User extends Authenticatable
         'deleted_at' => 'datetime',
     ];
 
+    // avatar_url (URL publica de la foto en S3) disponible en las respuestas JSON.
+    // La columna foto_url guarda solo la CLAVE del objeto; NO se agrega a \$fillable
+    // (fix H-015): el controller la setea con setter directo tras procesar el archivo.
+    protected $appends = ['avatar_url'];
+
     // ── Relaciones de empresa ────────────────────────────────────────
 
     // NULL para super_admin, obligatorio para los demás roles
@@ -234,5 +239,18 @@ class User extends Authenticatable
     public function nombreCompleto(): string
     {
         return trim("{$this->nombre} {$this->apellido}");
+    }
+
+    // ── Foto de perfil ───────────────────────────────────────────────
+
+    // Ruta del endpoint autenticado que sirve la foto (o null si no tiene).
+    // La foto vive en el disco privado; se sirve por stream, no por URL de S3,
+    // para funcionar igual en local y en Cloud sin exponer el bucket.
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (empty($this->foto_url)) {
+            return null;
+        }
+        return "/api/perfil/foto/{$this->id}";
     }
 }

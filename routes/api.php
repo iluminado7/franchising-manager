@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\ManualController;
 use App\Http\Controllers\ManualImageController;
@@ -50,6 +51,12 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::put('/me/email',    [AuthController::class, 'updateEmail']);
         Route::put('/me/password', [AuthController::class, 'updatePassword']);
     });
+
+    // Foto de perfil — cada usuario edita SOLO la suya (opera sobre el token).
+    Route::post('/perfil/foto',   [ProfilePhotoController::class, 'subir']);
+    Route::delete('/perfil/foto', [ProfilePhotoController::class, 'quitar']);
+    // Ver el avatar de cualquier usuario (para logs, listados, topbar).
+    Route::get('/perfil/foto/{userId}', [ProfilePhotoController::class, 'ver']);
 
     // Notificaciones — todos los roles
     Route::get('/notificaciones',             [NotificationController::class, 'index']);
@@ -200,10 +207,6 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::post('/manuales/{manualId}/categorias',                [ManualCategoryAssignmentController::class, 'asignar']);
         Route::put('/manuales/{manualId}/categorias',                 [ManualCategoryAssignmentController::class, 'sincronizar']);
         Route::delete('/manuales/{manualId}/categorias/{categoryId}', [ManualCategoryAssignmentController::class, 'desasignar']);
-
-        // ── Asignación de manuales a usuarios individuales ──────────
-        Route::get('/manuales/{manualId}/usuarios', [ManualAssignmentController::class, 'porManual']);
-        Route::put('/manuales/{manualId}/usuarios', [ManualAssignmentController::class, 'sincronizarPorManual']);
 
         // ── Asignación de documentos a categorías ───────────────────
         Route::get('/documentos/{documentId}/categorias',                 [DocumentAssignmentController::class, 'listarCategorias']);

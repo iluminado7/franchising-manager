@@ -28,9 +28,17 @@ include 'layout/head.php';
           <!-- Tarjeta datos personales -->
           <div class="card-perfil">
             <div class="card-perfil-header">
-              <div class="avatar" id="avatar-iniciales"></div>
+              <div class="avatar" id="avatar-wrap">
+                <img id="avatar-foto" alt="" style="display:none">
+                <span id="avatar-iniciales"></span>
+              </div>
               <div>
                 <div class="perfil-nombre" id="perfil-nombre">—</div>
+                <div class="foto-acciones">
+                  <button type="button" class="foto-btn" onclick="document.getElementById('input-foto').click()">Cambiar foto</button>
+                  <button type="button" class="foto-btn foto-btn-quitar" id="btn-quitar-foto" onclick="quitarFoto()" style="display:none">Quitar</button>
+                </div>
+                <input type="file" id="input-foto" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="onSeleccionarFoto(this)">
               </div>
             </div>
 
@@ -151,6 +159,28 @@ include 'layout/head.php';
 
       </div><!-- /perfil-grid -->
 
+    <!-- Cropper.js (CDN) para encuadrar la foto antes de subir -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+    <!-- Modal de encuadre -->
+    <div class="cropper-overlay" id="cropper-modal" style="display:none">
+      <div class="cropper-box">
+        <div class="cropper-header">Encuadrá tu foto</div>
+        <div class="cropper-area">
+          <img id="cropper-img" alt="">
+        </div>
+        <div class="cropper-controles">
+          <button type="button" class="foto-btn" onclick="cropperInstance && cropperInstance.zoom(0.1)">Acercar +</button>
+          <button type="button" class="foto-btn" onclick="cropperInstance && cropperInstance.zoom(-0.1)">Alejar −</button>
+        </div>
+        <div class="cropper-acciones">
+          <button type="button" class="foto-btn" onclick="cerrarCropper()">Cancelar</button>
+          <button type="button" class="foto-btn foto-btn-aplicar" id="btn-aplicar-crop" onclick="aplicarCrop()">Aplicar y subir</button>
+        </div>
+      </div>
+    </div>
+
     </main>
   </div>
 </div>
@@ -211,6 +241,34 @@ include 'layout/head.php';
   font-family: 'Archivo', sans-serif;
   letter-spacing: .02em;
 }
+#avatar-wrap { position: relative; overflow: hidden; }
+#avatar-foto { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.foto-acciones { display: flex; gap: 8px; margin-top: 6px; }
+.foto-btn {
+  background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
+  color: var(--gris5); cursor: pointer; font-size: 11px; padding: 3px 10px;
+  font-family: 'Roboto', sans-serif; transition: border-color .12s, color .12s;
+}
+.foto-btn:hover { border-color: var(--dorado); color: var(--blanco); }
+.foto-btn-quitar:hover { border-color: #c0392b; color: #e57373; }
+.cropper-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.7);
+}
+.cropper-box {
+  background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px;
+  padding: 20px; width: 92%; max-width: 420px;
+}
+.cropper-header { font-size: 15px; font-weight: 600; color: var(--blanco); margin-bottom: 14px; font-family: 'Archivo', sans-serif; }
+.cropper-area { max-height: 360px; }
+.cropper-area img { max-width: 100%; display: block; }
+.cropper-controles { display: flex; gap: 8px; justify-content: center; margin: 12px 0; }
+.cropper-acciones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+.foto-btn-aplicar { border-color: var(--dorado); color: var(--dorado); }
+.foto-btn-aplicar:hover { background: var(--dorado); color: #1a1a1a; }
+/* Mascara circular del recorte */
+.cropper-view-box, .cropper-face { border-radius: 50%; }
 .perfil-nombre {
   font-size: 16px;
   font-weight: 600;
@@ -386,6 +444,7 @@ function renderPerfil(u) {
 
   document.getElementById('avatar-iniciales').textContent = iniciales;
   document.getElementById('perfil-nombre').textContent    = nombre;
+  aplicarAvatar(u, !!u.avatar_url);
   document.getElementById('dato-email').textContent       = u.email;
   document.getElementById('dato-dni').textContent         = u.dni || '—';
 
@@ -592,6 +651,127 @@ function togglePass(inputId, eyeId) {
 }
 
 let toastTimer;
+// ── FOTO DE PERFIL ────────────────────────────────────────────
+// Multipart directo: apiFetch no sirve para FormData (setea Content-Type JSON).
+async function fetchMultipart(endpoint, formData) {
+  const res = await fetch(API + endpoint, { method: 'POST', credentials: 'include', body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error(); err.data = data; throw err; }
+  return data;
+}
+
+// Muestra la foto (via el endpoint autenticado) o cae a las iniciales.
+function aplicarAvatar(u, tieneFoto) {
+  const img = document.getElementById('avatar-foto');
+  const ini = document.getElementById('avatar-iniciales');
+  const btnQuitar = document.getElementById('btn-quitar-foto');
+  // Guarda: si el HTML del avatar no está presente, no rompemos el render.
+  if (!img || !ini) return;
+  if (tieneFoto) {
+    // ?t= fuerza recarga tras subir/quitar (el endpoint tiene Cache-Control).
+    img.src = API + '/perfil/foto/' + u.id + '?t=' + Date.now();
+    img.style.display = 'block';
+    ini.style.display = 'none';
+    if (btnQuitar) btnQuitar.style.display = '';
+  } else {
+    const iniciales = (u.nombre && u.apellido)
+      ? `${u.nombre[0]}${u.apellido[0]}`.toUpperCase()
+      : (u.email ? u.email[0].toUpperCase() : '?');
+    ini.textContent = iniciales;
+    img.style.display = 'none';
+    img.removeAttribute('src');
+    ini.style.display = '';
+    if (btnQuitar) btnQuitar.style.display = 'none';
+  }
+}
+
+let cropperInstance = null;
+
+// Al elegir archivo: validar y abrir el modal de encuadre (no sube todavia).
+function onSeleccionarFoto(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const tiposOk = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!tiposOk.includes(file.type)) {
+    mostrarToast('Formato no válido. Usá JPG, PNG o WebP.', 'error');
+    input.value = ''; return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    mostrarToast('La imagen supera los 5 MB.', 'error');
+    input.value = ''; return;
+  }
+  if (typeof Cropper === 'undefined') {
+    mostrarToast('No se pudo cargar el editor de imagen.', 'error');
+    input.value = ''; return;
+  }
+
+  const img = document.getElementById('cropper-img');
+  img.src = URL.createObjectURL(file);
+  document.getElementById('cropper-modal').style.display = 'flex';
+
+  if (cropperInstance) cropperInstance.destroy();
+  cropperInstance = new Cropper(img, {
+    aspectRatio: 1,
+    viewMode: 1,
+    dragMode: 'move',
+    autoCropArea: 1,
+    background: false,
+    cropBoxResizable: false,
+    cropBoxMovable: false,
+    minContainerHeight: 300,
+  });
+  input.value = '';
+}
+
+function cerrarCropper() {
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+  const img = document.getElementById('cropper-img');
+  if (img.src) { URL.revokeObjectURL(img.src); img.removeAttribute('src'); }
+  document.getElementById('cropper-modal').style.display = 'none';
+}
+
+// Recorta a 512x512 en el cliente y sube el resultado.
+async function aplicarCrop() {
+  if (!cropperInstance) return;
+  const btn = document.getElementById('btn-aplicar-crop');
+  btn.disabled = true; btn.textContent = 'Subiendo...';
+
+  const canvas = cropperInstance.getCroppedCanvas({
+    width: 512, height: 512, imageSmoothingQuality: 'high',
+  });
+  if (!canvas) {
+    mostrarToast('No se pudo procesar la imagen.', 'error');
+    btn.disabled = false; btn.textContent = 'Aplicar y subir'; return;
+  }
+
+  canvas.toBlob(async (blob) => {
+    try {
+      const fd = new FormData();
+      fd.append('foto', blob, 'avatar.jpg');
+      await fetchMultipart('/perfil/foto', fd);
+      if (miPerfil) miPerfil.avatar_url = '/api/perfil/foto/' + miPerfil.id;
+      aplicarAvatar(miPerfil, true);
+      mostrarToast('Foto de perfil actualizada.', 'exito');
+      cerrarCropper();
+    } catch (e) {
+      mostrarToast('No se pudo subir la foto.', 'error');
+      btn.disabled = false; btn.textContent = 'Aplicar y subir';
+    }
+  }, 'image/jpeg', 0.9);
+}
+
+async function quitarFoto() {
+  if (!confirm('¿Quitar tu foto de perfil?')) return;
+  try {
+    await apiFetch('DELETE', '/perfil/foto');
+    if (miPerfil) miPerfil.avatar_url = null;
+    aplicarAvatar(miPerfil, false);
+    mostrarToast('Foto de perfil eliminada.', 'exito');
+  } catch (e) {
+    mostrarToast('No se pudo quitar la foto.', 'error');
+  }
+}
+
 function mostrarToast(msg, tipo = 'exito') {
   const el   = document.getElementById('toast');
   const icon = tipo === 'exito'
