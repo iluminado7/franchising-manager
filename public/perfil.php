@@ -34,6 +34,7 @@ include 'layout/head.php';
               </div>
               <div>
                 <div class="perfil-nombre" id="perfil-nombre">—</div>
+                <div id="perfil-rol-badge" style="margin:4px 0"></div>
                 <div class="foto-acciones">
                   <button type="button" class="foto-btn" onclick="document.getElementById('input-foto').click()">Cambiar foto</button>
                   <button type="button" class="foto-btn foto-btn-quitar" id="btn-quitar-foto" onclick="quitarFoto()" style="display:none">Quitar</button>
@@ -665,8 +666,6 @@ function aplicarAvatar(u, tieneFoto) {
   const img = document.getElementById('avatar-foto');
   const ini = document.getElementById('avatar-iniciales');
   const btnQuitar = document.getElementById('btn-quitar-foto');
-  // Guarda: si el HTML del avatar no está presente, no rompemos el render.
-  if (!img || !ini) return;
   if (tieneFoto) {
     // ?t= fuerza recarga tras subir/quitar (el endpoint tiene Cache-Control).
     img.src = API + '/perfil/foto/' + u.id + '?t=' + Date.now();

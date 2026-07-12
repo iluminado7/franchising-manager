@@ -55,7 +55,18 @@ body {
   background: #FFFFFF; border-radius: 4px;
   box-shadow: 0 2px 20px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.06);
   padding: 72px 80px; min-height: 600px;
+  position: relative;
 }
+/* Marca de agua con datos del usuario (socios comerciales / empleados).
+   Va detras del contenido, no interfiere con clicks y se repite en mosaico. */
+.watermark-container {
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none; overflow: hidden;
+  background-repeat: repeat;
+}
+#doc-header, #doc-content-wrap, #doc-footer-manual { position: relative; z-index: 1; }
+/* Refuerzo anti-copia: sin seleccion de texto para socios comerciales. */
+.sin-seleccion, .sin-seleccion * { -webkit-user-select: none !important; user-select: none !important; }
 .doc-content {
   font-family: 'Roboto', sans-serif;
   font-size: 15px; line-height: 1.85; color: #2A2A2A;
@@ -220,7 +231,14 @@ body {
 
   /* Ocultar todo lo que no sea el contenido del manual (topbars, sidebars, botones) */
   .doc-topbar, .doc-footer, .find-bar, #estado-aceptacion-wrap, #btn-aceptar-wrap,
-  .app-topbar, .app-sidebar, .watermark-container { display: none !important; }
+  .app-topbar, .app-sidebar { display: none !important; }
+
+  /* La marca de agua SI se imprime (disuasivo ante capturas/impresiones). */
+  .watermark-container {
+    display: block !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
   .app-layout, .app-body, .lectura-layout, main { display: block !important; }
 
@@ -343,6 +361,9 @@ body {
 
     <div class="doc-page">
 
+      <!-- Marca de agua (datos del usuario) — se llena por JS solo para socios comerciales -->
+      <div class="watermark-container" id="watermark"></div>
+
       <!-- Encabezado del manual (mostrado en pantalla y en impresión) -->
       <div id="doc-header" class="doc-header" style="display:none"></div>
 
@@ -434,6 +455,12 @@ async function init() {
     // Obtener rol del usuario para saber si mostrar aceptación
     const me = await apiFetch('GET', '/me');
     rolUsuario = me.rol;
+
+    // Marca de agua con datos del usuario: solo socios comerciales (franquiciado) y empleados.
+    if (rolUsuario === 'franquiciado' || rolUsuario === 'empleado') {
+      ponerMarcaDeAgua(me);
+      document.getElementById('doc-content-wrap')?.classList.add('sin-seleccion');
+    }
 
     // El franquiciante llega acá en modo "vista previa" desde el dashboard.
     if (rolUsuario === 'franquiciante') {
@@ -627,6 +654,31 @@ async function agregarNota() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ── MARCA DE AGUA ─────────────────────────────────────────────
+// Estampa nombre + apellido (+ sucursal si tiene) en mosaico diagonal, muy tenue,
+// detras del contenido. Disuasivo ante capturas/impresiones no autorizadas.
+function ponerMarcaDeAgua(me) {
+  const nombre   = [me.nombre, me.apellido].filter(Boolean).join(' ').trim() || me.email || '';
+  const sucursal = me.perfil && me.perfil.franquicia ? me.perfil.franquicia.nombre : null;
+  const texto    = sucursal ? `${nombre} \u00B7 ${sucursal}` : nombre;
+  const cont = document.getElementById('watermark');
+  if (!cont || !texto) return;
+
+  // SVG tile: texto rotado -30, gris muy tenue (no estorba la lectura).
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='210'>` +
+    `<text x='180' y='110' fill='rgba(0,0,0,0.07)' font-size='15' font-weight='600' ` +
+    `font-family='Arial, sans-serif' text-anchor='middle' transform='rotate(-30 180 105)'>` +
+    `${escaparXML(texto)}</text></svg>`;
+  cont.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function escaparXML(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 document.addEventListener('contextmenu', (e) => {

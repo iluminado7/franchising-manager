@@ -458,6 +458,9 @@ class DocumentController extends Controller
             ])->toArray();
 
             try {
+                // insert() a proposito: los super_admin reciben la notif in-app (aviso
+                // de gestion) pero NO email — no son destinatarios del documento.
+                // insert() saltea el observer, asi que no se encola mail.
                 if (!empty($notifSuper)) Notification::insert($notifSuper);
             } catch (\Throwable $e) { /* best-effort */ }
         }
@@ -855,21 +858,24 @@ class DocumentController extends Controller
 
         if ($userIds->isEmpty()) return;
 
-        // 3. Insertar notificaciones en bulk
-        $notificaciones = $userIds->map(fn($uid) => [
-            'user_id'             => $uid,
-            'tipo'                => $tipo,
-            'manual_id'           => null,
-            'manual_version_id'   => null,
-            'document_id'         => $documentIdNotif,
-            'document_version_id' => $documentVersionId,
-            'category_id'         => null,
-            'titulo'              => $titulo,
-            'created_at'          => now(),
-        ])->toArray();
-
-        try {
-            Notification::insert($notificaciones);
-        } catch (\Throwable $e) { /* best-effort */ }
+        // 3. Crear las notificaciones.
+        //    create() (no insert()) para que dispare el observer de Notification,
+        //    que encola el email a cada destinatario. insert() es un bulk que saltea
+        //    el modelo y por ende el observer — con insert() no saldria ningun mail.
+        foreach ($userIds as $uid) {
+            try {
+                Notification::create([
+                    'user_id'             => $uid,
+                    'tipo'                => $tipo,
+                    'manual_id'           => null,
+                    'manual_version_id'   => null,
+                    'document_id'         => $documentIdNotif,
+                    'document_version_id' => $documentVersionId,
+                    'category_id'         => null,
+                    'titulo'              => $titulo,
+                    'created_at'          => now(),
+                ]);
+            } catch (\Throwable $e) { /* best-effort: una notif fallida no corta las demas */ }
+        }
     }
 }

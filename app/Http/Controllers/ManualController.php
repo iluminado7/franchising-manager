@@ -422,23 +422,28 @@ class ManualController extends Controller
                 $tituloManual = strip_tags($manual->titulo ?? '');
 
                 if ($userIds->isNotEmpty()) {
-                    $notificaciones = $userIds->map(fn($uid) => [
-                        'user_id'             => $uid,
-                        'tipo'                => $tipo,
-                        'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
-                        'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
-                        'document_id'         => null,
-                        'document_version_id' => null,
-                        'category_id'         => null,
-                        'titulo'              => $tipo === 'nuevo_manual'
-                                                ? "Nuevo manual: {$tituloManual}"
-                                                : "Manual actualizado: {$tituloManual} (v{$versionLabel})",
-                        'created_at'          => now(),
-                    ])->toArray();
+                    // create() (no insert()) para que dispare el observer de Notification,
+                    // que encola el email a cada destinatario. insert() es un bulk que
+                    // saltea el modelo y por ende el observer — por eso no salían mails.
+                    $tituloNotif = $tipo === 'nuevo_manual'
+                        ? "Nuevo manual asignado: {$tituloManual}"
+                        : "Manual actualizado: {$tituloManual} (v{$versionLabel})";
 
-                    try {
-                        Notification::insert($notificaciones);
-                    } catch (\Throwable $e) { /* best-effort */ }
+                    foreach ($userIds as $uid) {
+                        try {
+                            Notification::create([
+                                'user_id'             => $uid,
+                                'tipo'                => $tipo,
+                                'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
+                                'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
+                                'document_id'         => null,
+                                'document_version_id' => null,
+                                'category_id'         => null,
+                                'titulo'              => $tituloNotif,
+                                'created_at'          => now(),
+                            ]);
+                        } catch (\Throwable $e) { /* best-effort: una notif fallida no corta las demás */ }
+                    }
                 }
 
                 $esFranq = $user->esFranquiciante();
@@ -469,6 +474,9 @@ class ManualController extends Controller
                     ])->toArray();
                     try {
                         if (!empty($notifSuper)) {
+                            // insert() a propósito: los super_admin reciben la notif in-app
+                            // (aviso de gestión) pero NO email — no son destinatarios del
+                            // manual. insert() saltea el observer, así que no se encola mail.
                             Notification::insert($notifSuper);
                         }
                     } catch (\Throwable $e) { /* best-effort */ }
