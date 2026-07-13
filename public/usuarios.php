@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout/config.php';
 require_once __DIR__ . '/layout/auth.php';
-verificarSesion(); // super_admin y franquiciante — restricciones por rol en JS
+verificarSesion('franquiciante'); // super_admin y franquiciante — restricciones por rol en JS
 $titulo        = 'Usuarios';
 $pagina_actual = 'usuarios';
 include 'layout/head.php';

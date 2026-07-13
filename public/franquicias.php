@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout/config.php';
 require_once __DIR__ . '/layout/auth.php';
-verificarSesion();
+verificarSesion('franquiciante');
 $titulo        = 'Franquicias';
 $pagina_actual = 'franquicias';
 include 'layout/head.php';

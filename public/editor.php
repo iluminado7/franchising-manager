@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout/config.php';
 require_once __DIR__ . '/layout/auth.php';
-verificarSesion(); // super_admin y franquiciante
+verificarSesion('franquiciante'); // super_admin y franquiciante
 $titulo        = 'Editor de Manual';
 $pagina_actual = 'manuales';
 include 'layout/head.php';
