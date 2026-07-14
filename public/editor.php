@@ -452,7 +452,7 @@ include 'layout/head.php';
     <div class="modal-body">
       <p style="font-size:13.5px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:12px">
         Si este manual ya venía usándose fuera del sistema con su propia numeración
-        (por ejemplo <strong style="color:var(--blanco)">v10.3</strong>), declarala acá.
+        (por ejemplo <strong style="color:var(--blanco)">v6.2</strong>), declarala acá.
         Así el número que ve el socio comercial coincide con el que dice el documento por dentro.
       </p>
       <p style="font-size:13px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:18px">

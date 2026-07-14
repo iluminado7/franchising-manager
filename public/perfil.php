@@ -452,7 +452,7 @@ function renderPerfil(u) {
   document.getElementById('dato-dni').textContent         = u.dni || '—';
 
   // Badge de rol
-  const labels = { super_admin: 'Super Admin', franquiciante: 'Franquiciante', franquiciado: 'Franquiciado', empleado: 'Empleado' };
+  const labels = { super_admin: 'Super Admin', franquiciante: 'Franquiciante', franquiciado: 'Socio Comercial', empleado: 'Empleado' };
   document.getElementById('perfil-rol-badge').innerHTML =
     `<span class="rol-badge ${u.rol}">${labels[u.rol] || u.rol}</span>`;
 

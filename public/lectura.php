@@ -403,7 +403,7 @@ body {
     <!-- Notas / Sugerencias (solo franquiciado) -->
     <div class="notas-box" id="notas-box" style="display:none">
       <div class="notas-box-title">Notas y sugerencias</div>
-      <p class="notas-box-sub">Dej&aacute; una sugerencia sobre este manual. El administrador la va a revisar y marcar&aacute; su estado.</p>
+      <p class="notas-box-sub">Dej&aacute; una sugerencia sobre este manual.</p>
 
       <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; tu sugerencia..." class="nota-textarea"></textarea>
       <button class="btn-nota-enviar" id="btn-nota-enviar" onclick="agregarNota()">
