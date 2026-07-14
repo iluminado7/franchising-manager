@@ -78,9 +78,28 @@ class AuthController extends Controller
             'empleado'      => $user->franchiseStaff,
         };
 
+        // V2-H-013: antes se generaba una lista de abilities por rol que NINGÚN
+        // endpoint validaba (cero usos de tokenCan() y cero middleware 'ability:'
+        // en todo el código). Era metadata muerta que sugería una protección
+        // inexistente.
+        //
+        // No se aplicó el middleware 'ability:' que recomendaba la auditoría porque
+        // la lista además estaba DESINCRONIZADA del modelo real de permisos: el rol
+        // franquiciante no declaraba manual:crear / manual:editar / manual:publicar /
+        // manual:archivar, pero sí ejerce esas rutas (api.php, grupo
+        // role:super_admin,franquiciante). Aplicarla habría dejado a todos los
+        // franquiciantes sin poder publicar.
+        //
+        // La autorización real vive en dos lugares, y en ningún otro:
+        //   1. middleware 'role:' en routes/api.php  → qué roles llegan a la ruta
+        //   2. Policies (ManualPolicy, DocumentPolicy) → qué recurso puede tocar
+        //
+        // Reconstruir las abilities como defensa en profundidad queda como mejora
+        // futura; para no volver a desincronizarse tendrían que derivarse de la
+        // misma fuente de verdad que las Policies.
         $token = $user->createToken(
             name:      'auth_token',
-            abilities: $this->abilitiesPorRol($user->rol),
+            abilities: ['*'],
             expiresAt: now()->addHours(8),
         )->plainTextToken;
 
@@ -300,44 +319,5 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             // best-effort
         }
-    }
-
-    private function abilitiesPorRol(string $rol): array
-    {
-        return match($rol) {
-            'super_admin' => [
-                'empresa:gestionar',
-                'plan:gestionar',
-                'manual:crear',
-                'manual:editar',
-                'manual:publicar',
-                'manual:archivar',
-                'manual:asignar_empresa',
-                'franquicia:gestionar',
-                'usuario:gestionar',
-                'documento:subir',
-                'log:ver',
-                'invoice:ver',
-            ],
-            'franquiciante' => [
-                'franquicia:gestionar',
-                'usuario:gestionar',
-                'manual:ver',
-                'manual:asignar',
-                'firma:subir',
-                'documento:subir',
-                'log:ver',
-            ],
-            'franquiciado' => [
-                'manual:ver',
-                'manual:aceptar',
-                'manual:asignar',
-                'documento:ver',
-                'firma:subir',
-            ],
-            'empleado' => [
-                'manual:ver',
-            ],
-        };
     }
 }

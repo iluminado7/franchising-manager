@@ -12,6 +12,7 @@ use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * Gestiona las asignaciones de un documento:
@@ -310,8 +311,17 @@ class DocumentAssignmentController extends Controller
         $error = $this->validarDocumentoOperable($actor, $document);
         if ($error) return response()->json($error, $error['_status']);
 
+        // V2-H-006: el usuario destino debe pertenecer a la empresa del documento.
+        // validarAsignacionUsuario() ya lo bloqueaba con 422 (el aislamiento se
+        // cumplia), pero la regla vivia fuera de la capa de validacion. Ahora falla
+        // como error de campo y no depende de que el helper se siga llamando.
         $data = $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
+            'user_id' => [
+                'required', 'integer',
+                Rule::exists('users', 'id')->where(
+                    fn($q) => $q->where('empresa_id', $document->empresa_id)
+                ),
+            ],
         ]);
 
         $usuario = User::findOrFail($data['user_id']);

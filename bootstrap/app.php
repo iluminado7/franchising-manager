@@ -21,4 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
             return response()->json(['message' => 'No autenticado.'], 401);
         });
+
+        // V2-H-014: sin esto, $this->authorize() devolveria HTML y romperia apiFetch.
+        // Se conserva la forma {'error': '...'} que ya esperaba el frontend en los
+        // 403 emitidos a mano por los controllers.
+        $exceptions->render(function (\Illuminate\Auth\Access\AuthorizationException $e, Request $request) {
+            $msg = $e->getMessage();
+            if ($msg === '' || $msg === 'This action is unauthorized.') {
+                $msg = 'Sin permisos.';
+            }
+            return response()->json(['error' => $msg], 403);
+        });
     })->create();

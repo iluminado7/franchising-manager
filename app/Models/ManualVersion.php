@@ -14,6 +14,21 @@ class ManualVersion extends Model
     public $timestamps = false;
     protected $dates = ['created_at', 'publicado_at'];
 
+    // V2-H-019 (mass assignment): es_activa NO esta en $fillable.
+    //
+    // Marcar una version como activa es la operacion mas sensible del modelo: es
+    // lo que decide que contenido ven todos los usuarios y sobre que se firman las
+    // aceptaciones. Si quedara en $fillable, un futuro
+    // ManualVersion::create($request->all()) o ->update($request->all())
+    // permitiria activar cualquier version salteando la logica de publicar()
+    // (transaccion, desactivacion de la anterior, calculo de numero, notificaciones).
+    //
+    // Se asigna SIEMPRE con setter directo, igual que password_hash (H-015):
+    //     $version->es_activa = 1;
+    //     $version->save();
+    //
+    // Los Query Builder updates (ManualVersion::where(...)->update(['es_activa' => 0]))
+    // no pasan por $fillable y siguen siendo validos.
     protected $fillable = [
         'manual_id',
         'version_number',
@@ -22,7 +37,6 @@ class ManualVersion extends Model
         'contenido_hash',
         'publicado_por',
         'publicado_at',
-        'es_activa',
         'nota_publicacion',   // mensaje opcional del publicador al subir la versión
     ];
 

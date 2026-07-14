@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Services\ManualAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class AcceptanceController extends Controller
 {
@@ -27,22 +28,68 @@ class AcceptanceController extends Controller
             ], 403);
         }
 
-        if ($version->fueAceptadaPor($user->id)) {
-            return response()->json([
-                'message' => 'Ya aceptaste esta versión del manual.',
-            ], 409);
+        // V2-H-010: todo el flujo de aceptación va dentro de una transacción con
+        // lock pesimista sobre la fila de la versión. Motivos:
+        //
+        //  1. aceptar() no validaba que la versión fuera la ACTIVA. Sin ninguna
+        //     carrera de por medio, un usuario podía postear el ID de una versión
+        //     vieja y registrar una aceptación sobre contenido ya superado.
+        //
+        //  2. Un check de es_activa NO alcanza: archivar() marca el manual como
+        //     'archivado' pero NO toca las versiones, así que la versión de un
+        //     manual archivado sigue con es_activa = 1. Hay que validar también
+        //     el estado del manual.
+        //
+        //  3. acceptances NO tenía UNIQUE (manual_version_id, user_id): dos
+        //     requests concurrentes pasaban ambos por fueAceptadaPor() y creaban
+        //     DOS filas de compliance. El lock serializa; el UNIQUE nuevo (ver
+        //     migración add_unique_version_user_to_acceptances) es la garantía real.
+        try {
+            $acceptance = DB::transaction(function () use ($version, $user, $request) {
+
+                // Lock pesimista: nadie más toca esta versión hasta el commit.
+                $v = ManualVersion::where('id', $version->id)
+                                  ->lockForUpdate()
+                                  ->firstOrFail();
+
+                if (!$v->es_activa) {
+                    return ['_error' => 'Esta versión ya no es la vigente. Actualizá la página.', '_status' => 409];
+                }
+
+                $manual = $v->manual;
+                if (!$manual || $manual->deleted_at !== null || $manual->estado !== 'publicado') {
+                    return ['_error' => 'Este manual no está disponible para aceptación.', '_status' => 409];
+                }
+
+                // Re-chequeo DENTRO del lock (el de afuera puede haber quedado obsoleto).
+                if ($v->fueAceptadaPor($user->id)) {
+                    return ['_error' => 'Ya aceptaste esta versión del manual.', '_status' => 409];
+                }
+
+                return Acceptance::create([
+                    'manual_version_id' => $v->id,
+                    'user_id'           => $user->id,
+                    'empresa_id'        => $user->empresa_id, // desnormalizado para performance
+                    'aceptado_at'       => now(),
+                    'ip_address'        => $request->ip(),
+                    'user_agent'        => $request->userAgent(),
+                    'hash_verificacion' => $v->contenido_hash,
+                    'pdf_generado'      => 0,
+                ]);
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Red de seguridad: si el UNIQUE salta igual (dos nodos, lock perdido),
+            // respondemos 409 en vez de un 500.
+            if ($e->getCode() === '23000') {
+                return response()->json(['message' => 'Ya aceptaste esta versión del manual.'], 409);
+            }
+            throw $e;
         }
 
-        $acceptance = Acceptance::create([
-            'manual_version_id' => $version->id,
-            'user_id'           => $user->id,
-            'empresa_id'        => $user->empresa_id, // desnormalizado para performance
-            'aceptado_at'       => now(),
-            'ip_address'        => $request->ip(),
-            'user_agent'        => $request->userAgent(),
-            'hash_verificacion' => $version->contenido_hash,
-            'pdf_generado'      => 0,
-        ]);
+        // La closure devuelve un array cuando hay que abortar con un código propio.
+        if (is_array($acceptance)) {
+            return response()->json(['message' => $acceptance['_error']], $acceptance['_status']);
+        }
 
         ActivityLog::registrar(
             userId:      $user->id,

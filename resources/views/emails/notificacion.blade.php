@@ -14,7 +14,7 @@
           {{-- Encabezado --}}
           <tr>
             <td style="background-color:#1A1A1A; padding:22px 32px;">
-              <span style="color:#C9A84C; font-size:18px; font-weight:bold; letter-spacing:0.02em;">GoHarv.</span>
+              <span style="color:#C9A84C; font-size:18px; font-weight:bold; letter-spacing:0.02em;">Franchasing Manager by GoHarv.</span>
             </td>
           </tr>
 

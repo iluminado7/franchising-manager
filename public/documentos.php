@@ -228,6 +228,27 @@ include 'layout/head.php';
         </div>
       </div>
 
+      <div class="form-group">
+        <label>Versión inicial</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="doc-ver-number" min="1" max="999" step="1" placeholder="1"
+                 style="width:90px" oninput="previewVersionDoc()">
+          <span style="font-size:18px;font-weight:700;color:var(--gris4)">.</span>
+          <input type="number" id="doc-ver-minor" min="0" max="999" step="1" placeholder="0"
+                 style="width:90px" oninput="previewVersionDoc()">
+          <span id="doc-ver-preview"
+                style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;margin-left:6px">
+            Se guardará como v1.0
+          </span>
+        </div>
+        <div style="font-size:11.5px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;margin-top:6px">
+          Dejalo vacío para arrancar en <strong>v1.0</strong>. Si el documento ya venía usándose
+          fuera del sistema con su propia numeración (ej. <strong>v10.3</strong>), declarala acá.
+          <strong style="color:var(--dorado)">Se elige una sola vez:</strong> las versiones
+          siguientes las numera el sistema.
+        </div>
+      </div>
+
       <div class="form-error" id="doc-error" style="display:none"></div>
     </div>
     <div class="modal-footer">
@@ -1316,6 +1337,9 @@ function abrirModalSubir() {
   document.getElementById('doc-franquicia').value  = '';
   document.getElementById('doc-visible').checked   = false;
   document.getElementById('doc-archivo').value     = '';
+  document.getElementById('doc-ver-number').value  = '';
+  document.getElementById('doc-ver-minor').value   = '';
+  previewVersionDoc();
   document.getElementById('doc-error').style.display = 'none';
   resetDropZone();
 
@@ -1335,6 +1359,28 @@ function abrirModalSubir() {
 
   document.getElementById('modal-subir').classList.add('open');
   setTimeout(() => document.getElementById('doc-titulo').focus(), 100);
+}
+
+// Preview en vivo de la version inicial del documento.
+// Vacio -> v1.0 (el backend aplica el mismo default).
+function previewVersionDoc() {
+  const nRaw = document.getElementById('doc-ver-number').value.trim();
+  const mRaw = document.getElementById('doc-ver-minor').value.trim();
+  const prev = document.getElementById('doc-ver-preview');
+
+  if (nRaw === '' && mRaw === '') {
+    prev.textContent = 'Se guardará como v1.0';
+    prev.style.color = 'var(--gris4)';
+    return;
+  }
+
+  const n = nRaw === '' ? 1 : parseInt(nRaw, 10);
+  const m = mRaw === '' ? 0 : parseInt(mRaw, 10);
+  const ok = Number.isInteger(n) && n >= 1 && n <= 999
+          && Number.isInteger(m) && m >= 0 && m <= 999;
+
+  prev.textContent = ok ? `Se guardará como v${n}.${m}` : 'Versión inválida';
+  prev.style.color = ok ? 'var(--dorado)' : 'var(--rojo, #E25C5C)';
 }
 
 function cerrarModalSubir() {
@@ -1398,6 +1444,21 @@ async function subirDocumento() {
     errEl.textContent = 'El archivo supera los 20 MB.'; errEl.style.display = 'block'; return;
   }
 
+  // Version inicial (opcional). Vacio -> el backend usa 1.0.
+  const verNumRaw = document.getElementById('doc-ver-number').value.trim();
+  const verMinRaw = document.getElementById('doc-ver-minor').value.trim();
+  const verNum = verNumRaw === '' ? null : parseInt(verNumRaw, 10);
+  const verMin = verMinRaw === '' ? null : parseInt(verMinRaw, 10);
+
+  if (verNum !== null && (!Number.isInteger(verNum) || verNum < 1 || verNum > 999)) {
+    errEl.textContent = 'La versión debe ser un número entero entre 1 y 999.';
+    errEl.style.display = 'block'; return;
+  }
+  if (verMin !== null && (!Number.isInteger(verMin) || verMin < 0 || verMin > 999)) {
+    errEl.textContent = 'La revisión debe ser un número entero entre 0 y 999.';
+    errEl.style.display = 'block'; return;
+  }
+
   btn.disabled = true; btn.textContent = 'Subiendo...';
 
   try {
@@ -1408,6 +1469,11 @@ async function subirDocumento() {
     form.append('archivo',             archivo);
     if (franqId)   form.append('franquicia_id', franqId);
     if (rolUsuario === 'super_admin' && empresaId) form.append('empresa_id', empresaId);
+
+    // Solo se manda si el usuario declaro algo. El backend lo lee UNICAMENTE al
+    // crear el documento (store); subirVersion() despues autoincrementa.
+    if (verNum !== null) form.append('version_inicial_number', verNum);
+    if (verMin !== null) form.append('version_inicial_minor',  verMin);
 
     // apiFetch no sirve para multipart, usamos fetch directo
     const res = await fetchMultipart('/documentos', form);

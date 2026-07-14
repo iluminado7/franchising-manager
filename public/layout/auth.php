@@ -71,7 +71,12 @@ function verificarSesion(?string $rol_requerido = null): void
     // super_admin tiene acceso a todo — nunca se bloquea por rol
     if ($rol_requerido && $usuario['rol'] !== $rol_requerido && $usuario['rol'] !== 'super_admin') {
         http_response_code(403);
-        $volver = BASE_URL_PHP . '/manuales.php';
+        $destino = match ($usuario['rol']) {
+        'franquiciado' => '/mis-manuales.php',
+        'empleado'     => '/mis-manuales.php',
+        default        => '/dashboard.php',
+        };
+        $volver = BASE_URL_PHP . $destino;
         echo '<!DOCTYPE html>
 <html lang="es">
 <head>

@@ -37,6 +37,20 @@ body {
   width: 100%; max-width: 800px;
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+
+  /* Sticky: en un manual largo, volver al listado (o abrir el buscador) no
+     debe obligar a scrollear hasta el tope del documento.
+     top: 56px = alto de .app-topbar, que es lo que .lectura-layout descuenta
+     en su min-height. Si .app-topbar no fuera sticky/fixed, poner top: 0. */
+  position: sticky;
+  top: 56px;
+  z-index: 100;
+
+  /* Fondo opaco + separador: el contenido del manual pasa por debajo. */
+  background: #F5F3EE;
+  border-bottom: 1px solid #E0DDD6;
+  padding: 12px 0;
+  margin-top: -12px;   /* compensa el padding para no correr el layout */
 }
 .doc-back {
   display: inline-flex; align-items: center; gap: 6px;
@@ -444,10 +458,38 @@ let versionActivaId = null;
 let yaAceptado      = false;
 let rolUsuario      = '';
 
+const LISTADO_POR_ROL = {
+  franquiciado:  'mis-manuales.php',
+  empleado:      'mis-manuales.php',
+  franquiciante: 'dashboard.php',   // llega en modo "vista previa" desde el dashboard
+  super_admin:   'manuales.php',
+};
+
+function destinoListado(rol) {
+  // perfil.php es el fallback: no tiene restriccion de rol, asi que es seguro
+  // para cualquier usuario autenticado.
+  return LISTADO_POR_ROL[rol] ?? 'perfil.php';
+}
+
+// Redirect de error: resuelve el rol antes de elegir destino, para no mandar a
+// un usuario a una pagina que le va a responder 403.
+async function volverAlListado(mensaje) {
+  mostrarToast(mensaje, 'error');
+
+  let destino = 'perfil.php';
+  try {
+    const me = await apiFetch('GET', '/me');
+    destino = destinoListado(me.rol);
+  } catch (e) {
+    // Sin sesion valida: perfil.php ya redirige solo a login.html.
+  }
+
+  setTimeout(() => window.location.href = destino, 2000);
+}
+
 async function init() {
   if (!MANUAL_ID) {
-    mostrarToast('No se especificó un manual.', 'error');
-    setTimeout(() => window.location.href = 'manuales.php', 2000);
+    await volverAlListado('No se especificó un manual.');
     return;
   }
 
@@ -462,11 +504,11 @@ async function init() {
       document.getElementById('doc-content-wrap')?.classList.add('sin-seleccion');
     }
 
-    // El franquiciante llega acá en modo "vista previa" desde el dashboard.
-    if (rolUsuario === 'franquiciante') {
-      const back = document.querySelector('.doc-back');
-      if (back) back.setAttribute('href', 'dashboard.php');
-    }
+    // Destino del boton "Volver" segun el rol (ver LISTADO_POR_ROL).
+    // El franquiciante llega aca en modo "vista previa" desde el dashboard;
+    // el super_admin, desde manuales.php; el resto, desde mis-manuales.php.
+    const back = document.querySelector('.doc-back');
+    if (back) back.setAttribute('href', destinoListado(rolUsuario));
 
     const manual  = await apiFetch('GET', `/manuales/${MANUAL_ID}`);
     const version = manual.version_activa?.[0];

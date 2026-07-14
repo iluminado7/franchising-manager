@@ -200,14 +200,7 @@ class ManualController extends Controller
         $manual = Manual::findOrFail($id);
         $user   = $request->user();
 
-            if ($user->esFranquiciante()) {
-                $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                                ->where('empresa_id', $user->empresa_id)
-                                                ->exists();
-                if (!$asignado) {
-                    return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-                }
-            }
+        $this->authorize('gestionar', $manual);
         $data = $request->validate([
             'titulo'    => 'sometimes|string|max:200',
             'categoria' => 'nullable|string|max:100',
@@ -245,14 +238,7 @@ class ManualController extends Controller
         $user   = $request->user();
 
     // Franquiciante solo puede editar manuales de su empresa
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $manual);
 
         // Header/footer viven en 'manuals' (no en 'manual_versions') porque
         // son identidad del manual, no versionables. Setter directo para no
@@ -282,6 +268,9 @@ class ManualController extends Controller
                 'contenido_hash' => hash('sha256', $html),
             ]);
         } else {
+            // V2-H-019: es_activa ya no esta en $fillable. No hace falta pasarlo:
+            // la columna tiene DEFAULT 0, que es justo lo que queremos para un
+            // borrador (version_number = 0, nunca activa).
             ManualVersion::create([
                 'manual_id'      => $manual->id,
                 'version_number' => 0,
@@ -289,7 +278,6 @@ class ManualController extends Controller
                 'contenido_hash' => hash('sha256', $html),
                 'publicado_por'  => $request->user()->id,
                 'publicado_at'   => now(),
-                'es_activa'      => 0,
             ]);
         }
 
@@ -311,6 +299,11 @@ class ManualController extends Controller
             'encabezado_html'  => 'nullable|string|max:200000',
             'pie_pagina_html'  => 'nullable|string|max:200000',
             'tipo_cambio'      => 'nullable|in:mayor,menor',
+            // Version inicial declarada por el usuario. Solo se USA en la primera
+            // publicacion del manual (ver mas abajo). version_number = 0 esta
+            // reservado para el borrador, por eso min:1.
+            'version_inicial_number' => 'nullable|integer|min:1|max:999',
+            'version_inicial_minor'  => 'nullable|integer|min:0|max:999',
         ]);
 
         $manual = Manual::findOrFail($id);
@@ -322,14 +315,7 @@ class ManualController extends Controller
         $notaPub = trim($request->nota_publicacion ?? '');
         $notaPub = $notaPub === '' ? null : $notaPub;
 
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $manual);
 
         // Header/footer: se guardan a nivel manual (identidad, no versionable).
         // Se sanitizan con el mismo HTMLPurifier que contenido_html.
@@ -376,8 +362,18 @@ class ManualController extends Controller
                 //  - menor (sobre la activa) -> mismo numero, minor = max(minor) + 1
                 //  - mayor (default)         -> numero + 1, minor 0
                 if ($ultimaVersion === 0) {
-                    $nuevoNumber = 1;
-                    $nuevoMinor  = 0;
+                    // PRIMERA PUBLICACION: el usuario puede declarar la version real
+                    // que el manual ya tenia fuera del sistema (ej. 10.3). Si no
+                    // declara nada, arranca en 1.0 como siempre.
+                    //
+                    // Este es el UNICO lugar de todo el sistema donde el numero de
+                    // version viene del request, y se lee SOLO dentro de esta rama.
+                    // Si el manual ya tiene versiones publicadas, el campo ni se
+                    // consulta: degradar una version existente es imposible por
+                    // construccion, no por una validacion que alguien pueda saltear.
+                    // (Ver V2-H-027 de la auditoria v2.)
+                    $nuevoNumber = (int) ($request->input('version_inicial_number') ?: 1);
+                    $nuevoMinor  = (int) ($request->input('version_inicial_minor') ?? 0);
                 } elseif ($request->tipo_cambio === 'menor' && $activaActual) {
                     $nuevoNumber = $activaActual->version_number;
                     $nuevoMinor  = (ManualVersion::where('manual_id', $manual->id)
@@ -388,7 +384,11 @@ class ManualController extends Controller
                     $nuevoMinor  = 0;
                 }
 
-                $version = ManualVersion::create([
+                // V2-H-019: es_activa salio del $fillable de ManualVersion, asi que
+                // NO se puede setear via create()/fill() — se ignoraria en silencio y
+                // la version nacaria inactiva (manual publicado sin version visible).
+                // Se asigna con setter directo, igual que password_hash en H-015.
+                $version = new ManualVersion([
                     'manual_id'        => $manual->id,
                     'version_number'   => $nuevoNumber,
                     'version_minor'    => $nuevoMinor,
@@ -396,9 +396,10 @@ class ManualController extends Controller
                     'contenido_hash'   => $hash,
                     'publicado_por'    => $user->id,
                     'publicado_at'     => now(),
-                    'es_activa'        => 1,
                     'nota_publicacion' => $notaPub,
                 ]);
+                $version->es_activa = 1;
+                $version->save();
 
                 // Etiqueta mayor.menor para notificaciones ("v3.1").
                 $versionLabel = $version->version_number . '.' . $version->version_minor;
@@ -522,14 +523,7 @@ class ManualController extends Controller
         // v2.3: validar permisos ANTES de modificar el estado.
         // Antes el update se ejecutaba primero y después se devolvía 403, dejando
         // el manual archivado aunque el franquiciante no tuviera acceso.
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $manual);
 
         $manual->update(['estado' => 'archivado']);
 
@@ -552,14 +546,7 @@ class ManualController extends Controller
         $manual = Manual::findOrFail($id);
         $user   = $request->user();
 
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $manual);
 
         $manual->update(['estado' => 'borrador']);
 
@@ -636,10 +623,24 @@ class ManualController extends Controller
         //   - data:image/* URIs
         // Cualquier otra cosa se descarta.
         //
-        // La verificación es "contains" en vez de "startsWith" para soportar
-        // instalaciones en subpath (típico XAMPP local /manuales-franquiciantes/public).
-        // Igual sigue siendo seguro: la URL DEBE tener el path completo de nuestro
-        // endpoint. URLs a otros dominios no matchean el pattern.
+        // V2-H-024: el filtro anterior usaba "contains" sobre el path para soportar
+        // instalaciones en subpath (XAMPP: /manuales-franquiciantes/public/api/...).
+        // El comentario decía que "URLs a otros dominios no matchean el pattern".
+        // ERA FALSO: el (?:^|/) del regex matcheaba la barra que viene DESPUÉS del
+        // host, así que todo esto pasaba el filtro:
+        //
+        //     https://evil.com/api/manuales-imagenes/1/descargar
+        //     //tracker.malicioso.net/api/manuales-imagenes/1/descargar
+        //     http://attacker.io/api/manuales-imagenes/999/descargar?x=1
+        //
+        // HTMLPurifier permite http/https, así que un franquiciante podía insertar
+        // un pixel de tracking en un manual: cada franquiciado que abría lectura.php
+        // disparaba un request al servidor del atacante, filtrando IP, user-agent,
+        // confirmación de lectura y Referer.
+        //
+        // Ahora se parsea la URL y se RECHAZA cualquier src que traiga scheme o host.
+        // Solo se aceptan rutas relativas (que por definición apuntan a nuestro
+        // servidor) cuyo path termine en el endpoint, o data:image/.
         $html = preg_replace_callback(
             '#<img\s+[^>]*>#i',
             function ($m) {
@@ -647,17 +648,37 @@ class ManualController extends Controller
                 if (!preg_match('#src\s*=\s*["\']([^"\']+)["\']#i', $tag, $srcMatch)) {
                     return ''; // sin src → descartar
                 }
-                $src = trim($srcMatch[1]);
+                $src = trim(html_entity_decode($srcMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
-                // Aceptar si contiene el path exacto del endpoint (con o sin subpath).
-                // Regex: opcional http://host, luego el path /api/manuales-imagenes/N/descargar.
+                // data:image/ → lo permitimos (HTMLPurifier ya validó el subtipo).
+                if (str_starts_with($src, 'data:image/')) {
+                    return $tag;
+                }
+
+                $partes = parse_url($src);
+
+                // parse_url devuelve false ante URLs malformadas → descartar.
+                if ($partes === false) {
+                    return '';
+                }
+
+                // CLAVE: cualquier scheme (http:, https:, //host) implica un destino
+                // externo. Solo aceptamos rutas relativas a nuestro propio servidor.
+                if (!empty($partes['scheme']) || !empty($partes['host'])) {
+                    return '';
+                }
+
+                $path = $partes['path'] ?? '';
+
+                // El path debe TERMINAR en nuestro endpoint. El (?:^|/) inicial sigue
+                // siendo necesario para tolerar el subpath de XAMPP, pero ahora es
+                // seguro porque ya descartamos todo lo que tenga host.
                 $esNuestraApi = (bool) preg_match(
-                    '#(?:^|/)api/manuales-imagenes/\d+/descargar(?:\?|$)#',
-                    $src
+                    '#(?:^|/)api/manuales-imagenes/\d+/descargar$#',
+                    $path
                 );
-                $esDataUri = str_starts_with($src, 'data:image/');
 
-                return ($esNuestraApi || $esDataUri) ? $tag : '';
+                return $esNuestraApi ? $tag : '';
             },
             $html
         );
@@ -672,14 +693,7 @@ class ManualController extends Controller
         $user   = $request->user();
 
         // Franquiciante solo puede eliminar manuales de su empresa
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $manual);
 
         $manual->update([
             'estado'     => 'eliminado',
@@ -746,14 +760,7 @@ class ManualController extends Controller
         $user   = $request->user();
 
         // Franquiciante solo puede restaurar manuales de su empresa
-        if ($user->esFranquiciante()) {
-            $asignado = ManualEmpresaAssignment::where('manual_id', $id)
-                                            ->where('empresa_id', $user->empresa_id)
-                                            ->exists();
-            if (!$asignado) {
-                return response()->json(['error' => 'Sin acceso a este manual.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $manual);
 
         // Restaurar a borrador (estado seguro) y limpiar metadata de eliminación
         $manual->update([

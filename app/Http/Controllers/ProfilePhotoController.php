@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Endpoints:
  *   POST   /api/perfil/foto          → sube/reemplaza la foto propia
  *   DELETE /api/perfil/foto          → quita la foto propia
- *   GET    /api/perfil/foto/{userId} → sirve la foto (cualquier usuario autenticado)
+ *   GET    /api/perfil/foto/{userId} → sirve la foto (uno mismo, misma empresa, o super_admin)
  */
 class ProfilePhotoController extends Controller
 {
@@ -44,10 +44,21 @@ class ProfilePhotoController extends Controller
     {
         $user = $request->user();
 
+        // V2-H-021: además del peso, hay que acotar las DIMENSIONES.
+        // Antes solo se validaba MIME + 5 MB. Un PNG de 20000x20000 comprime a muy
+        // poco y entraba holgado en el límite de 5 MB, pero procesarlo con GD
+        // (imagecreatefrompng) reserva ancho * alto * 4 bytes ≈ 1,6 GB → agota la
+        // memoria de PHP. DoS con un solo upload.
+        //
+        // Con el tope de 5000x5000 el peor caso de GD queda en 5000*5000*4 = 100 MB.
+        // Si el memory_limit del server es menor a 256M, bajar estos valores.
+        // La regla dimensions usa getimagesize(), que solo lee el header: es barata
+        // y corre ANTES de que GD toque el archivo.
         $request->validate([
             // max en KB (5 MB). Aceptamos fotos grandes de celular y luego
             // las achicamos server-side.
-            'foto' => 'required|file|image|max:5120|mimes:jpg,jpeg,png,webp',
+            'foto' => 'required|file|image|max:5120|mimes:jpg,jpeg,png,webp'
+                      . '|dimensions:min_width=50,min_height=50,max_width=5000,max_height=5000',
         ]);
 
         if (!function_exists('imagecreatetruecolor')) {
@@ -68,8 +79,11 @@ class ProfilePhotoController extends Controller
         $disk = config('filesystems.default');
         $key  = "avatars/{$user->id}/" . substr(hash('sha256', $binario), 0, 16) . '.jpg';
 
-        // Subir la versión procesada (pública para poder servirla por URL directa).
-        Storage::disk($disk)->put($key, $binario, 'public');
+        // El avatar se sirve SIEMPRE por el endpoint autenticado /api/perfil/foto/{id}.
+        // NUNCA por URL directa, asi que no debe subirse con visibilidad 'public':
+        // en S3 eso dejaria el objeto accesible sin auth, con clave adivinable
+        // (avatars/{userId}/{hash16}.jpg). Misma clase de bug que v1 H-017.
+        Storage::disk($disk)->put($key, $binario);
 
         // Borrar la foto anterior si existía y es distinta.
         $anterior = $user->foto_url;
@@ -92,12 +106,33 @@ class ProfilePhotoController extends Controller
     }
 
     // GET /api/perfil/foto/{userId}
-    // Sirve la foto por stream desde el disco privado. Cualquier usuario
-    // autenticado puede ver el avatar de otro (aparece en logs, listados, etc.).
+    // Sirve la foto por stream desde el disco privado.
     public function ver(Request $request, int $userId): StreamedResponse|JsonResponse
     {
+        $actor   = $request->user();
         $usuario = User::find($userId);
         if (!$usuario || empty($usuario->foto_url)) {
+            return response()->json(['error' => 'Sin foto.'], 404);
+        }
+
+        // V2-H-004: antes bastaba estar autenticado. Un usuario de la empresa A
+        // podia ver el avatar de cualquier usuario de la empresa B enumerando IDs.
+        // Ahora: uno mismo, alguien de la misma empresa, o super_admin.
+        //
+        // Se niega con 404 'Sin foto.' y NO con 403, a proposito:
+        //   1. Es la misma respuesta que da hoy cuando el usuario no tiene foto,
+        //      asi que el frontend ya la maneja (fallback a iniciales). Cero riesgo
+        //      de dejar avatares rotos en un listado que no previmos.
+        //   2. Impide distinguir "existe pero no es tuyo" de "no tiene foto", con lo
+        //      cual la enumeracion no revela nada.
+        //
+        // Nota: super_admin tiene empresa_id NULL. Su avatar cae al fallback de
+        // iniciales para los demas roles. Es cosmetico, no un error.
+        $puedeVer = $actor->esSuperAdmin()
+            || $actor->id === $usuario->id
+            || ($actor->empresa_id !== null && $actor->empresa_id === $usuario->empresa_id);
+
+        if (!$puedeVer) {
             return response()->json(['error' => 'Sin foto.'], 404);
         }
 

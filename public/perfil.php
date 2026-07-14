@@ -423,7 +423,9 @@ async function init() {
     miPerfil = await apiFetch('GET', '/me');
     renderPerfil(miPerfil);
 
-    if (miPerfil.rol === 'franquiciante') {
+    const empresaFacturable = miPerfil.empresa?.facturable !== false;
+
+    if (miPerfil.rol === 'franquiciante' && empresaFacturable) {
       document.getElementById('col-facturacion').style.display = 'flex';
       cargarFacturacion(miPerfil);  // pasamos el perfil completo, empresa ya viene adentro
     }
@@ -479,7 +481,12 @@ async function cargarNombreEmpresa(empresa) {
 // ── FACTURACIÓN (solo franquiciante) ──────────────────────────
 async function cargarFacturacion(u) {
   const empresa = u.empresa;  // viene en /me
-
+ // Empresa exenta: no hay plan ni facturas que mostrar. Salimos sin pegarle a /invoices.
+  if (empresa && empresa.facturable === false) {
+    document.getElementById('col-facturacion').style.display = 'none';
+    return;
+  }
+  
   if (empresa) {
     renderPlan(empresa);
     document.getElementById('dato-empresa').textContent = empresa.nombre || '—';

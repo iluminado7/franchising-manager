@@ -118,6 +118,12 @@ class DocumentController extends Controller
             'visible_franquiciado' => 'nullable|boolean',
             'empresa_id'           => 'nullable|integer|exists:empresas,id',
             'nota'                 => 'nullable|string|max:500',
+            // Version inicial declarada por el usuario: permite cargar un documento
+            // que la empresa ya venia usando como "v10.3" sin que el sistema lo
+            // renumere a v1.0. Solo aplica al alta; subirVersion() sigue haciendo
+            // max(version_number) + 1, asi que hereda la numeracion correcta.
+            'version_inicial_number' => 'nullable|integer|min:1|max:999',
+            'version_inicial_minor'  => 'nullable|integer|min:0|max:999',
         ]);
 
         $archivo = $request->file('archivo');
@@ -136,10 +142,13 @@ class DocumentController extends Controller
                 'visible_franquiciado' => $request->visible_franquiciado ?? true,
             ]);
 
+            // Version inicial: la declarada por el usuario, o 1.0 por defecto.
+            // Es el unico punto donde el numero viene del request; a partir de aca
+            // subirVersion() autoincrementa desde max(version_number).
             DocumentVersion::create([
                 'document_id'         => $doc->id,
-                'version_number'      => 1,
-                'version_minor'       => 0,
+                'version_number'      => (int) ($request->input('version_inicial_number') ?: 1),
+                'version_minor'       => (int) ($request->input('version_inicial_minor') ?? 0),
                 'previous_version_id' => null,   // v2.3: primera versión, sin antecesora
                 'archivo_url'         => $path,
                 'archivo_hash'        => $hash,
@@ -179,12 +188,7 @@ class DocumentController extends Controller
         $documento = Document::findOrFail($id);
         $user      = $request->user();
 
-        if ($user->esFranquiciante() && $documento->empresa_id !== $user->empresa_id) {
-            return response()->json(['error' => 'Sin acceso a este documento.'], 403);
-        }
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
+        $this->authorize('gestionar', $documento);
 
         // H-003 fix: la franquicia debe pertenecer a la empresa del documento.
         // El $documento->empresa_id ya está validado por el gate al inicio del método.
@@ -231,12 +235,7 @@ class DocumentController extends Controller
         if ($documento->deleted_at !== null) {
             return response()->json(['error' => 'No se puede subir una versión a un documento eliminado.'], 409);
         }
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
-        if ($user->esFranquiciante() && $documento->empresa_id !== $user->empresa_id) {
-            return response()->json(['error' => 'Sin acceso a este documento.'], 403);
-        }
+        $this->authorize('gestionar', $documento);
 
         $request->validate([
             'archivo'     => 'required|file|mimes:pdf,doc,docx|max:20480',
@@ -335,12 +334,7 @@ class DocumentController extends Controller
         $documento = Document::findOrFail($id);
         $user      = $request->user();
 
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
-        if ($user->esFranquiciante() && $documento->empresa_id !== $user->empresa_id) {
-            return response()->json(['error' => 'Sin acceso a este documento.'], 403);
-        }
+        $this->authorize('gestionar', $documento);
 
         $includeDeleted = (bool) $request->query('include_deleted', false);
 
@@ -364,12 +358,7 @@ class DocumentController extends Controller
         $documento = $version->document;
         $user      = $request->user();
 
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
-        if ($user->esFranquiciante() && $documento->empresa_id !== $user->empresa_id) {
-            return response()->json(['error' => 'Sin acceso a este documento.'], 403);
-        }
+        $this->authorize('gestionar', $documento);
 
         $data = $request->validate([
             'nota' => 'nullable|string|max:500',
@@ -421,11 +410,7 @@ class DocumentController extends Controller
         $documento = Document::findOrFail($id);
         $user      = $request->user();
 
-        if ($user->esFranquiciante()) {
-            if ($documento->empresa_id !== $user->empresa_id) {
-                return response()->json(['error' => 'Sin acceso a este documento.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $documento);
 
         $documento->update([
             'deleted_by' => $user->id,
@@ -488,14 +473,7 @@ class DocumentController extends Controller
 
         $documento = $version->document;
 
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
-
-        if ($user->esFranquiciante() &&
-            $documento->empresa_id !== $user->empresa_id) {
-            return response()->json(['error' => 'Sin acceso.'], 403);
-        }
+        $this->authorize('gestionar', $documento);
 
         if ($version->deleted_at) {
             return response()->json([
@@ -567,11 +545,7 @@ class DocumentController extends Controller
         $documento = Document::findOrFail($id);
         $user      = $request->user();
 
-        if ($user->esFranquiciante()) {
-            if ($documento->empresa_id !== $user->empresa_id) {
-                return response()->json(['error' => 'Sin acceso a este documento.'], 403);
-            }
-        }
+        $this->authorize('gestionar', $documento);
 
         $documento->update([
             'deleted_by' => null,
@@ -605,14 +579,7 @@ class DocumentController extends Controller
         $documento = $version->document;
         $user      = $request->user();
 
-        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
-            return response()->json(['error' => 'Sin permisos.'], 403);
-        }
-
-        if ($user->esFranquiciante() &&
-            $documento->empresa_id !== $user->empresa_id) {
-            return response()->json(['error' => 'Sin acceso.'], 403);
-        }
+        $this->authorize('gestionar', $documento);
 
         if ($version->deleted_at === null) {
             return response()->json([

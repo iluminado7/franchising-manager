@@ -179,8 +179,8 @@ include 'layout/head.php';
     </div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif">
-        Esto generará facturas del período <strong id="periodo-txt" style="color:var(--blanco)"></strong> para todas las empresas activas que aún no tengan factura en ese período.<br><br>
-        Las empresas que ya tienen factura para este mes <strong style="color:var(--blanco)">no serán afectadas</strong>.
+       Esto generará facturas del período <strong id="periodo-txt" style="color:var(--blanco)"></strong> para todas las empresas activas <strong style="color:var(--blanco)">y facturables</strong> que aún no tengan factura en ese período.<br><br>
+        Las empresas que ya tienen factura para este mes <strong style="color:var(--blanco)">no serán afectadas</strong>. Las empresas exentas <strong style="color:var(--blanco)">nunca se facturan</strong>.
       </p>
       <div class="form-error" id="generar-error" style="display:none"></div>
       <div class="form-exito" id="generar-exito" style="display:none"></div>
@@ -539,7 +539,18 @@ function poblarSelectEmpresas(empresas) {
   empresas.forEach(e => {
     const opt = document.createElement('option');
     opt.value = e.id;
-    opt.textContent = `${e.nombre}${e.activa ? '' : ' (suspendida)'}`;
+
+    // Empresa exenta (facturable = false): nunca tiene facturas. La mostramos
+    // deshabilitada en vez de esconderla, para que el super_admin vea que existe
+    // y entienda por qué no aparece en el historial.
+    if (e.facturable === false) {
+      opt.textContent = `${e.nombre} (exenta — no se factura)`;
+      opt.disabled    = true;
+      opt.style.color = '#888';
+    } else {
+      opt.textContent = `${e.nombre}${e.activa ? '' : ' (suspendida)'}`;
+    }
+
     sel.appendChild(opt);
   });
 }

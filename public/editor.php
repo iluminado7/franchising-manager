@@ -439,6 +439,53 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ── MODAL VERSIÓN INICIAL (solo en la primera publicación) ─── -->
+
+<div class="modal-overlay" id="modal-version-inicial">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>¿Con qué versión arranca este manual?</h3>
+      <button class="modal-close" onclick="cerrarModalVersionInicial()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13.5px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:12px">
+        Si este manual ya venía usándose fuera del sistema con su propia numeración
+        (por ejemplo <strong style="color:var(--blanco)">v10.3</strong>), declarala acá.
+        Así el número que ve el socio comercial coincide con el que dice el documento por dentro.
+      </p>
+      <p style="font-size:13px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:18px">
+        <strong style="color:var(--dorado)">Se elige una sola vez.</strong>
+        A partir de la próxima publicación el sistema numera solo.
+      </p>
+
+      <div style="display:flex;align-items:flex-end;gap:10px">
+        <div class="form-group" style="flex:1;margin-bottom:0">
+          <label class="form-label">Versión</label>
+          <input id="vi-number" type="number" class="form-input" min="1" max="999" step="1" value="1" oninput="previewVersionInicial()">
+        </div>
+        <div style="font-size:22px;font-weight:700;color:var(--gris4);padding-bottom:10px">.</div>
+        <div class="form-group" style="flex:1;margin-bottom:0">
+          <label class="form-label">Revisión</label>
+          <input id="vi-minor" type="number" class="form-input" min="0" max="999" step="1" value="0" oninput="previewVersionInicial()">
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding:12px;border:1px solid var(--gris2);border-radius:6px;background:rgba(201,168,76,.04)">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris4);font-weight:600;margin-bottom:4px">Se publicará como</div>
+        <div id="vi-preview" style="font-size:20px;font-weight:700;color:var(--dorado);font-family:'Archivo',sans-serif">v1.0</div>
+      </div>
+
+      <div class="form-error" id="vi-error" style="display:none;margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalVersionInicial()">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarVersionInicial()">Continuar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL PUBLICAR ─────────────────────────────────────────── -->
 <div class="modal-overlay" id="modal-publicar" onclick="if(event.target===this)cerrarModal()">
   <div class="modal-box" style="max-width:500px">
@@ -1108,6 +1155,7 @@ let estado = {
   htmlOriginal:  '',
   modificado:    false,
   tipoCambio:    'mayor',   // elegido en el modal de version antes de publicar
+  versionInicial: null,     // {number, minor} — SOLO en la primera publicacion del manual
 };
 
 // v2.3 — categorías activas de la empresa del manual + ids actualmente asignados
@@ -2175,10 +2223,13 @@ function abrirModalVersion() {
 
   const activa = estado.versiones.find(v => v.es_activa == 1 && v.version_number > 0);
 
-  // Primera publicacion real: no se pregunta, el backend crea v1.0.
+  // Primera publicacion real: no hay version anterior contra la cual comparar,
+  // asi que en vez de preguntar mayor/menor preguntamos con que numero arranca.
+  // Es el unico momento en que el usuario puede elegir el numero (ver backend:
+  // ManualController::publicar, rama $ultimaVersion === 0).
   if (!activa) {
     estado.tipoCambio = 'mayor';
-    abrirModalPublicar();
+    abrirModalVersionInicial();
     return;
   }
 
@@ -2197,6 +2248,52 @@ function abrirModalVersion() {
   document.getElementById('ver-opcion-mayor').textContent = `v${maxNumber + 1}.0`;
 
   document.getElementById('modal-version').classList.add('open');
+}
+
+// ── VERSION INICIAL (solo primera publicacion) ────────────────
+
+function abrirModalVersionInicial() {
+  estado.versionInicial = null;
+  document.getElementById('vi-number').value = 1;
+  document.getElementById('vi-minor').value  = 0;
+  document.getElementById('vi-error').style.display = 'none';
+  previewVersionInicial();
+  document.getElementById('modal-version-inicial').classList.add('open');
+}
+
+function cerrarModalVersionInicial() {
+  document.getElementById('modal-version-inicial').classList.remove('open');
+}
+
+function previewVersionInicial() {
+  const n = parseInt(document.getElementById('vi-number').value, 10);
+  const m = parseInt(document.getElementById('vi-minor').value, 10);
+  const nOk = Number.isInteger(n) && n >= 1   && n <= 999;
+  const mOk = Number.isInteger(m) && m >= 0   && m <= 999;
+  document.getElementById('vi-preview').textContent =
+    (nOk && mOk) ? `v${n}.${m}` : '—';
+}
+
+function confirmarVersionInicial() {
+  const errEl = document.getElementById('vi-error');
+  const n = parseInt(document.getElementById('vi-number').value, 10);
+  const m = parseInt(document.getElementById('vi-minor').value, 10);
+
+  // version_number = 0 esta reservado para el borrador -> minimo 1.
+  if (!Number.isInteger(n) || n < 1 || n > 999) {
+    errEl.textContent = 'La versión debe ser un número entero entre 1 y 999.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!Number.isInteger(m) || m < 0 || m > 999) {
+    errEl.textContent = 'La revisión debe ser un número entero entre 0 y 999.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  estado.versionInicial = { number: n, minor: m };
+  cerrarModalVersionInicial();
+  abrirModalPublicar();   // paso 2: aviso legal (franquiciante) o confirmacion (admin)
 }
 
 function elegirTipoCambio(tipo) {
@@ -2269,9 +2366,17 @@ async function publicar() {
     };
     if (nota) body.nota_publicacion = nota;
 
+    // Solo va en la primera publicacion. El backend lo lee UNICAMENTE en la rama
+    // "no hay versiones publicadas"; si el manual ya tiene versiones, lo ignora.
+    if (estado.versionInicial) {
+      body.version_inicial_number = estado.versionInicial.number;
+      body.version_inicial_minor  = estado.versionInicial.minor;
+    }
+
     const res = await apiFetch('POST', `/manuales/${MANUAL_ID}/publicar`, body);
 
     cerrarModal();
+    estado.versionInicial = null;   // ya se uso: la proxima publicacion autoincrementa
     mostrarToast('¡Manual publicado! Los franquiciados fueron notificados.', 'exito');
     marcarSinCambios();
 

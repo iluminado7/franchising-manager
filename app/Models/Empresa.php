@@ -19,11 +19,13 @@ class Empresa extends Model
         'plan_id',
         'precio_custom_por_franquicia',
         'precio_custom_global',
+        'facturable',
         'activa',
     ];
 
     protected $casts = [
         'activa'                      => 'boolean',
+        'facturable'                   => 'boolean',
         'precio_custom_por_franquicia' => 'decimal:2',
         'precio_custom_global'         => 'decimal:2',
     ];
@@ -98,12 +100,16 @@ class Empresa extends Model
     // Precio efectivo según tipo de plan
     public function precioEfectivoporFranquicia(): ?float
     {
+        if (!$this->facturable) return 0.0;
+
         return $this->precio_custom_por_franquicia
             ?? $this->plan?->precio_base_por_franquicia;
     }
 
     public function precioEfectivoGlobal(): ?float
     {
+        if (!$this->facturable) return 0.0;
+
         return $this->precio_custom_global
             ?? $this->plan?->precio_global;
     }
@@ -113,5 +119,11 @@ class Empresa extends Model
     public function scopeActivas($query)
     {
         return $query->where('activa', 1);
+    }
+
+    // Para jobs de facturación / suspensión por impago: nunca deben tocar a la exenta.
+    public function scopeFacturables($query)
+    {
+        return $query->where('facturable', 1);
     }
 }

@@ -81,11 +81,17 @@ class InvoiceController extends Controller
     // Solo super_admin — genera facturas del mes actual para todas las empresas activas
     public function generar(Request $request): JsonResponse
     {
-        $periodo = now()->startOfMonth()->toDateString();
+        $periodo   = now()->startOfMonth()->toDateString();
         $generadas = 0;
         $errores   = [];
 
-        $empresas = Empresa::with('plan')->where('activa', 1)->get();
+        // facturables() excluye a la empresa exenta (Cerrajería Leonardo, la que
+        // desarrolla el software). Sin este filtro se le generaría una factura
+        // con plan_id = NULL.
+        $empresas = Empresa::with('plan')
+                           ->where('activa', 1)
+                           ->facturables()
+                           ->get();
 
         foreach ($empresas as $empresa) {
             // Evitar duplicado para el mismo período
@@ -97,9 +103,18 @@ class InvoiceController extends Controller
 
             try {
                 $plan = $empresa->plan;
+
+                // Una empresa facturable sin plan es un estado inválido: la
+                // reportamos como error en vez de dejar que el null reviente
+                // el batch entero.
+                if (!$plan) {
+                    $errores[] = "Empresa {$empresa->nombre}: es facturable pero no tiene plan asignado.";
+                    continue;
+                }
+
                 $franquiciasActivas = $empresa->franquiciasActivas()->count();
 
-                $precioPorFranquicia = null;
+                $precioPorFranquicia  = null;
                 $precioGlobalSnapshot = null;
                 $total = 0;
 
@@ -114,20 +129,23 @@ class InvoiceController extends Controller
                 $numeroFactura = $empresa->id . '-' . now()->format('Ym');
 
                 Invoice::create([
-                    'empresa_id'            => $empresa->id,
-                    'plan_id'               => $plan->id,
-                    'periodo'               => $periodo,
-                    'numero_factura'        => $numeroFactura,
-                    'franquicias_activas'   => $franquiciasActivas,
-                    'precio_por_franquicia' => $precioPorFranquicia,
-                    'precio_global_snapshot'=> $precioGlobalSnapshot,
-                    'total'                 => $total,
-                    'estado'                => 'pendiente',
+                    'empresa_id'             => $empresa->id,
+                    'plan_id'                => $plan->id,
+                    'periodo'                => $periodo,
+                    'numero_factura'         => $numeroFactura,
+                    'franquicias_activas'    => $franquiciasActivas,
+                    'precio_por_franquicia'  => $precioPorFranquicia,
+                    'precio_global_snapshot' => $precioGlobalSnapshot,
+                    'total'                  => $total,
+                    'estado'                 => 'pendiente',
                 ]);
 
                 $generadas++;
 
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                // \Throwable y no \Exception: un TypeError o un "call on null"
+                // son \Error y antes tumbaban el batch completo en vez de
+                // registrarse como error de esa empresa.
                 $errores[] = "Empresa {$empresa->nombre}: {$e->getMessage()}";
             }
         }

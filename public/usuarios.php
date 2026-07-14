@@ -588,7 +588,7 @@ function renderTabla(lista) {
         <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
         <td><span class="estado-pill estado-pendiente">Eliminado</span></td>
         <td>
-          <button class="accion-btn" style="color:var(--dorado)" onclick="restaurarUsuario(${u.id}, '${esc(nombre)}')">
+          <button class="accion-btn" style="color:var(--dorado)" onclick="restaurarUsuario(${u.id}, '${escAttr(nombre)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Restaurar
           </button>
@@ -614,7 +614,7 @@ function renderTabla(lista) {
     const puedeEliminar = u.rol !== 'super_admin' &&
       !(miRol === 'franquiciante' && u.rol === 'franquiciante');
     const btnEliminar = puedeEliminar ? `
-      <button class="accion-btn" style="color:var(--gris5)" onclick="abrirModalEliminar(${u.id}, '${esc(nombre)}')">
+      <button class="accion-btn" style="color:var(--gris5)" onclick="abrirModalEliminar(${u.id}, '${escAttr(nombre)}')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         Eliminar
       </button>` : '';
@@ -634,12 +634,12 @@ function renderTabla(lista) {
             Editar
           </button>
           ${u.rol === 'empleado' ? `
-          <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalManuales(${u.id}, '${esc(nombre)}')">
+            <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalManuales(${u.id}, '${escAttr(nombre)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Manuales
           </button>` : ''}
           ${u.rol === 'franquiciado' ? `
-          <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalCategorias(${u.id}, '${esc(nombre)}', ${u.empresa_id || 'null'})">
+          <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalCategorias(${u.id}, '${escAttr(nombre)}', ${u.empresa_id || 'null'})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Categorías
           </button>` : ''}
@@ -673,7 +673,7 @@ function renderCategoriasChips(u, nombre) {
   const more = resto > 0
     ? `<span class="cat-chip more"
              title="Ver todas las categorías de ${esc(nombre)}"
-             onclick="abrirModalCategorias(${u.id}, '${esc(nombre)}', ${u.empresa_id || 'null'})">
+             onclick="abrirModalCategorias(${u.id}, '${escAttr(nombre)}', ${u.empresa_id || 'null'})">
          +${resto} más
        </span>`
     : '';
@@ -813,7 +813,13 @@ function limpiarFranquiciaUsr() {
 
 // Escape para usar dentro de onmousedown="...('${valor}')"
 function escAttr(s) {
-  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+   return String(s ?? '')
+    .replace(/\\/g, '\\\\')   // JS: barra invertida
+    .replace(/'/g, "\\'")     // JS: cierre del string
+    .replace(/&/g, '&amp;')   // HTML: primero, para no romper las entidades de abajo
+    .replace(/"/g, '&quot;')  // HTML: cierre del atributo
+    .replace(/</g, '&lt;')    // HTML: defensivo
+    .replace(/>/g, '&gt;');
 }
 
 // Cerrar los comboboxes al hacer click afuera
