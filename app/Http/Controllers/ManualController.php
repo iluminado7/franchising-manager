@@ -263,9 +263,16 @@ class ManualController extends Controller
                                  ->first();
 
         if ($borrador) {
+            // El borrador (v0) guarda tambien su encabezado/pie, para que sea un
+            // snapshot completo de "lo que se publicaria si publicaras ahora".
             $borrador->update([
                 'contenido_html' => $html,
                 'contenido_hash' => hash('sha256', $html),
+                'encabezado_html' => $manual->encabezado_html,
+                'pie_pagina_html' => $manual->pie_pagina_html,
+                'documento_hash'  => $this->hashDocumento(
+                    $manual->encabezado_html, $html, $manual->pie_pagina_html
+                ),
             ]);
         } else {
             // V2-H-019: es_activa ya no esta en $fillable. No hace falta pasarlo:
@@ -276,6 +283,11 @@ class ManualController extends Controller
                 'version_number' => 0,
                 'contenido_html' => $html,
                 'contenido_hash' => hash('sha256', $html),
+                'encabezado_html' => $manual->encabezado_html,
+                'pie_pagina_html' => $manual->pie_pagina_html,
+                'documento_hash'  => $this->hashDocumento(
+                    $manual->encabezado_html, $html, $manual->pie_pagina_html
+                ),
                 'publicado_por'  => $request->user()->id,
                 'publicado_at'   => now(),
             ]);
@@ -388,12 +400,28 @@ class ManualController extends Controller
                 // NO se puede setear via create()/fill() — se ignoraria en silencio y
                 // la version nacaria inactiva (manual publicado sin version visible).
                 // Se asigna con setter directo, igual que password_hash en H-015.
+                // SNAPSHOT INMUTABLE del encabezado y el pie.
+                //
+                // $manual->encabezado_html ya viene sanitizado y guardado unas lineas
+                // mas arriba, asi que aca solo se congela. A partir de este momento,
+                // editar el manual NO cambia lo que esta version muestra ni lo que su
+                // documento_hash certifica.
+                //
+                // Esto es lo que arregla el agujero: antes, cambiar el pie de pagina
+                // de un manual ya aceptado modificaba el documento que el socio
+                // comercial imprimia y firmaba, sin generar version nueva y sin que
+                // el hash de verificacion se moviera un bit.
                 $version = new ManualVersion([
                     'manual_id'        => $manual->id,
                     'version_number'   => $nuevoNumber,
                     'version_minor'    => $nuevoMinor,
                     'contenido_html'   => $html,
                     'contenido_hash'   => $hash,
+                    'encabezado_html'  => $manual->encabezado_html,
+                    'pie_pagina_html'  => $manual->pie_pagina_html,
+                    'documento_hash'   => $this->hashDocumento(
+                        $manual->encabezado_html, $html, $manual->pie_pagina_html
+                    ),
                     'publicado_por'    => $user->id,
                     'publicado_at'     => now(),
                     'nota_publicacion' => $notaPub,
@@ -574,6 +602,28 @@ class ManualController extends Controller
     // El frontend intercepta paste/drag y sube al server ANTES de mostrar, así
     // que en el HTML final que llega al backend NO debería haber data: URIs
     // — pero por defensa las permitimos igual.
+    /**
+     * Hash del DOCUMENTO COMPLETO: encabezado + contenido + pie.
+     *
+     * Es lo que el usuario realmente ve, imprime y firma. contenido_hash cubre
+     * solo contenido_html, asi que por si solo no certifica nada del membrete:
+     * razon social, fecha de vigencia o aviso legal podian cambiar sin que el
+     * hash se moviera.
+     *
+     * Se hashea cada parte por separado y despues se concatenan los DIGESTS (no
+     * los HTML crudos). Concatenar los HTML seria ambiguo: encabezado "AB" +
+     * contenido "C" produciria el mismo string que encabezado "A" + contenido "BC",
+     * y por lo tanto el mismo hash para dos documentos distintos.
+     */
+    private function hashDocumento(?string $encabezado, string $contenido, ?string $pie): string
+    {
+        return hash('sha256',
+            hash('sha256', (string) $encabezado) .
+            hash('sha256', $contenido) .
+            hash('sha256', (string) $pie)
+        );
+    }
+
     private function sanitizarHtml(string $html): string
     {
         $config = HTMLPurifier_Config::createDefault();

@@ -522,16 +522,28 @@ async function init() {
     versionActivaId = version.id;
     yaAceptado      = manual.mi_aceptacion || false;
 
-    // Header/footer del manual: si tienen contenido, mostrarlos; si vienen
-    // vacíos, dejar el div oculto para que no ocupe espacio en blanco.
+    // Header/footer: se leen del SNAPSHOT DE LA VERSION, no del manual.
+    //
+    // El manual guarda la copia de trabajo (lo que el franquiciante está editando
+    // ahora). La versión guarda lo que estaba congelado al publicarse — que es lo
+    // que el socio comercial aceptó y lo que su hash_verificacion certifica.
+    //
+    // Leer del manual era el bug: cambiar el pie de página de un manual ya aceptado
+    // alteraba el documento que el socio imprimía y firmaba, sin versión nueva.
+    //
+    // El ?? manual.* es fallback para versiones anteriores a la migración; después
+    // del backfill no debería usarse nunca.
+    const encabezado = version.encabezado_html ?? manual.encabezado_html;
+    const pie        = version.pie_pagina_html ?? manual.pie_pagina_html;
+
     const headerEl = document.getElementById('doc-header');
     const footerEl = document.getElementById('doc-footer-manual');
-    if (manual.encabezado_html && manual.encabezado_html.trim()) {
-      headerEl.innerHTML = manual.encabezado_html;
+    if (encabezado && encabezado.trim()) {
+      headerEl.innerHTML = encabezado;
       headerEl.style.display = 'block';
     }
-    if (manual.pie_pagina_html && manual.pie_pagina_html.trim()) {
-      footerEl.innerHTML = manual.pie_pagina_html;
+    if (pie && pie.trim()) {
+      footerEl.innerHTML = pie;
       footerEl.style.display = 'block';
     }
 

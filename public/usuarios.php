@@ -349,6 +349,35 @@ include 'layout/head.php';
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
 /* Chips de categorías en la tabla */
+/* ── Avatar en la celda Nombre ────────────────────────────── */
+.u-nombre-cell { display: flex; align-items: center; gap: 10px; }
+
+/* Base: circulo con las iniciales. Siempre se renderiza. */
+.u-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--gris2);
+  border: 1px solid var(--gris3);
+  color: var(--gris5);
+  font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  font-family: 'Archivo', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* La foto se apoya ENCIMA de las iniciales. Si carga, las tapa; si el endpoint
+   devuelve 404, el onerror la borra y las iniciales quedan a la vista. El
+   fallback es el estado base, no una rama de codigo. */
+.u-avatar-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .cat-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 260px; }
 .cat-chip {
   display: inline-flex; align-items: center;
@@ -544,6 +573,29 @@ async function init() {
 }
 
 // ── RENDER TABLA ──────────────────────────────────────────────
+// Iniciales del usuario: NA (nombre+apellido) o la primera letra del email.
+// Mismo criterio que perfil.php, para que un usuario se vea igual en las dos pantallas.
+function inicialesDe(u) {
+  return (u.nombre && u.apellido)
+    ? `${u.nombre[0]}${u.apellido[0]}`.toUpperCase()
+    : (u.email ? u.email[0].toUpperCase() : '?');
+}
+
+// Avatar de 32px. Devuelve SIEMPRE el circulo con iniciales; si el usuario tiene
+// foto, le monta la <img> encima. Si la imagen falla (404 del endpoint, sin
+// permiso, archivo faltante) el onerror la elimina y quedan las iniciales.
+//
+// La URL se arma con API (const global) y NO con u.avatar_url tal cual: ese campo
+// es una ruta absoluta ("/api/perfil/foto/N") y en XAMPP el proyecto vive en un
+// subpath, con lo cual resolveria contra la raiz del servidor y daria 404.
+function renderAvatar(u) {
+  const ini = esc(inicialesDe(u));
+  if (!u.avatar_url) {
+    return `<span class="u-avatar">${ini}</span>`;
+  }
+  return `<span class="u-avatar">${ini}<img class="u-avatar-img" src="${API}/perfil/foto/${u.id}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+}
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   document.getElementById('tabla-titulo').textContent = `${lista.length} resultado(s)`;
@@ -580,7 +632,9 @@ function renderTabla(lista) {
     // Si está eliminado: solo super_admin lo ve, y solo puede restaurarlo (sin otras acciones)
     if (eliminado) {
       return `<tr style="opacity:.65">
-        <td style="color:var(--blanco);font-weight:500">${esc(nombre)}${badgeElim}</td>
+        <td style="color:var(--blanco);font-weight:500">
+          <div class="u-nombre-cell">${renderAvatar(u)}<span>${esc(nombre)}${badgeElim}</span></div>
+        </td>
         <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
         <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
         <td>${contexto}</td>
@@ -620,7 +674,9 @@ function renderTabla(lista) {
       </button>` : '';
 
     return `<tr>
-      <td style="color:var(--blanco);font-weight:500">${esc(nombre)}</td>
+      <td style="color:var(--blanco);font-weight:500">
+        <div class="u-nombre-cell">${renderAvatar(u)}<span>${esc(nombre)}</span></div>
+      </td>
       <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
       <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
       <td>${contexto}</td>

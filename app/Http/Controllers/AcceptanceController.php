@@ -73,7 +73,14 @@ class AcceptanceController extends Controller
                     'aceptado_at'       => now(),
                     'ip_address'        => $request->ip(),
                     'user_agent'        => $request->userAgent(),
-                    'hash_verificacion' => $v->contenido_hash,
+                    // Se firma el DOCUMENTO COMPLETO (encabezado + contenido + pie),
+                    // no solo el contenido. contenido_hash dejaba fuera el membrete:
+                    // razon social, fecha de vigencia y aviso legal podian cambiar
+                    // sin que el hash de la aceptacion se moviera.
+                    //
+                    // Fallback a contenido_hash para las versiones publicadas ANTES
+                    // de la migracion que agrego documento_hash.
+                    'hash_verificacion' => $v->documento_hash ?: $v->contenido_hash,
                     'pdf_generado'      => 0,
                 ]);
             });

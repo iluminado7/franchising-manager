@@ -35,6 +35,14 @@ class ManualVersion extends Model
         'version_minor',
         'contenido_html',
         'contenido_hash',
+        // Snapshot inmutable del encabezado/pie tal como estaban al publicar esta
+        // version. La copia de trabajo (editable) sigue en manuals.
+        'encabezado_html',
+        'pie_pagina_html',
+        // SHA-256 de encabezado+contenido+pie: es lo que el usuario realmente
+        // firma. contenido_hash cubre SOLO contenido_html y se conserva por
+        // compatibilidad con las aceptaciones ya emitidas.
+        'documento_hash',
         'publicado_por',
         'publicado_at',
         'nota_publicacion',   // mensaje opcional del publicador al subir la versión
