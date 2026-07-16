@@ -96,6 +96,8 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::get('/empresas/{id}',              [EmpresaController::class, 'show']);
         Route::put('/empresas/{id}',              [EmpresaController::class, 'update']);
         Route::get('/empresas/{id}/dashboard',    [EmpresaController::class, 'dashboard']);
+        Route::delete('/empresas/{id}',           [EmpresaController::class, 'destroy']);
+        Route::post('/empresas/{id}/restore',     [EmpresaController::class, 'restore']);
 
         // Emails de empresa
         Route::get('/empresas/{empresaId}/emails',         [EmpresaEmailController::class, 'index']);
@@ -142,6 +144,8 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::get('/franquicias/{id}',           [FranquiciaController::class, 'show']);
         Route::put('/franquicias/{id}',           [FranquiciaController::class, 'update']);
         Route::get('/franquicias/{id}/dashboard', [FranquiciaController::class, 'dashboard']);
+        Route::delete('/franquicias/{id}',        [FranquiciaController::class, 'destroy']);
+        Route::post('/franquicias/{id}/restore',  [FranquiciaController::class, 'restore']);
 
         // Categorías del franquiciado — escritura
         Route::post('/categorias',                    [FranchiseCategoryController::class, 'store']);

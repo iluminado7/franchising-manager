@@ -17,7 +17,12 @@ class FranquiciaController extends Controller
     {
         $user = $request->user();
 
-        $query = Franquicia::withCount('staff')->orderBy('nombre');
+        $incluirEliminadas = (bool) $request->query('include_deleted', false);
+
+        $query = Franquicia::withCount('staff')
+                           ->with('deletedBy:id,nombre,apellido,rol')
+                           ->when(!$incluirEliminadas, fn($q) => $q->noEliminadas())
+                           ->orderBy('nombre');
 
         // Franquiciante solo ve las franquicias de su empresa
         if ($user->esFranquiciante()) {
@@ -225,5 +230,92 @@ class FranquiciaController extends Controller
             'franquicia'   => $franquicia->nombre,
             'validaciones' => $resultado,
         ]);
+    }
+
+    // DELETE /api/franquicias/{id}  (solo super_admin)
+    // Soft-delete de una sola franquicia (no en cascada: la franquicia es la hoja).
+    // Suspende y revoca los tokens de sus socios comerciales / empleados.
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $actor = $request->user();
+
+        // La ruta /franquicias NO esta bajo role:super_admin (el franquiciante la
+        // usa para gestionar sus sucursales), asi que el guard va explicito aca:
+        // dar de baja una sucursal entera es operacion de super_admin.
+        if (!$actor->esSuperAdmin()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        $franquicia = Franquicia::findOrFail($id);
+
+        if ($franquicia->deleted_at !== null) {
+            return response()->json(['error' => 'La franquicia ya fue dada de baja.'], 409);
+        }
+
+        DB::transaction(function () use ($franquicia, $actor, $id) {
+            $franquicia->deleted_by = $actor->id;
+            $franquicia->deleted_at = now();
+            $franquicia->activa     = false;
+            $franquicia->save();
+
+            // Revocar tokens de los usuarios asignados a esta franquicia (via
+            // franchise_staff). Mismo mecanismo que la suspension de H-016.
+            $userIds = User::whereHas('franchiseStaff', fn($q) =>
+                $q->where('franquicia_id', $id)
+            )->pluck('id');
+
+            if ($userIds->isNotEmpty()) {
+                DB::table('personal_access_tokens')
+                    ->where('tokenable_type', User::class)
+                    ->whereIn('tokenable_id', $userIds)
+                    ->delete();
+            }
+        });
+
+        ActivityLog::registrar(
+            userId:      $actor->id,
+            accion:      'franquicia_eliminada',
+            ip:          $request->ip(),
+            empresaId:   $franquicia->empresa_id,
+            entidadTipo: 'franquicias',
+            entidadId:   $franquicia->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Franquicia dada de baja correctamente.']);
+    }
+
+    // POST /api/franquicias/{id}/restore  (solo super_admin)
+    // NO reactiva: activa queda en false hasta reactivacion manual.
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        $actor = $request->user();
+
+        if (!$actor->esSuperAdmin()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        $franquicia = Franquicia::findOrFail($id);
+
+        if ($franquicia->deleted_at === null) {
+            return response()->json(['error' => 'La franquicia no esta dada de baja.'], 409);
+        }
+
+        $franquicia->deleted_by = null;
+        $franquicia->deleted_at = null;
+        // activa queda en false: reactivar es aparte.
+        $franquicia->save();
+
+        ActivityLog::registrar(
+            userId:      $actor->id,
+            accion:      'franquicia_restaurada',
+            ip:          $request->ip(),
+            empresaId:   $franquicia->empresa_id,
+            entidadTipo: 'franquicias',
+            entidadId:   $franquicia->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Franquicia restaurada. Reactivala cuando quieras habilitar el acceso.']);
     }
 }

@@ -121,6 +121,18 @@ class Empresa extends Model
         return $query->where('activa', 1);
     }
 
+    // Excluir dados de baja (soft-delete). deleted_at / deleted_by se setean con
+    // setter directo desde el controller; no van al $fillable.
+    public function scopeNoEliminadas($query)
+    {
+        return $query->whereNull('deleted_at');
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
     // Para jobs de facturación / suspensión por impago: nunca deben tocar a la exenta.
     public function scopeFacturables($query)
     {

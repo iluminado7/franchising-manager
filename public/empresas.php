@@ -29,6 +29,8 @@ include 'layout/head.php';
         <button class="filtro-btn active" onclick="filtrar('todas', this)">Todas</button>
         <button class="filtro-btn" onclick="filtrar('activas', this)">Activas</button>
         <button class="filtro-btn" onclick="filtrar('inactivas', this)">Inactivas</button>
+        <button class="filtro-btn" id="btn-mostrar-elim" onclick="toggleMostrarEliminadas(this)"
+                style="margin-left:auto">Mostrar eliminadas</button>
         <div style="margin-left:auto;position:relative">
           <input type="text" id="inp-buscar" placeholder="Buscar empresa..." oninput="filtrarOpcionesEmpresa()" class="buscar-input">
           <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -335,6 +337,7 @@ let todosLosPlanes   = [];
 // al default 'todas'.
 const _paramEstado = new URLSearchParams(window.location.search).get('estado');
 let filtroActual   = ['todas', 'activas', 'inactivas'].includes(_paramEstado) ? _paramEstado : 'todas';
+let mostrarEliminadas = false;   // toggle "Mostrar eliminadas"
 let pendingToggle    = null;
 let emailsOriginales = []; // emails guardados de la empresa en edición
 
@@ -342,7 +345,7 @@ let emailsOriginales = []; // emails guardados de la empresa en edición
 async function cargarDatos() {
   try {
     const [empresas, planes] = await Promise.all([
-      apiFetch('GET', '/empresas'),
+      apiFetch('GET', '/empresas' + (mostrarEliminadas ? '?include_deleted=1' : '')),
       apiFetch('GET', '/planes'),
     ]);
 
@@ -442,9 +445,11 @@ function renderTabla(lista) {
       if (resto > 0) emailsHtml += `<div style="font-size:10px;color:var(--gris4)">+${resto} más</div>`;
     }
 
-    return `<tr>
+    const eliminada = !!e.deleted_at;
+
+    return `<tr style="${eliminada ? 'opacity:.55' : ''}">
       <td>
-        <div style="font-weight:500;color:var(--blanco)">${esc(e.nombre)}</div>
+        <div style="font-weight:500;color:var(--blanco)">${esc(e.nombre)}${eliminada ? ' <span class="estado-pill estado-pendiente" style="margin-left:6px">Dada de baja</span>' : ''}</div>
         <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${esc(e.razon_social)}</div>
       </td>
       <td style="font-family:'Roboto',sans-serif;font-size:12px">${esc(e.cuit)}</td>
@@ -464,6 +469,11 @@ function renderTabla(lista) {
       </td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${eliminada ? `
+          <button class="accion-btn" style="color:var(--exito)" onclick="restaurarEmpresa(${e.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar
+          </button>` : `
           <button class="accion-btn" style="color:var(--dorado)"
             onclick="window.location.href='franquicias.php?empresa_id=${e.id}'">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
@@ -480,6 +490,10 @@ function renderTabla(lista) {
               : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Activar`
             }
           </button>
+          <button class="accion-btn" style="color:var(--error)" onclick="abrirBajaEmpresa(${e.id}, '${esc(e.nombre).replace(/'/g, "\\'")}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Dar de baja
+          </button>`}
         </div>
       </td>
     </tr>`;
@@ -526,8 +540,11 @@ function filtrarOpcionesEmpresa() {
 
 function aplicarFiltros(texto = document.getElementById('inp-buscar').value) {
   let lista = [...todasLasEmpresas];
-  if (filtroActual === 'activas')   lista = lista.filter(e => e.activa);
-  if (filtroActual === 'inactivas') lista = lista.filter(e => !e.activa);
+  // Los filtros activas/inactivas aplican SOLO a empresas vivas. Una empresa dada
+  // de baja no es "activa" ni "inactiva": es otra categoria. Si el usuario filtra
+  // por activas, no queremos que aparezcan las eliminadas.
+  if (filtroActual === 'activas')   lista = lista.filter(e => e.activa && !e.deleted_at);
+  if (filtroActual === 'inactivas') lista = lista.filter(e => !e.activa && !e.deleted_at);
   if (texto.trim()) {
     const q = texto.toLowerCase();
     lista = lista.filter(e =>
@@ -851,6 +868,63 @@ async function confirmarToggle() {
     document.getElementById('toggle-error').style.display = 'block';
     btn.disabled = false;
     btn.textContent = activa ? 'Suspender' : 'Activar';
+  }
+}
+
+// ── SOFT-DELETE ───────────────────────────────────────────────
+
+async function toggleMostrarEliminadas(btn) {
+  mostrarEliminadas = !mostrarEliminadas;
+  btn.classList.toggle('active', mostrarEliminadas);
+  btn.textContent = mostrarEliminadas ? 'Ocultar eliminadas' : 'Mostrar eliminadas';
+  await cargarDatos();
+}
+
+// Dar de baja: reusa el modal-toggle genérico, configurándolo como acción de baja.
+let pendingBaja = null;
+function abrirBajaEmpresa(id, nombre) {
+  pendingBaja = id;
+  document.getElementById('toggle-titulo').textContent = 'Dar de baja la empresa';
+  document.getElementById('toggle-msg').innerHTML =
+    `Vas a dar de baja <strong>${nombre}</strong>. Esto también da de baja sus franquicias y ` +
+    `cierra la sesión de todos sus usuarios. No se borra nada: podés restaurarla después ` +
+    `desde "Mostrar eliminadas".`;
+  const b = document.getElementById('btn-toggle-confirmar');
+  b.textContent = 'Dar de baja';
+  b.className = 'btn';
+  b.style.background = 'var(--error)';
+  b.style.color = '#fff';
+  b.onclick = confirmarBaja;   // se reasigna; confirmarToggle usa su propio onclick del HTML
+  document.getElementById('toggle-error').style.display = 'none';
+  document.getElementById('modal-toggle').classList.add('open');
+}
+
+async function confirmarBaja() {
+  if (!pendingBaja) return;
+  const b = document.getElementById('btn-toggle-confirmar');
+  b.disabled = true; b.textContent = 'Procesando...';
+  try {
+    await apiFetch('DELETE', `/empresas/${pendingBaja}`);
+    mostrarToast('Empresa dada de baja.', 'error');
+    cerrarModalToggle();
+    b.onclick = confirmarToggle;   // restaurar el handler original del modal
+    b.style.background = ''; b.style.color = '';
+    pendingBaja = null;
+    await cargarDatos();
+  } catch (e) {
+    document.getElementById('toggle-error').textContent  = e.data?.message || 'Error.';
+    document.getElementById('toggle-error').style.display = 'block';
+    b.disabled = false; b.textContent = 'Dar de baja';
+  }
+}
+
+async function restaurarEmpresa(id) {
+  try {
+    const r = await apiFetch('POST', `/empresas/${id}/restore`);
+    mostrarToast(r.message || 'Empresa restaurada.', 'exito');
+    await cargarDatos();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'No se pudo restaurar.', 'error');
   }
 }
 

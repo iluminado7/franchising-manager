@@ -61,6 +61,7 @@ include 'layout/head.php';
             <button class="filtro-btn active" onclick="filtrar('todas', this)">Todas</button>
             <button class="filtro-btn" onclick="filtrar('activas', this)">Activas</button>
             <button class="filtro-btn" onclick="filtrar('inactivas', this)">Inactivas</button>
+            <button class="filtro-btn" id="btn-mostrar-elim-sa" onclick="toggleMostrarEliminadas(this)">Mostrar eliminadas</button>
             <div style="margin-left:auto;position:relative">
               <input type="text" id="inp-buscar-sa" placeholder="Buscar franquicia..." oninput="buscar(this.value)" class="buscar-input">
               <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -105,6 +106,7 @@ include 'layout/head.php';
           <button class="filtro-btn active" onclick="filtrar('todas', this)">Todas</button>
           <button class="filtro-btn" onclick="filtrar('activas', this)">Activas</button>
           <button class="filtro-btn" onclick="filtrar('inactivas', this)">Inactivas</button>
+          <button class="filtro-btn" id="btn-mostrar-elim-fq" onclick="toggleMostrarEliminadas(this)" style="margin-left:auto">Mostrar eliminadas</button>
         </div>
 
         <div class="tabla-wrap">
@@ -280,6 +282,7 @@ include 'layout/head.php';
 let todasLasFranquicias = [];
 let todasLasEmpresas    = [];
 let filtroActual        = 'todas';
+let mostrarEliminadas   = false;   // toggle "Mostrar eliminadas"
 let pendingToggle       = null;
 let empresaSeleccionada = null; // solo super_admin
 let rolActual           = '';
@@ -398,7 +401,7 @@ function volverSelector() {
 
 async function cargarFranquiciasDeEmpresa(empresaId) {
   try {
-    const data = await apiFetch('GET', `/franquicias?empresa_id=${empresaId}`);
+    const data = await apiFetch('GET', `/franquicias?empresa_id=${empresaId}` + (mostrarEliminadas ? '&include_deleted=1' : ''));
     todasLasFranquicias = data;
     aplicarFiltrosSA();
     document.getElementById('page-sub-sa').textContent =
@@ -411,8 +414,8 @@ async function cargarFranquiciasDeEmpresa(empresaId) {
 
 function aplicarFiltrosSA(texto = '') {
   let lista = [...todasLasFranquicias];
-  if (filtroActual === 'activas')   lista = lista.filter(f => f.activa);
-  if (filtroActual === 'inactivas') lista = lista.filter(f => !f.activa);
+  if (filtroActual === 'activas')   lista = lista.filter(f => f.activa && !f.deleted_at);
+  if (filtroActual === 'inactivas') lista = lista.filter(f => !f.activa && !f.deleted_at);
   if (texto.trim()) {
     const q = texto.toLowerCase();
     lista = lista.filter(f =>
@@ -427,7 +430,7 @@ function aplicarFiltrosSA(texto = '') {
 // ── FRANQUICIANTE: cargar sus franquicias ─────────────────────
 async function cargarFranquicias() {
   try {
-    const data = await apiFetch('GET', '/franquicias');
+    const data = await apiFetch('GET', '/franquicias' + (mostrarEliminadas ? '?include_deleted=1' : ''));
     todasLasFranquicias = data;
     aplicarFiltrosFQ();
     document.getElementById('page-sub-fq').textContent =
@@ -440,8 +443,8 @@ async function cargarFranquicias() {
 
 function aplicarFiltrosFQ(texto = '') {
   let lista = [...todasLasFranquicias];
-  if (filtroActual === 'activas')   lista = lista.filter(f => f.activa);
-  if (filtroActual === 'inactivas') lista = lista.filter(f => !f.activa);
+  if (filtroActual === 'activas')   lista = lista.filter(f => f.activa && !f.deleted_at);
+  if (filtroActual === 'inactivas') lista = lista.filter(f => !f.activa && !f.deleted_at);
   if (texto.trim()) {
     const q = texto.toLowerCase();
     lista = lista.filter(f =>
@@ -479,12 +482,17 @@ function renderTabla(lista, tbodyId, tituloId) {
         ${!f.email_contacto && !f.telefono ? '—' : ''}
       </td>
       <td>
-        <span class="estado-pill ${f.activa ? 'estado-completo' : 'estado-pendiente'}">
-          ${f.activa ? 'Activa' : 'Inactiva'}
+        <span class="estado-pill ${f.deleted_at ? 'estado-pendiente' : (f.activa ? 'estado-completo' : 'estado-pendiente')}">
+          ${f.deleted_at ? 'Dada de baja' : (f.activa ? 'Activa' : 'Inactiva')}
         </span>
       </td>
       <td>
         <div style="display:flex;gap:4px">
+          ${f.deleted_at ? `
+          <button class="accion-btn" style="color:var(--exito)" onclick="restaurarFranquicia(${f.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar
+          </button>` : `
           <button class="accion-btn" style="color:var(--gris5)" onclick="abrirModalEditar(${f.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
@@ -496,6 +504,10 @@ function renderTabla(lista, tbodyId, tituloId) {
               : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Activar`
             }
           </button>
+          <button class="accion-btn" style="color:var(--error)" onclick="abrirBajaFranquicia(${f.id}, '${esc(f.nombre).replace(/'/g, "\\'")}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Dar de baja
+          </button>`}
         </div>
       </td>
     </tr>
@@ -654,6 +666,76 @@ async function confirmarToggle() {
     document.getElementById('toggle-error').style.display = 'block';
     btn.disabled = false;
     btn.textContent = activa ? 'Desactivar' : 'Activar';
+  }
+}
+
+// ── SOFT-DELETE ───────────────────────────────────────────────
+
+async function recargarSegunVista() {
+  // La vista puede ser el listado general o el de una empresa puntual.
+  if (empresaSeleccionada) {
+    await cargarFranquiciasDeEmpresa(empresaSeleccionada.id);
+  } else {
+    await cargarFranquicias();
+  }
+}
+
+async function toggleMostrarEliminadas(btn) {
+  mostrarEliminadas = !mostrarEliminadas;
+  // Sincroniza los dos botones (uno por vista) aunque se toque solo uno.
+  ['btn-mostrar-elim-fq', 'btn-mostrar-elim-sa'].forEach(bid => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.classList.toggle('active', mostrarEliminadas);
+    b.textContent = mostrarEliminadas ? 'Ocultar eliminadas' : 'Mostrar eliminadas';
+  });
+  await recargarSegunVista();
+}
+
+// Reusa el modal-toggle genérico, reconfigurándolo como acción de baja.
+let pendingBajaFq = null;
+function abrirBajaFranquicia(id, nombre) {
+  pendingBajaFq = id;
+  document.getElementById('toggle-titulo').textContent = 'Dar de baja la franquicia';
+  document.getElementById('toggle-msg').innerHTML =
+    `Vas a dar de baja <strong>${nombre}</strong>. Esto cierra la sesión de sus socios ` +
+    `comerciales y empleados. No se borra nada: podés restaurarla desde "Mostrar eliminadas".`;
+  const b = document.getElementById('btn-toggle-confirmar');
+  b.textContent = 'Dar de baja';
+  b.className = 'btn';
+  b.style.background = 'var(--error)';
+  b.style.color = '#fff';
+  b.onclick = confirmarBajaFranquicia;
+  document.getElementById('toggle-error').style.display = 'none';
+  document.getElementById('modal-toggle').classList.add('open');
+}
+
+async function confirmarBajaFranquicia() {
+  if (!pendingBajaFq) return;
+  const b = document.getElementById('btn-toggle-confirmar');
+  b.disabled = true; b.textContent = 'Procesando...';
+  try {
+    await apiFetch('DELETE', `/franquicias/${pendingBajaFq}`);
+    mostrarToast('Franquicia dada de baja.', 'error');
+    cerrarModalToggle();
+    b.onclick = confirmarToggle;   // restaura el handler original del modal
+    b.style.background = ''; b.style.color = '';
+    pendingBajaFq = null;
+    await recargarSegunVista();
+  } catch (e) {
+    document.getElementById('toggle-error').textContent  = e.data?.message || 'Error.';
+    document.getElementById('toggle-error').style.display = 'block';
+    b.disabled = false; b.textContent = 'Dar de baja';
+  }
+}
+
+async function restaurarFranquicia(id) {
+  try {
+    const r = await apiFetch('POST', `/franquicias/${id}/restore`);
+    mostrarToast(r.message || 'Franquicia restaurada.', 'exito');
+    await recargarSegunVista();
+  } catch (e) {
+    mostrarToast(e.data?.message || 'No se pudo restaurar.', 'error');
   }
 }
 

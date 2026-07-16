@@ -3,18 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Empresa;
+use App\Models\Franquicia;
 use App\Models\User;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class EmpresaController extends Controller
 {
     // GET /api/empresas
     public function index(Request $request): JsonResponse
     {
-        $empresas = Empresa::with(['plan', 'emails'])
+        // Por defecto se ocultan las dadas de baja. Con ?include_deleted=1 se
+        // incluyen (para el toggle "mostrar eliminadas" del panel).
+        $incluirEliminadas = (bool) $request->query('include_deleted', false);
+
+        $empresas = Empresa::with(['plan', 'emails', 'deletedBy:id,nombre,apellido,rol'])
                            ->withCount(['franquicias', 'franquiciasActivas'])
+                           ->when(!$incluirEliminadas, fn($q) => $q->noEliminadas())
                            ->orderBy('nombre')
                            ->get();
 
@@ -121,6 +128,104 @@ class EmpresaController extends Controller
         }
 
         return response()->json($empresa->fresh('plan'));
+    }
+
+    // DELETE /api/empresas/{id}  (solo super_admin)
+    // Soft-delete en cascada: baja la empresa y TODAS sus franquicias no-eliminadas
+    // en la misma transaccion, con el mismo timestamp. Suspende (activa=false) y
+    // revoca los tokens de todos los usuarios de la empresa.
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $empresa = Empresa::findOrFail($id);
+        $actor   = $request->user();
+
+        if ($empresa->deleted_at !== null) {
+            return response()->json(['error' => 'La empresa ya fue dada de baja.'], 409);
+        }
+
+        $ahora = now();
+
+        DB::transaction(function () use ($empresa, $actor, $ahora, $id) {
+            // Empresa: baja + suspension. deleted_at/deleted_by/activa con setter
+            // directo (deleted_* no estan en $fillable; activa si, pero lo unificamos).
+            $empresa->deleted_by = $actor->id;
+            $empresa->deleted_at = $ahora;
+            $empresa->activa     = false;
+            $empresa->save();
+
+            // Cascada: solo las franquicias que HOY estan activas (no las ya
+            // dadas de baja). Se marcan con el MISMO deleted_at que la empresa;
+            // ese timestamp compartido es la firma de "cayo por esta cascada" y
+            // permite revivir solo estas al restaurar.
+            Franquicia::where('empresa_id', $id)
+                      ->whereNull('deleted_at')
+                      ->update([
+                          'deleted_by' => $actor->id,
+                          'deleted_at' => $ahora,
+                          'activa'     => 0,
+                      ]);
+
+            // Revocar tokens de todos los usuarios de la empresa: los saca del
+            // sistema de inmediato, sin esperar a que expiren.
+            User::where('empresa_id', $id)->each(fn($u) => $u->tokens()->delete());
+        });
+
+        ActivityLog::registrar(
+            userId:      $actor->id,
+            accion:      'empresa_eliminada',
+            ip:          $request->ip(),
+            empresaId:   $empresa->id,
+            entidadTipo: 'empresas',
+            entidadId:   $empresa->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Empresa dada de baja correctamente.']);
+    }
+
+    // POST /api/empresas/{id}/restore  (solo super_admin)
+    // Restaura la empresa y las franquicias que cayeron en la MISMA cascada
+    // (mismo deleted_at). NO reactiva: activa queda en false hasta que el
+    // super_admin la reactive a mano. Restaurar != reactivar.
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        $empresa = Empresa::findOrFail($id);
+        $actor   = $request->user();
+
+        if ($empresa->deleted_at === null) {
+            return response()->json(['error' => 'La empresa no esta dada de baja.'], 409);
+        }
+
+        $tsBaja = $empresa->deleted_at;
+
+        DB::transaction(function () use ($empresa, $id, $tsBaja) {
+            $empresa->deleted_by = null;
+            $empresa->deleted_at = null;
+            // activa NO se toca: queda en false. Reactivar es un paso aparte.
+            $empresa->save();
+
+            // Solo las franquicias que se bajaron EN ESTA cascada (mismo timestamp).
+            // Las que el usuario habia dado de baja por su cuenta antes NO reviven.
+            Franquicia::where('empresa_id', $id)
+                      ->where('deleted_at', $tsBaja)
+                      ->update([
+                          'deleted_by' => null,
+                          'deleted_at' => null,
+                          // activa queda en 0: reactivar la sucursal es aparte.
+                      ]);
+        });
+
+        ActivityLog::registrar(
+            userId:      $actor->id,
+            accion:      'empresa_restaurada',
+            ip:          $request->ip(),
+            empresaId:   $empresa->id,
+            entidadTipo: 'empresas',
+            entidadId:   $empresa->id,
+            userAgent:   $request->userAgent()
+        );
+
+        return response()->json(['message' => 'Empresa restaurada. Reactivala cuando quieras habilitar el acceso.']);
     }
 
     /**
