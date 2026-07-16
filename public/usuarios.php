@@ -1285,6 +1285,8 @@ function abrirModalToggle(id, activo) {
 
 function cerrarModalToggle() {
   document.getElementById('modal-toggle').classList.remove('open');
+  const btn = document.getElementById('btn-toggle-confirmar');
+  btn.disabled = false;   // re-habilitar SIEMPRE al cerrar (éxito o cancelación)
   pendingToggle = null;
 }
 
@@ -1333,7 +1335,13 @@ function abrirModalEliminar(id, nombre) {
   document.getElementById('eliminar-error').style.display = 'none';
   document.getElementById('modal-eliminar').classList.add('open');
 }
-function cerrarModalEliminar() { document.getElementById('modal-eliminar').classList.remove('open'); pendingEliminar = null; }
+function cerrarModalEliminar() { 
+    ocument.getElementById('modal-eliminar').classList.remove('open');
+  const btn = document.getElementById('btn-eliminar-confirmar');
+  btn.disabled = false;   // re-habilitar SIEMPRE al cerrar
+  btn.textContent = 'Eliminar';
+  pendingEliminar = null;
+ }
 
 async function ejecutarEliminar() {
   if (!pendingEliminar) return;

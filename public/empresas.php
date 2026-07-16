@@ -850,6 +850,8 @@ function abrirModalToggle(id, activa) {
 
 function cerrarModalToggle() {
   document.getElementById('modal-toggle').classList.remove('open');
+  const btn = document.getElementById('btn-toggle-confirmar');
+  btn.disabled = false;   // re-habilitar SIEMPRE al cerrar
   pendingToggle = null;
 }
 

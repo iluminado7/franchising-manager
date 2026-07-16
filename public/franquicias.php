@@ -626,10 +626,17 @@ async function guardar() {
   }
 }
 
-// ── TOGGLE ────────────────────────────────────────────────────
+// ── TOGGLE / BAJA (modal compartido) ──────────────────────────
+//
+// Un solo botón físico (#btn-toggle-confirmar) con un onclick FIJO en el HTML:
+// confirmarModal(). Nunca se reasigna el onclick. La acción pendiente se guarda
+// en accionPendiente y confirmarModal() despacha según corresponda. Así no hay
+// handlers cruzados entre operaciones.
+let accionPendiente = null;   // { tipo: 'toggle'|'baja', id, activa? }
+
 function abrirModalToggle(id, activa) {
-  pendingToggle = { id, activa };
   const f = todasLasFranquicias.find(x => x.id === id);
+  accionPendiente = { tipo: 'toggle', id, activa };
   document.getElementById('toggle-titulo').textContent =
     activa ? 'Desactivar franquicia' : 'Activar franquicia';
   document.getElementById('toggle-msg').textContent = activa
@@ -637,42 +644,64 @@ function abrirModalToggle(id, activa) {
     : `¿Activar "${f?.nombre}"? Los usuarios podrán volver a ingresar.`;
   const btn = document.getElementById('btn-toggle-confirmar');
   btn.className   = `btn ${activa ? 'btn-danger' : 'btn-success'}`;
+  btn.style.background = ''; btn.style.color = '';
   btn.textContent = activa ? 'Desactivar' : 'Activar';
+  document.getElementById('toggle-error').style.display = 'none';
+  document.getElementById('modal-toggle').classList.add('open');
+}
+
+function abrirBajaFranquicia(id, nombre) {
+  accionPendiente = { tipo: 'baja', id };
+  document.getElementById('toggle-titulo').textContent = 'Dar de baja la franquicia';
+  document.getElementById('toggle-msg').innerHTML =
+    `Vas a dar de baja <strong>${nombre}</strong>. Esto cierra la sesión de sus socios ` +
+    `comerciales y empleados. No se borra nada: podés restaurarla desde "Mostrar eliminadas".`;
+  const btn = document.getElementById('btn-toggle-confirmar');
+  btn.className = 'btn btn-danger';
+  btn.style.background = ''; btn.style.color = '';
+  btn.textContent = 'Dar de baja';
   document.getElementById('toggle-error').style.display = 'none';
   document.getElementById('modal-toggle').classList.add('open');
 }
 
 function cerrarModalToggle() {
   document.getElementById('modal-toggle').classList.remove('open');
-  pendingToggle = null;
+  const btn = document.getElementById('btn-toggle-confirmar');
+  btn.disabled = false;   // ← re-habilitar SIEMPRE al cerrar (éxito o cancelación)
+  accionPendiente = null;
 }
 
+// Handler ÚNICO del botón del modal. Despacha según la acción pendiente.
 async function confirmarToggle() {
-  if (!pendingToggle) return;
-  const { id, activa } = pendingToggle;
+  if (!accionPendiente) return;
   const btn = document.getElementById('btn-toggle-confirmar');
+  const accion = accionPendiente;
   btn.disabled = true; btn.textContent = 'Procesando...';
+
   try {
-    await apiFetch('PUT', `/franquicias/${id}`, { activa: !activa });
-    mostrarToast(activa ? 'Franquicia desactivada.' : 'Franquicia activada.', activa ? 'error' : 'exito');
-    cerrarModalToggle();
-    if (rolActual === 'super_admin' && empresaSeleccionada) {
-      await cargarFranquiciasDeEmpresa(empresaSeleccionada.id);
+    if (accion.tipo === 'baja') {
+      await apiFetch('DELETE', `/franquicias/${accion.id}`);
+      mostrarToast('Franquicia dada de baja.', 'error');
     } else {
-      await cargarFranquicias();
+      await apiFetch('PUT', `/franquicias/${accion.id}`, { activa: !accion.activa });
+      mostrarToast(accion.activa ? 'Franquicia desactivada.' : 'Franquicia activada.',
+                   accion.activa ? 'error' : 'exito');
     }
+    cerrarModalToggle();
+    await recargarSegunVista();
   } catch (e) {
     document.getElementById('toggle-error').textContent  = e.data?.message || 'Error.';
     document.getElementById('toggle-error').style.display = 'block';
     btn.disabled = false;
-    btn.textContent = activa ? 'Desactivar' : 'Activar';
+    btn.textContent = accion.tipo === 'baja'
+      ? 'Dar de baja'
+      : (accion.activa ? 'Desactivar' : 'Activar');
   }
 }
 
 // ── SOFT-DELETE ───────────────────────────────────────────────
 
 async function recargarSegunVista() {
-  // La vista puede ser el listado general o el de una empresa puntual.
   if (empresaSeleccionada) {
     await cargarFranquiciasDeEmpresa(empresaSeleccionada.id);
   } else {
@@ -682,7 +711,6 @@ async function recargarSegunVista() {
 
 async function toggleMostrarEliminadas(btn) {
   mostrarEliminadas = !mostrarEliminadas;
-  // Sincroniza los dos botones (uno por vista) aunque se toque solo uno.
   ['btn-mostrar-elim-fq', 'btn-mostrar-elim-sa'].forEach(bid => {
     const b = document.getElementById(bid);
     if (!b) return;
@@ -690,43 +718,6 @@ async function toggleMostrarEliminadas(btn) {
     b.textContent = mostrarEliminadas ? 'Ocultar eliminadas' : 'Mostrar eliminadas';
   });
   await recargarSegunVista();
-}
-
-// Reusa el modal-toggle genérico, reconfigurándolo como acción de baja.
-let pendingBajaFq = null;
-function abrirBajaFranquicia(id, nombre) {
-  pendingBajaFq = id;
-  document.getElementById('toggle-titulo').textContent = 'Dar de baja la franquicia';
-  document.getElementById('toggle-msg').innerHTML =
-    `Vas a dar de baja <strong>${nombre}</strong>. Esto cierra la sesión de sus socios ` +
-    `comerciales y empleados. No se borra nada: podés restaurarla desde "Mostrar eliminadas".`;
-  const b = document.getElementById('btn-toggle-confirmar');
-  b.textContent = 'Dar de baja';
-  b.className = 'btn';
-  b.style.background = 'var(--error)';
-  b.style.color = '#fff';
-  b.onclick = confirmarBajaFranquicia;
-  document.getElementById('toggle-error').style.display = 'none';
-  document.getElementById('modal-toggle').classList.add('open');
-}
-
-async function confirmarBajaFranquicia() {
-  if (!pendingBajaFq) return;
-  const b = document.getElementById('btn-toggle-confirmar');
-  b.disabled = true; b.textContent = 'Procesando...';
-  try {
-    await apiFetch('DELETE', `/franquicias/${pendingBajaFq}`);
-    mostrarToast('Franquicia dada de baja.', 'error');
-    cerrarModalToggle();
-    b.onclick = confirmarToggle;   // restaura el handler original del modal
-    b.style.background = ''; b.style.color = '';
-    pendingBajaFq = null;
-    await recargarSegunVista();
-  } catch (e) {
-    document.getElementById('toggle-error').textContent  = e.data?.message || 'Error.';
-    document.getElementById('toggle-error').style.display = 'block';
-    b.disabled = false; b.textContent = 'Dar de baja';
-  }
 }
 
 async function restaurarFranquicia(id) {
