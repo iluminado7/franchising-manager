@@ -1242,13 +1242,25 @@ function cargarVersion(version) {
   estado.htmlOriginal = version.contenido_html || '';
   document.getElementById('editor').innerHTML = version.contenido_html || '';
 
-  // Header/footer viven en el manual (no en la versión). Se cargan al inicio
-  // y no cambian entre versiones. Guardamos los originales para detección
-  // de cambios.
-  // FIX: usar estado.manual (que se guarda en cargarManual()) porque el
-  // parámetro manual NO está en scope acá — solo llega la version.
-  const headerHtml = estado.manual?.encabezado_html || '';
-  const footerHtml = estado.manual?.pie_pagina_html || '';
+  // Header/footer: se leen del SNAPSHOT DE LA VERSIÓN.
+  //
+  // Antes salían de estado.manual (la copia de trabajo), con el argumento de que
+  // "viven en el manual y no cambian entre versiones". Eso dejó de ser cierto: ahora
+  // cada versión congela su propio encabezado/pie al publicarse, y lectura.php ya
+  // lee ese snapshot. Si el editor siguiera mostrando la copia de trabajo, el
+  // historial del editor mentiría aunque el manual publicado dijera la verdad.
+  //
+  // Esto importa especialmente al CARGAR UNA VERSIÓN VIEJA del historial
+  // (cargarVersionDesdeJSON): antes traía el contenido de la v1 con el encabezado
+  // de HOY, y publicar desde ahí generaba un documento mitad viejo y mitad nuevo.
+  // Ahora el rollback es coherente: contenido de la v1 + encabezado de la v1.
+  //
+  // ?? y no ||: un encabezado guardado como cadena vacía ('') es una decisión del
+  // usuario (lo borró). Con || caería al del manual y le reaparecería lo que acaba
+  // de borrar. El ?? solo cubre null/undefined: versiones anteriores a la migración,
+  // o un manual que todavía no tiene ninguna versión.
+  const headerHtml = version.encabezado_html ?? estado.manual?.encabezado_html ?? '';
+  const footerHtml = version.pie_pagina_html ?? estado.manual?.pie_pagina_html ?? '';
   estado.headerOriginal = headerHtml;
   estado.footerOriginal = footerHtml;
   document.getElementById('editor-header').innerHTML = headerHtml;

@@ -151,6 +151,32 @@ document.addEventListener('DOMContentLoaded', async function iniciarLayout() {
   }
 });
 
+// ── NAVEGACIÓN DE NOTIFICACIONES ──────────────────────────────
+//
+// El backend ya resolvió a dónde lleva cada notificación y si el recurso sigue
+// disponible (NotificationController::resolverDestino). Acá NO se decide nada:
+// solo se obedece. La lógica de "¿el manual sigue publicado? ¿el usuario todavía
+// tiene acceso? ¿este rol navega libre o va por la cola?" vive en PHP, que es donde
+// están los datos y las reglas.
+//
+// Cache id -> notificación, para que el onclick no tenga que serializar el objeto
+// entero en un atributo HTML.
+const NOTIFS_CACHE = new Map();
+
+// Click en una notificación: marca leída y DESPUÉS navega.
+//
+// El await antes de navegar no es cosmético: si se dispara el POST y se navega en
+// el mismo tick, el browser puede abortar el request en vuelo y la notificación
+// queda sin marcar.
+async function abrirNotif(id, el) {
+  const n = NOTIFS_CACHE.get(id);
+  await marcarNotifLeida(id, el);
+
+  if (n && n.disponible && n.destino) {
+    window.location.href = `${BASE_URL}/${n.destino}`;
+  }
+}
+
 // ── BADGE ─────────────────────────────────────────────────────
 function actualizarBadgeNotificaciones(total) {
   const badge = document.getElementById('notif-badge');
@@ -203,16 +229,27 @@ async function mostrarPopupNotificaciones() {
       document.body.appendChild(popup);
     }
 
+    notifs.forEach(n => NOTIFS_CACHE.set(n.id, n));
+
     document.getElementById('popup-notif-count').textContent = notifs.length;
-    document.getElementById('popup-notif-lista').innerHTML   = notifs.slice(0, 6).map(n => `
-      <div style="padding:12px 0;border-bottom:1px solid rgba(44,44,44,.5);display:flex;gap:12px;align-items:flex-start">
+    document.getElementById('popup-notif-lista').innerHTML   = notifs.slice(0, 6).map(n => {
+      // Mismos campos que el panel: destino y disponible vienen resueltos del backend.
+      const clickable = (n.disponible && n.destino)
+        ? `onclick="abrirNotif(${n.id}, this)" style="cursor:pointer"`
+        : '';
+      const aviso = !n.disponible
+        ? `<div style="font-size:11px;color:var(--gris4);font-style:italic;margin-top:2px;font-family:'Roboto',sans-serif">Ya no está disponible</div>`
+        : '';
+      return `
+      <div ${clickable} data-notif-id="${n.id}" style="padding:12px 0;border-bottom:1px solid rgba(44,44,44,.5);display:flex;gap:12px;align-items:flex-start;opacity:${n.disponible ? '1' : '.55'}">
         <div style="width:6px;height:6px;border-radius:50%;background:var(--dorado);flex-shrink:0;margin-top:5px"></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:500;color:var(--blanco);margin-bottom:3px;line-height:1.3">${esc(n.titulo)}</div>
           <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${formatFechaNotif(n.created_at)}</div>
+          ${aviso}
         </div>
-      </div>
-    `).join('') + (notifs.length > 6
+      </div>`;
+    }).join('') + (notifs.length > 6
       ? `<div style="font-size:12px;color:var(--gris4);text-align:center;padding:12px 0;font-family:'Roboto',sans-serif">y ${notifs.length - 6} notificación(es) más...</div>`
       : '');
 
@@ -318,10 +355,27 @@ async function cargarNotificacionesPanel() {
       return;
     }
 
-    lista.innerHTML = notifs.map(n => `
-      <div data-notif-id="${n.id}" onclick="marcarNotifLeida(${n.id}, this)" style="
+    NOTIFS_CACHE.clear();
+    notifs.forEach(n => NOTIFS_CACHE.set(n.id, n));
+
+    lista.innerHTML = notifs.map(n => {
+      // Recurso borrado, archivado, despublicado, o al que el usuario ya no tiene
+      // acceso. Se MUESTRA marcado, no se oculta: si el usuario recibió el mail y
+      // después no encuentra nada, el silencio confunde más que el aviso.
+      const aviso = !n.disponible
+        ? `<div style="font-size:11px;color:var(--gris4);font-style:italic;margin-top:3px;font-family:'Roboto',sans-serif">Ya no está disponible</div>`
+        : '';
+
+      // Flechita solo si realmente lleva a algún lado. No prometemos lo que no hay.
+      const flecha = (n.disponible && n.destino)
+        ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gris3);margin-top:4px"><polyline points="9 18 15 12 9 6"/></svg>`
+        : '';
+
+      return `
+      <div data-notif-id="${n.id}" onclick="abrirNotif(${n.id}, this)" style="
         padding:14px 20px;border-bottom:1px solid rgba(44,44,44,.5);
         cursor:pointer;transition:background .15s;
+        opacity:${n.disponible ? '1' : '.55'};
         background:${!n.leida ? 'rgba(201,168,76,.04)' : 'transparent'}"
         onmouseover="this.style.background='rgba(255,255,255,.04)'"
         onmouseout="this.style.background='${!n.leida ? 'rgba(201,168,76,.04)' : 'transparent'}'">
@@ -330,10 +384,12 @@ async function cargarNotificacionesPanel() {
           <div style="flex:1">
             <div class="notif-titulo" style="font-size:13px;font-weight:${!n.leida ? '500' : '400'};color:${!n.leida ? 'var(--blanco)' : 'var(--gris5)'};margin-bottom:4px;line-height:1.3">${esc(n.titulo)}</div>
             <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${formatFechaNotif(n.created_at)}</div>
+            ${aviso}
           </div>
+          ${flecha}
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
 
   } catch (_) {
     lista.innerHTML = `<div style="text-align:center;padding:48px 24px;color:var(--gris4);font-size:13px">Error al cargar.</div>`;
