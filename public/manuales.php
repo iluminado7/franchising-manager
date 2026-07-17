@@ -913,7 +913,7 @@ function irEditor(id) { window.location.href = `${BASE_PHP}/editor.php?id=${id}`
 // preview=1 marca que se abrió en modo previsualización (mismo render).
 // Pestaña nueva para no perder el listado.
 function vistaPrevia(id) {
-  window.open(`${BASE_PHP}/lectura.php?id=${id}&preview=1`, '_blank');
+    window.location.href = `${BASE_PHP}/lectura.php?id=${id}&preview=1`;
 }
 
 // ── ARCHIVAR ──────────────────────────────────────────────────

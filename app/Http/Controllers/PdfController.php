@@ -44,14 +44,33 @@ class PdfController extends Controller
         $encabezado = $this->resolverImagenes($version->encabezado_html ?? '', $manual->id);
         $pie        = $this->resolverImagenes($version->pie_pagina_html ?? '', $manual->id);
 
+        // Encabezado (mismo HTML que se repite en cada pagina). Se arma ACA,
+        // antes de crear el Mpdf, porque necesitamos su ALTURA para margin_top.
+        $tieneEncabezado = (trim(strip_tags($encabezado)) !== '' || str_contains($encabezado, '<img'));
+        $headerHtml = $tieneEncabezado
+            ? '<div style="border-bottom:1px solid #ccc;padding-bottom:4px;text-align:center;font-family:sans-serif;font-size:10px;color:#333;line-height:1.3">'
+              . $this->limitarImagenes($encabezado) .
+              '</div>'
+            : '';
+
+        // margin_top determinístico: margin_header + altura real del encabezado +
+        // un gap fijo. El contenido queda SIEMPRE ~gap mm debajo del header, sin
+        // encimarse (header grande) ni dejar hueco (header chico). Sin encabezado,
+        // un margen superior normal.
+        $margenHeader = 9;
+        $gap          = 5;
+        $marginTop    = $tieneEncabezado
+            ? $margenHeader + (int) ceil($this->medirAlturaHeader($headerHtml)) + $gap
+            : 18;
+
         $mpdf = new Mpdf([
             'mode'          => 'utf-8',
             'format'        => 'A4',
-            'margin_top'    => 50,   // deja lugar al header
+            'margin_top'    => $marginTop,   // calculado segun la altura del encabezado
             'margin_bottom' => 34,   // deja lugar al footer + nº de página
             'margin_left'   => 18,
             'margin_right'  => 18,
-            'margin_header' => 8,
+            'margin_header' => $margenHeader,
             'margin_footer' => 8,
             'tempDir'       => storage_path('app/mpdf-tmp'),
             'allow_local_files' => true,
@@ -60,13 +79,9 @@ class PdfController extends Controller
         $mpdf->SetTitle($manual->titulo);
         $mpdf->SetAuthor('Manuales Franquiciantes');
 
-        // Header repetido en cada página (si el manual tiene encabezado).
-        if (trim(strip_tags($encabezado)) !== '' || str_contains($encabezado, '<img')) {
-            $mpdf->SetHTMLHeader(
-                '<div style="border-bottom:1px solid #ccc;padding-bottom:4px;text-align:center;font-family:sans-serif;font-size:10px;color:#333;line-height:1.3">'
-                . $this->limitarImagenes($encabezado) .
-                '</div>'
-            );
+        // Header repetido en cada página (ya armado arriba en $headerHtml).
+        if ($tieneEncabezado) {
+            $mpdf->SetHTMLHeader($headerHtml);
         }
 
         // Footer repetido en cada página: el pie del franquiciante (centrado) +
@@ -117,6 +132,45 @@ class PdfController extends Controller
         // la response. ('I' imprimiria directo a la salida; 'D' forzaria descarga.)
         return response($mpdf->Output($nombre, 'S'), 200)
             ->header('Content-Type', 'application/pdf');
+    }
+
+    /**
+     * Mide la ALTURA (en mm) que ocupa el HTML del encabezado, renderizandolo en
+     * una instancia mPDF descartable con el MISMO ancho util (A4 - margenes L/R)
+     * y margen superior 0. Tras escribir, $scratch->y = alto del contenido en mm.
+     *
+     * Se usa para calcular margin_top a mano (margin_header + altura + gap), en
+     * vez de setAutoTopMargin='pad', cuyo gap depende de la version de mPDF.
+     */
+    private function medirAlturaHeader(string $html): float
+    {
+        try {
+            $scratch = new Mpdf([
+                'mode'          => 'utf-8',
+                'format'        => 'A4',
+                'margin_top'    => 0,
+                'margin_bottom' => 0,
+                'margin_left'   => 18,
+                'margin_right'  => 18,
+                'margin_header' => 0,
+                'margin_footer' => 0,
+                'tempDir'       => storage_path('app/mpdf-tmp'),
+                'allow_local_files' => true,
+            ]);
+            $scratch->WriteHTML($html);
+            $altura = (float) $scratch->y;   // y actual = alto del contenido (margen sup = 0)
+            unset($scratch);
+        } catch (\Throwable $e) {
+            $altura = 0.0;
+        }
+
+        // Defensa: si la medicion fallo (0) o dio un valor absurdo, caemos a un
+        // alto razonable para no encimar ni reservar de mas.
+        if ($altura <= 0 || $altura > 130) {
+            $altura = 40.0;
+        }
+
+        return $altura;
     }
 
     /**
