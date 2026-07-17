@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\ManualController;
+use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ManualImageController;
 use App\Http\Controllers\AcceptanceController;
 use App\Http\Controllers\NotificationController;
@@ -163,6 +164,7 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::delete('/manuales/{id}',           [ManualController::class, 'destroy']);
         Route::post('/manuales/{id}/restore',     [ManualController::class, 'restore']);
         Route::post('/manuales/{id}/publicar',    [ManualController::class, 'publicar']);
+        Route::get('/manuales/{id}/pdf',          [PdfController::class, 'generar']);
         Route::post('/manuales/{id}/archivar',    [ManualController::class, 'archivar']);
         Route::post('/manuales/{id}/borrador',    [ManualController::class, 'guardarBorrador']);
         Route::post('/manuales/{id}/desarchivar', [ManualController::class, 'desarchivar']);

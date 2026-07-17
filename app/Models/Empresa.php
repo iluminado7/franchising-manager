@@ -56,13 +56,18 @@ class Empresa extends Model
 
     public function franquicias(): HasMany
     {
-        return $this->hasMany(Franquicia::class, 'empresa_id');
+        // Excluye las dadas de baja: no deben sumar al total que se muestra en el
+        // panel de empresas. Si en algún momento hace falta el conteo histórico
+        // (incluyendo bajas), usar una relación aparte para no mezclar criterios.
+        return $this->hasMany(Franquicia::class, 'empresa_id')
+                    ->whereNull('deleted_at');
     }
 
     public function franquiciasActivas(): HasMany
     {
         return $this->hasMany(Franquicia::class, 'empresa_id')
-                    ->where('activa', 1);
+                    ->where('activa', 1)
+                    ->whereNull('deleted_at');
     }
 
     public function systemAdmins(): HasMany

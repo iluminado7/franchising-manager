@@ -531,6 +531,10 @@ function renderTabla(lista) {
               Editar
             </button>
             ${version ? `
+            <button class="accion-btn" style="color:var(--dorado)" onclick="vistaPrevia(${m.id})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Vista previa
+            </button>
             <button class="accion-btn" style="color:var(--gris5)" onclick="verAceptaciones(${m.id}, '${esc(m.titulo)}', ${version.id})">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Aceptaciones
@@ -904,6 +908,13 @@ function mostrarNuevoError(msg) {
 
 // ── EDITOR ────────────────────────────────────────────────────
 function irEditor(id) { window.location.href = `${BASE_PHP}/editor.php?id=${id}`; }
+
+// Vista previa: abre el manual en lectura.php tal como lo verá el receptor.
+// preview=1 marca que se abrió en modo previsualización (mismo render).
+// Pestaña nueva para no perder el listado.
+function vistaPrevia(id) {
+  window.open(`${BASE_PHP}/lectura.php?id=${id}&preview=1`, '_blank');
+}
 
 // ── ARCHIVAR ──────────────────────────────────────────────────
 function abrirModalArchivar(id, titulo) {

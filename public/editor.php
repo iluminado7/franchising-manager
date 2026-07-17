@@ -1354,8 +1354,33 @@ async function importarDocx(file) {
 
   try {
     const ab = await file.arrayBuffer();
+    // Preserva la ALINEACIÓN de párrafos (justificado del Word). Mammoth la
+    // descarta por defecto; transformDocument da acceso a paragraph.alignment.
+    // Se marca cada párrafo con una clase temporal (__al-*) que el post-proceso
+    // de abajo convierte en style="text-align:*" inline (lo único que sobrevive
+    // el HTMLPurifier del backend, que no permite class ni p sin [style]).
+     const marcarAlineacion = mammoth.transforms.paragraph(function (par) {
+      const a = par.alignment;
+      if (a === 'both' || a === 'justified') {
+        return Object.assign({}, par, { styleId: 'AlJustify', styleName: 'AlJustify' });
+      }
+      if (a === 'center') {
+        return Object.assign({}, par, { styleId: 'AlCenter', styleName: 'AlCenter' });
+      }
+      if (a === 'right' || a === 'end') {
+        return Object.assign({}, par, { styleId: 'AlRight', styleName: 'AlRight' });
+      }
+      return par;
+    });
+
     const result = await mammoth.convertToHtml({ arrayBuffer: ab }, {
+      transformDocument: marcarAlineacion,
       styleMap: [
+        // Ahora SÍ con style-name (lo único que Mammoth parsea). Los nombres
+        // 'AlJustify' etc. los inyectó transformDocument arriba.
+        "p[style-name='AlJustify'] => p.__al-justify:fresh",
+        "p[style-name='AlCenter']  => p.__al-center:fresh",
+        "p[style-name='AlRight']   => p.__al-right:fresh",
         "p[style-name='Heading 1'] => h1:fresh",
         "p[style-name='Heading 2'] => h2:fresh",
         "p[style-name='Heading 3'] => h3:fresh",
@@ -1385,7 +1410,25 @@ async function importarDocx(file) {
       })
     });
 
-    document.getElementById('editor').innerHTML = result.value;
+    // Post-proceso: convertir las clases temporales de alineación en style inline.
+    // HTMLPurifier del backend borra class y p pelado, pero conserva
+    // style="text-align:*". Así el justificado sobrevive editor -> publicar -> lectura -> PDF.
+    const _tmpDoc = document.createElement('div');
+    _tmpDoc.innerHTML = result.value;
+    _tmpDoc.querySelectorAll('.__al-justify').forEach(function (el) {
+      el.style.textAlign = 'justify'; el.classList.remove('__al-justify');
+      if (!el.getAttribute('class')) el.removeAttribute('class');
+    });
+    _tmpDoc.querySelectorAll('.__al-center').forEach(function (el) {
+      el.style.textAlign = 'center'; el.classList.remove('__al-center');
+      if (!el.getAttribute('class')) el.removeAttribute('class');
+    });
+    _tmpDoc.querySelectorAll('.__al-right').forEach(function (el) {
+      el.style.textAlign = 'right'; el.classList.remove('__al-right');
+      if (!el.getAttribute('class')) el.removeAttribute('class');
+    });
+
+    document.getElementById('editor').innerHTML = _tmpDoc.innerHTML;
     actualizarContador();
     marcarConCambios();
 

@@ -238,61 +238,105 @@ body {
    como "repetir en cada página".
    ══════════════════════════════════════════════════════════ */
 @media print {
+  /* Encabezado y pie del NAVEGADOR (fecha, URL, "Word — ...") se sacan desde el
+     diálogo de impresión: "Más configuraciones" → "Encabezados y pies" → desactivar.
+     No se pueden quitar por CSS. */
+
   @page {
     size: A4;
-    margin: 3cm 2cm 3cm 2cm; /* top/right/bottom/left — deja espacio a header y footer */
+    /* El margen superior/inferior reserva el espacio donde van el header y el
+       footer fijos. Sin este margen, position:fixed los solapa con el texto. */
+    margin: 2.5cm 1.8cm;
   }
 
-  /* Ocultar todo lo que no sea el contenido del manual (topbars, sidebars, botones) */
-  .doc-topbar, .doc-footer, .find-bar, #estado-aceptacion-wrap, #btn-aceptar-wrap,
-  .app-topbar, .app-sidebar { display: none !important; }
+  /* Ocultar TODO lo que no sea el documento. Se oculta por clase Y con un
+     enfoque de "apagar la app": el topbar real usa .topbar (no .app-topbar). */
+  .topbar, .app-topbar, .app-sidebar, .doc-topbar, .doc-footer,
+  .find-bar, #estado-aceptacion-wrap, #btn-aceptar-wrap,
+  .btn-logout, .notif-bell, .app-body > *:not(.lectura-layout) {
+    display: none !important;
+  }
 
-  /* La marca de agua SI se imprime (disuasivo ante capturas/impresiones). */
+  /* Resetear los contenedores de la app para que no metan padding/ancho propio. */
+  .app-layout, .app-body, .lectura-layout, main {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    background: #fff !important;
+  }
+
+  .doc-page {
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* ── HEADER fijo: se repite arriba en CADA hoja ── */
+  .doc-header {
+    display: block !important;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 2cm;
+    margin: 0;
+    padding: 4px 0;
+    border-bottom: 1px solid #ccc;
+    background: #fff;
+    color: #333;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  /* ── FOOTER fijo: se repite abajo en CADA hoja ── */
+  .doc-footer-manual {
+    display: block !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 2cm;
+    margin: 0;
+    padding: 4px 0;
+    border-top: 1px solid #ccc;
+    background: #fff;
+    color: #333;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .doc-header img, .doc-footer-manual img { max-height: 1.6cm; width: auto; }
+
+  /* El contenido fluye entre header y footer. El @page margin ya reserva el
+     espacio; este padding extra evita que la primera/última línea los toque. */
+  #doc-content-wrap {
+    padding-top: 0.4cm !important;
+    padding-bottom: 0.4cm !important;
+  }
+
+  /* Legibilidad en papel */
+  body, #doc-content-wrap, #doc-content-wrap * {
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  /* Evitar cortes feos: que una imagen o fila de tabla no se parta al medio */
+  #doc-content-wrap img,
+  #doc-content-wrap tr,
+  #doc-content-wrap table { page-break-inside: avoid; }
+
+  /* Que un título no quede huérfano al final de una hoja */
+  #doc-content-wrap h1, #doc-content-wrap h2, #doc-content-wrap h3 {
+    page-break-after: avoid;
+  }
+
+  /* La marca de agua sí se imprime (disuasivo) */
   .watermark-container {
     display: block !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-
-  .app-layout, .app-body, .lectura-layout, main { display: block !important; }
-
-  .doc-page {
-    padding: 0 !important;
-    box-shadow: none !important;
-    background: white !important;
-    max-width: none !important;
-  }
-
-  /* Header: fijo arriba en cada página impresa */
-  .doc-header {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    margin: 0;
-    padding: 10px 20px;
-    border-bottom: 1px solid #ccc;
-    background: white;
-    color: #333;
-    page-break-after: avoid;
-  }
-
-  /* Footer: fijo abajo en cada página impresa */
-  .doc-footer-manual {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    margin: 0;
-    padding: 10px 20px;
-    border-top: 1px solid #ccc;
-    background: white;
-    color: #333;
-    page-break-before: avoid;
-  }
-
-  /* Body a color negro y letras oscuras para impresión legible */
-  body, #doc-content-wrap, #doc-content-wrap * {
-    color: #000 !important;
-    background: white !important;
-  }
 }
+
 
 /* Notas / Sugerencias (vista franquiciado) */
 .notas-box {
@@ -352,6 +396,11 @@ body {
         <span id="doc-fecha">—</span>
         <button class="doc-find-btn" onclick="toggleBuscador()" title="Buscar en el documento (Ctrl+F)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
+        <!-- Imprimir / Descargar PDF — visible SOLO para super_admin y franquiciante.
+             Se despliega desde JS una vez que se conoce el rol (init). -->
+        <button class="doc-find-btn" id="btn-imprimir" onclick="imprimirManual()" title="Imprimir / Descargar PDF" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         </button>
       </div>
     </div>
@@ -497,6 +546,13 @@ async function init() {
     // Obtener rol del usuario para saber si mostrar aceptación
     const me = await apiFetch('GET', '/me');
     rolUsuario = me.rol;
+
+    // Imprimir / Descargar PDF: solo super_admin y franquiciante. El socio
+    // comercial y el empleado leen y aceptan, no imprimen el documento maestro.
+    if (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') {
+      const bi = document.getElementById('btn-imprimir');
+      if (bi) bi.style.display = '';
+    }
 
     // Marca de agua con datos del usuario: solo socios comerciales (franquiciado) y empleados.
     if (rolUsuario === 'franquiciado' || rolUsuario === 'empleado') {
@@ -759,7 +815,7 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Bloquear F12 o Ctrl+Shift+I (Inspeccionar elemento)
-    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+    if (e.key === 'F14' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
         e.preventDefault();
     }
 });
@@ -771,6 +827,20 @@ let findMatches = [];
 let findIndex   = -1;
 const findSupported =
   (typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight !== 'undefined');
+
+// Imprimir el manual. PASO 2: usa la impresión del navegador.
+// PASO 3 (mPDF): esto se reemplaza por la descarga del PDF generado en el servidor,
+// que garantiza encabezado y pie en cada hoja sin depender del navegador:
+//   window.location.href = `${BASE_PHP}/api/manuales/${MANUAL_ID}/pdf`;
+function imprimirManual() {
+  // Abre el PDF generado por mPDF en el servidor (encabezado y pie en cada hoja,
+  // nº de página, igual en cualquier máquina). Se abre en pestaña nueva: el visor
+  // del navegador ya trae los botones de imprimir y guardar.
+  //
+  // API es la misma constante global que usa apiFetch (definida en layout), así
+  // que resuelve bien el subpath de XAMPP sin depender de BASE_PHP.
+  window.open(`${API}/manuales/${MANUAL_ID}/pdf`, '_blank');
+}
 
 function toggleBuscador() {
   const bar = document.getElementById('find-bar');

@@ -629,7 +629,10 @@ class ManualController extends Controller
         $config = HTMLPurifier_Config::createDefault();
 
         $config->set('HTML.Allowed',
-            'h1,h2,h3,p,br,' .
+            // p[style] para conservar text-align (justificado importado del Word).
+            // text-align ya está en CSS.AllowedProperties; sin [style] acá,
+            // HTMLPurifier borraría la alineación al publicar.
+            'h1,h2,h3,p[style],br,' .
             'strong,em,u,s,' .
             'ul,ol,li,' .
             'table[style],thead,tbody,tr,' .
