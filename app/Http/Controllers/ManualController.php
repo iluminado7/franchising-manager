@@ -293,10 +293,11 @@ class ManualController extends Controller
             ]);
         }
 
-        // Feature imágenes: limpiar imágenes que ya no están referenciadas en
-        // ninguna versión del manual ni en el header/footer.
+        // Feature imágenes: limpiar imágenes que ya no están referenciadas.
+        // Se pasa $html (lo recién guardado) por robustez, para que nunca se borre
+        // una imagen que el borrador actual referencia.
         try {
-            ManualImageController::limpiarHuerfanas($manual->id);
+            ManualImageController::limpiarHuerfanas($manual->id, $html);
         } catch (\Throwable $e) { /* best-effort — no bloquea el guardado */ }
 
         return response()->json(['message' => 'Borrador guardado.']);
@@ -348,11 +349,14 @@ class ManualController extends Controller
         try {
             DB::transaction(function () use ($manual, $user, $html, $hash, $request, $notaPub) {
 
-                // Feature imágenes: limpiamos huérfanas al publicar. Se hace ANTES
-                // de crear la versión nueva para que la limpieza vea el estado
-                // "borrador anterior" y no la versión que estamos por crear.
+                // Feature imágenes: limpiamos huérfanas al publicar. Se PASA el HTML
+                // que estamos por publicar ($html) para que sus imágenes NO se
+                // consideren huérfanas: todavía no están en ninguna versión guardada.
+                // Sin esto, las imágenes recién importadas se borraban acá y la
+                // versión nueva quedaba referenciando imágenes inexistentes (candado
+                // en el PDF; src="" tras resolverImagenes).
                 try {
-                    ManualImageController::limpiarHuerfanas($manual->id);
+                    ManualImageController::limpiarHuerfanas($manual->id, $html);
                 } catch (\Throwable $e) { /* best-effort */ }
 
                 // Capturamos la version activa ANTES de desactivarla: su numero es

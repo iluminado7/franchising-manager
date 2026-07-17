@@ -189,7 +189,7 @@ class ManualImageController extends Controller
      * Se llama desde ManualController::guardarBorrador y publicar() después
      * de guardar los cambios.
      */
-    public static function limpiarHuerfanas(int $manualId): int
+    public static function limpiarHuerfanas(int $manualId, ?string $htmlExtra = null): int
     {
         $manual = Manual::find($manualId);
         if (!$manual) return 0;
@@ -205,6 +205,13 @@ class ManualImageController extends Controller
                                   ->pluck('contenido_html');
         foreach ($versiones as $html) {
             $htmls[] = $html ?? '';
+        }
+
+        // HTML que está por publicarse/guardarse pero AÚN NO es una versión en la
+        // base. Sin esto, sus imágenes recién subidas se verían como huérfanas y se
+        // borrarían justo antes de crear la versión que las referencia -> candado.
+        if ($htmlExtra !== null) {
+            $htmls[] = $htmlExtra;
         }
 
         $htmlCompleto = implode(' ', $htmls);

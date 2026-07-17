@@ -1373,14 +1373,42 @@ async function importarDocx(file) {
       return par;
     });
 
+    // Mapa de resaltados estandar de Word (w:highlight) -> color hex.
+    // Son 16 nombres FIJOS; el highlight de Word no admite hex arbitrario
+    // (eso seria color de fuente/fondo de celda, que van por otra via).
+    const _HL_MAP = {
+      yellow:'#FFFF00', green:'#00FF00', cyan:'#00FFFF', magenta:'#FF00FF',
+      blue:'#0000FF', red:'#FF0000', darkblue:'#000080', darkcyan:'#008080',
+      darkgreen:'#008000', darkmagenta:'#800080', darkred:'#800000',
+      darkyellow:'#808000', darkgray:'#808080', lightgray:'#C0C0C0',
+      black:'#000000', white:'#FFFFFF'
+    };
+
+    // Marca cada run resaltado con un styleName sintetico (__hl_<nombre>),
+    // igual que la alineacion pero a nivel run. 'none' o desconocido se
+    // dejan sin tocar.
+    const marcarResaltado = mammoth.transforms.run(function (run) {
+      const h = run.highlight ? String(run.highlight).toLowerCase() : null;
+      if (h && _HL_MAP[h]) {
+        return Object.assign({}, run, { styleId: '__hl_' + h, styleName: '__hl_' + h });
+      }
+      return run;
+    });
+
+    // Reglas de styleMap para los resaltados, generadas del mapa (una por color).
+    const _hlRules = Object.keys(_HL_MAP).map(function (n) {
+      return "r[style-name='__hl_" + n + "'] => span.__hl-" + n + ":fresh";
+    });
+
     const result = await mammoth.convertToHtml({ arrayBuffer: ab }, {
-      transformDocument: marcarAlineacion,
+      transformDocument: function (d) { return marcarResaltado(marcarAlineacion(d)); },
       styleMap: [
         // Ahora SÍ con style-name (lo único que Mammoth parsea). Los nombres
         // 'AlJustify' etc. los inyectó transformDocument arriba.
         "p[style-name='AlJustify'] => p.__al-justify:fresh",
         "p[style-name='AlCenter']  => p.__al-center:fresh",
         "p[style-name='AlRight']   => p.__al-right:fresh",
+        ..._hlRules,
         "p[style-name='Heading 1'] => h1:fresh",
         "p[style-name='Heading 2'] => h2:fresh",
         "p[style-name='Heading 3'] => h3:fresh",
@@ -1426,6 +1454,16 @@ async function importarDocx(file) {
     _tmpDoc.querySelectorAll('.__al-right').forEach(function (el) {
       el.style.textAlign = 'right'; el.classList.remove('__al-right');
       if (!el.getAttribute('class')) el.removeAttribute('class');
+    });
+
+    // Resaltados: clase temporal __hl-<nombre> -> background-color inline.
+    // Mismo criterio que la alineacion: HTMLPurifier conserva el style, no la clase.
+    Object.keys(_HL_MAP).forEach(function (n) {
+      _tmpDoc.querySelectorAll('.__hl-' + n).forEach(function (el) {
+        el.style.backgroundColor = _HL_MAP[n];
+        el.classList.remove('__hl-' + n);
+        if (!el.getAttribute('class')) el.removeAttribute('class');
+      });
     });
 
     document.getElementById('editor').innerHTML = _tmpDoc.innerHTML;
