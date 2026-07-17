@@ -145,7 +145,8 @@ class DocumentController extends Controller
             // Version inicial: la declarada por el usuario, o 1.0 por defecto.
             // Es el unico punto donde el numero viene del request; a partir de aca
             // subirVersion() autoincrementa desde max(version_number).
-            DocumentVersion::create([
+            // V2-H-019: es_activa fuera de $fillable -> setter directo.
+            $version = DocumentVersion::create([
                 'document_id'         => $doc->id,
                 'version_number'      => (int) ($request->input('version_inicial_number') ?: 1),
                 'version_minor'       => (int) ($request->input('version_inicial_minor') ?? 0),
@@ -155,10 +156,11 @@ class DocumentController extends Controller
                 'mime_type'           => $archivo->getMimeType(),
                 'tamano_bytes'        => $archivo->getSize(),
                 'nota'                => $request->nota,
-                'es_activa'           => 1,
                 'subido_por'          => $user->id,
                 'subido_at'           => now(),
             ]);
+            $version->es_activa = 1;
+            $version->save();
 
             return $doc;
         });
@@ -261,7 +263,9 @@ class DocumentController extends Controller
                 // Desactivar la anterior (si existe). El UNIQUE generado pasa a NULL
                 // en esa fila al cambiar es_activa a 0.
                 if ($activaAnterior) {
-                    $activaAnterior->update(['es_activa' => 0]);
+                    // V2-H-019: es_activa fuera de $fillable -> setter directo.
+                    $activaAnterior->es_activa = 0;
+                    $activaAnterior->save();
                 }
 
                 // Cálculo mayor/menor. Contamos también las eliminadas (no hay trait
@@ -281,7 +285,8 @@ class DocumentController extends Controller
                     $nuevoMinor  = 0;
                 }
 
-                return DocumentVersion::create([
+                // V2-H-019: es_activa fuera de $fillable -> setter directo.
+                $nueva = DocumentVersion::create([
                     'document_id'         => $documento->id,
                     'version_number'      => $nuevoNumber,
                     'version_minor'       => $nuevoMinor,
@@ -291,10 +296,13 @@ class DocumentController extends Controller
                     'mime_type'           => $archivo->getMimeType(),
                     'tamano_bytes'        => $archivo->getSize(),
                     'nota'                => $request->nota,
-                    'es_activa'           => 1,
                     'subido_por'          => $user->id,
                     'subido_at'           => now(),
                 ]);
+                $nueva->es_activa = 1;
+                $nueva->save();
+
+                return $nueva;
             });
         } catch (\Illuminate\Database\QueryException $e) {
             // Violación del UNIQUE uq_doc_version: dos uploads que calcularon el
@@ -510,15 +518,17 @@ class DocumentController extends Controller
             }
 
             // Primero desactivar y marcar como eliminada (libera el UNIQUE generado)
-            $version->update([
-                'es_activa'  => 0,
-                'deleted_by' => $user->id,
-                'deleted_at' => now(),
-            ]);
+            // V2-H-019: es_activa fuera de $fillable -> setters directos, un solo save().
+            $version->es_activa  = 0;
+            $version->deleted_by = $user->id;
+            $version->deleted_at = now();
+            $version->save();
 
             // Después promover la nueva activa, si corresponde
             if ($promovida) {
-                $promovida->update(['es_activa' => 1]);
+                // V2-H-019: es_activa fuera de $fillable -> setter directo.
+                $promovida->es_activa = 1;
+                $promovida->save();
             }
         });
 
@@ -600,11 +610,11 @@ class DocumentController extends Controller
             $version->lockForUpdate()->refresh();
 
             // Restaurar inactiva primero (no choca con UNIQUE generado)
-            $version->update([
-                'deleted_by' => null,
-                'deleted_at' => null,
-                'es_activa'  => 0,
-            ]);
+            // V2-H-019: es_activa fuera de $fillable -> setters directos, un solo save().
+            $version->deleted_by = null;
+            $version->deleted_at = null;
+            $version->es_activa  = 0;
+            $version->save();
             $version->refresh();
 
             // Vigente actual entre las NO eliminadas (lockeada también)
@@ -618,9 +628,13 @@ class DocumentController extends Controller
             // Si no hay vigente, o la restaurada es más nueva → promoverla
             if (!$vigenteActual || $version->version_number > $vigenteActual->version_number) {
                 if ($vigenteActual) {
-                    $vigenteActual->update(['es_activa' => 0]);
+                    // V2-H-019: es_activa fuera de $fillable -> setter directo.
+                    $vigenteActual->es_activa = 0;
+                    $vigenteActual->save();
                 }
-                $version->update(['es_activa' => 1]);
+                // V2-H-019: es_activa fuera de $fillable -> setter directo.
+                $version->es_activa = 1;
+                $version->save();
                 $promovida = true;
             }
         });

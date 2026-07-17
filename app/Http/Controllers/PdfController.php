@@ -40,13 +40,6 @@ class PdfController extends Controller
         if (!$version) {
             return response()->json(['error' => 'El manual no tiene una versión publicada.'], 409);
         }
-        \Illuminate\Support\Facades\Log::info('PDF version', [
-            'manual'       => $manual->id,
-            'version_id'   => $version->id,
-            'version_num'  => $version->version_number . '.' . $version->version_minor,
-            'tiene_patron' => str_contains((string)$version->contenido_html, 'manuales-imagenes') ? 'SI' : 'NO',
-            'len_contenido'=> strlen((string)$version->contenido_html),
-        ]);
         $contenido  = $this->resolverImagenes($version->contenido_html ?? '', $manual->id);
         $encabezado = $this->resolverImagenes($version->encabezado_html ?? '', $manual->id);
         $pie        = $this->resolverImagenes($version->pie_pagina_html ?? '', $manual->id);
@@ -62,7 +55,6 @@ class PdfController extends Controller
             'margin_footer' => 8,
             'tempDir'       => storage_path('app/mpdf-tmp'),
             'allow_local_files' => true,
-            'debug' => true, 
         ]);
 
         $mpdf->SetTitle($manual->titulo);
@@ -114,9 +106,6 @@ class PdfController extends Controller
         $cssHeaderFooter = '
             .pdf-hf-img { max-height: 22mm; width: auto; }
         ';
-         \Illuminate\Support\Facades\Log::info('PDF contenido final', [
-            'primer_img' => substr($contenido, strpos($contenido, '<img') ?: 0, 300),
-        ]);
         $mpdf->WriteHTML($cssHeaderFooter, \Mpdf\HTMLParserMode::HEADER_CSS);
         $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
         $mpdf->WriteHTML($contenido, \Mpdf\HTMLParserMode::HTML_BODY);
@@ -124,17 +113,10 @@ class PdfController extends Controller
         $verLabel = $version->version_number . '.' . ($version->version_minor ?? 0);
         $nombre   = 'manual-' . $manual->id . '-v' . $verLabel . '.pdf';
 
-        // 'I' = inline (se abre en el visor del navegador; el usuario decide
-        // imprimir o guardar). 'D' seria descarga forzada.
-         try {
-            $pdfContent = $mpdf->Output($nombre, 'S');   // 'S' = devuelve como string
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ERROR_MPDF' => $e->getMessage(),
-                'archivo'    => $e->getFile() . ':' . $e->getLine(),
-            ], 500);
-        }
-        return response($pdfContent, 200)->header('Content-Type', 'application/pdf');
+        // 'S' = mPDF devuelve el documento como string y Laravel lo envuelve en
+        // la response. ('I' imprimiria directo a la salida; 'D' forzaria descarga.)
+        return response($mpdf->Output($nombre, 'S'), 200)
+            ->header('Content-Type', 'application/pdf');
     }
 
     /**
@@ -166,14 +148,6 @@ class PdfController extends Controller
                 if (!is_file($full)) {
                     return 'src=""';
                 }
-
-                // TEMPORAL: log por imagen
-              \Illuminate\Support\Facades\Log::info('PDF img', [
-                    'id'     => $imagenId,
-                    'path'   => $imagen->archivo_path,
-                    'full'   => $full,
-                    'existe' => is_file($full) ? 'SI' : 'NO',
-                ]);
 
                 return 'src="' . $full . '"';
             },

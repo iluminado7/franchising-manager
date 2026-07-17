@@ -13,6 +13,15 @@ class DocumentVersion extends Model
     public $timestamps = false;
     protected $dates = ['subido_at'];
 
+    // V2-H-019 (mass assignment): es_activa NO esta en $fillable.
+    //
+    // Marcar una version como activa decide que archivo descargan/ven todos
+    // los usuarios. Si quedara en $fillable, un
+    // DocumentVersion::create($request->all()) o ->update($request->all())
+    // permitiria activar cualquier version salteando la logica de
+    // subirVersion/destroyVersion/restoreVersion (transaccion, lock pesimista,
+    // desactivacion de la anterior, UNIQUE generado uq_dv_es_activa). Se setea
+    // con setter directo ($v->es_activa = 1; $v->save();) en el controlador.
     protected $fillable = [
         'document_id',
         'version_number',
@@ -23,7 +32,6 @@ class DocumentVersion extends Model
         'mime_type',
         'tamano_bytes',
         'nota',
-        'es_activa',
         'subido_por',
         'subido_at',
         'deleted_by',
