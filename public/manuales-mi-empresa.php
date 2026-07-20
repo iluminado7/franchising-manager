@@ -124,6 +124,11 @@ include 'layout/head.php';
             <span>Importar Word (.docx)</span>
             <small>Convertí tu documento a HTML editable</small>
           </button>
+          <button class="modo-btn" id="modo-btn-pdf" onclick="seleccionarModo('pdf')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span>Subir PDF</span>
+            <small>Se publica tal cual, sin editar</small>
+          </button>
         </div>
       </div>
 
@@ -141,6 +146,19 @@ include 'layout/head.php';
         <div id="import-warn" style="display:none;margin-top:6px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
       </div>
 
+      <div id="zona-pdf" style="display:none">
+        <div class="drop-zone" id="drop-zone-pdf" onclick="document.getElementById('file-pdf').click()">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gris3);margin-bottom:8px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div style="font-size:13px;color:var(--gris4)">Elegí el <strong style="color:var(--dorado)">.pdf</strong> que querés publicar</div>
+        </div>
+        <input type="file" id="file-pdf" accept="application/pdf,.pdf" style="display:none" onchange="onElegirPdf(this.files[0])">
+        <div id="pdf-ok" style="display:none;margin-top:10px;background:rgba(92,184,122,.08);border:1px solid rgba(92,184,122,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--exito)"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--gris4);line-height:1.5;font-family:'Roboto',sans-serif">
+          El PDF se publica <strong style="color:var(--gris5)">tal cual</strong>: no se convierte ni se edita nunca.
+          Los socios comerciales lo leen y lo aceptan igual que un manual editable.
+        </div>
+      </div>
+
       <div class="form-error" id="nuevo-error"></div>
     </div>
 
@@ -148,7 +166,7 @@ include 'layout/head.php';
       <button class="btn btn-ghost" onclick="cerrarModalNuevo()">Cancelar</button>
       <button class="btn btn-primary" id="btn-crear" onclick="crearManual()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Crear y abrir editor
+        <span id="btn-crear-label">Crear y abrir editor</span>
       </button>
     </div>
 
@@ -425,7 +443,7 @@ function renderTabla(lista) {
 
     return `<tr>
       <td>
-        <div style="color:var(--blanco);font-weight:500">${esc(m.titulo)}</div>
+        <div style="color:var(--blanco);font-weight:500">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
       </td>
       <td>${esc(m.categoria) || '—'}</td>
       <td>${estadoPill(m.estado)}</td>
@@ -435,10 +453,19 @@ function renderTabla(lista) {
       <td style="font-family:'Roboto',sans-serif">${verNum}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${m.tipo === 'pdf' ? `
+          <button class="accion-btn" style="color:var(--dorado)" onclick="verArchivoPdf(${m.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Ver PDF
+          </button>
+          <button class="accion-btn" style="color:var(--dorado)" onclick="subirNuevaVersionPdf(${m.id}, '${esc(m.titulo)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Nueva versión
+          </button>` : `
           <button class="accion-btn" style="color:var(--dorado)" onclick="irEditor(${m.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
-          </button>
+          </button>`}
           ${version ? `
           <button class="accion-btn" style="color:var(--gris5)" onclick="verAceptaciones(${m.id}, '${esc(m.titulo)}', ${version.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -672,11 +699,72 @@ function sincronizarChecksUsuarios() {
 }
 
 
+// ── MANUALES PDF ──────────────────────────────────────────────
+// Archivo elegido en el modal de creacion (modo 'pdf').
+let archivoPdfSeleccionado = null;
+
+function onElegirPdf(file) {
+  if (!file) return;
+  archivoPdfSeleccionado = file;
+  const ok = document.getElementById('pdf-ok');
+  ok.style.display = 'block';
+  ok.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+// Sube un PDF como version del manual. fetch crudo (no apiFetch) porque hay
+// que mandar multipart, igual que subirImagen() en editor.php.
+async function subirPdfComoVersion(manualId, file) {
+  const fd = new FormData();
+  fd.append('archivo', file, file.name || 'manual.pdf');
+  const res = await fetch(`${API}/manuales/${manualId}/archivo`, {
+    method: 'POST',
+    credentials: 'include',
+    body: fd,
+  });
+  if (!res.ok) {
+    let msg = 'Error al subir el PDF';
+    try {
+      const d = await res.json();
+      msg = d.error || (d.errors ? Object.values(d.errors).flat().join(' ') : msg);
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+// Abre el PDF de la version activa (endpoint autenticado, no el archivo crudo).
+function verArchivoPdf(id) { window.location.href = `${API}/manuales/${id}/archivo`; }
+
+// Publica una version nueva de un manual PDF. Se confirma antes porque esto
+// dispara notificaciones y mails a todos los socios asignados.
+function subirNuevaVersionPdf(id, titulo) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/pdf,.pdf';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!confirm(`¿Publicar "${file.name}" como nueva versión de "${titulo}"?\n\nSe notificará por mail a todos los socios asignados.`)) return;
+    try {
+      await subirPdfComoVersion(id, file);
+      await cargarManuales();
+    } catch (e) {
+      alert(e.message || 'No se pudo subir el PDF.');
+    }
+  };
+  input.click();
+}
+
 function seleccionarModo(modo) {
   modoImport = modo;
   document.getElementById('modo-btn-scratch').classList.toggle('active', modo === 'scratch');
   document.getElementById('modo-btn-import').classList.toggle('active', modo === 'import');
+  document.getElementById('modo-btn-pdf').classList.toggle('active', modo === 'pdf');
   document.getElementById('zona-import').style.display = modo === 'import' ? 'block' : 'none';
+  document.getElementById('zona-pdf').style.display    = modo === 'pdf' ? 'block' : 'none';
+  // Un manual PDF no abre editor: el boton principal lo dice.
+  const lbl = document.getElementById('btn-crear-label');
+  if (lbl) lbl.textContent = modo === 'pdf' ? 'Crear y subir PDF' : 'Crear y abrir editor';
 }
 
 // ── DOCX ──────────────────────────────────────────────────────
@@ -728,10 +816,12 @@ async function crearManual() {
 
   if (!titulo) { mostrarNuevoError('El título es obligatorio.'); return; }
   if (modoImport === 'import' && !htmlImportado) { mostrarNuevoError('Importá un archivo .docx antes de continuar.'); return; }
+  if (modoImport === 'pdf' && !archivoPdfSeleccionado) { mostrarNuevoError('Elegí el archivo PDF antes de continuar.'); return; }
 
   btn.disabled = true; btn.textContent = 'Creando...';
   try {
     const payload = { titulo, categoria: categoria || null, orden: 0 };
+    if (modoImport === 'pdf') payload.tipo = 'pdf';
     const manual  = await apiFetch('POST', '/manuales', payload);
 
     // v2.3: sync de categorías a las que va dirigido el manual
@@ -744,6 +834,17 @@ async function crearManual() {
       }
     } catch (errCat) {
       console.warn('Falló sync de categorías:', errCat);
+    }
+
+    // Manual PDF: se sube el archivo como primera version y se vuelve al
+    // listado. No hay editor que abrir. Si la subida falla, el manual queda
+    // creado en borrador y se puede reintentar con "Nueva version".
+    if (modoImport === 'pdf') {
+      btn.textContent = 'Subiendo PDF...';
+      await subirPdfComoVersion(manual.id, archivoPdfSeleccionado);
+      cerrarModalNuevo();
+      await cargarManuales();
+      return;
     }
 
     cerrarModalNuevo();

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -22,7 +23,43 @@ class Manual extends Model
         'orden',
         'deleted_by',
         'deleted_at',
+        // OJO: `tipo` (editable|pdf) NO va aca a proposito.
+        //
+        // El tipo define QUE clase de contenido tienen las versiones del
+        // manual: 'editable' -> contenido_html, 'pdf' -> archivo_path. Si se
+        // pudiera cambiar por mass assignment (update($request->all())), un
+        // manual publicado quedaria incoherente con sus propias versiones y
+        // con las aceptaciones ya firmadas.
+        //
+        // La base garantiza "HTML o archivo, nunca ambos" (chk_mv_contenido),
+        // pero un CHECK no puede referenciar otra tabla, asi que el vinculo
+        // tipo <-> contenido se sostiene desde el codigo.
+        //
+        // Se setea con setter directo UNA sola vez, en ManualController::store().
+        // Mismo criterio que es_activa (V2-H-019) y los campos privilegiados
+        // de User (H-015).
+        // OJO: `public_id` tampoco va aca (igual que `tipo`).
+        // Es el identificador con el que el manual se conoce publicamente en
+        // las URLs. Cambiarlo por mass assignment romperia todos los enlaces
+        // guardados y los deep-links de notificaciones ya emitidas.
+        // Lo asigna el hook creating() de abajo, una sola vez.
     ];
+
+    // ── Ciclo de vida ────────────────────────────────────────────────
+
+    protected static function booted(): void
+    {
+        // Todo manual nace con su identificador publico. Va en el MODELO y no en
+        // el controlador para cubrir cualquier camino de creacion (store, seeders,
+        // tinker, endpoints futuros) sin depender de que alguien se acuerde.
+        // La columna es NOT NULL: sin esto, un create() por fuera de store()
+        // fallaria en la base.
+        static::creating(function (Manual $manual) {
+            if (empty($manual->public_id)) {
+                $manual->public_id = (string) Str::ulid();
+            }
+        });
+    }
 
     // ── Relaciones ───────────────────────────────────────────────────
 
@@ -165,5 +202,20 @@ class Manual extends Model
     public function estaPublicado(): bool
     {
         return $this->estado === 'publicado';
+    }
+
+    // ── Tipo de manual ───────────────────────────────────────────────
+
+    // Manual subido como archivo PDF: no se edita, no se publica desde el
+    // editor. Sus versiones guardan archivo_path en vez de contenido_html.
+    public function esPdf(): bool
+    {
+        return $this->tipo === 'pdf';
+    }
+
+    // Manual redactado en el editor (comportamiento historico y default).
+    public function esEditable(): bool
+    {
+        return $this->tipo !== 'pdf';
     }
 }

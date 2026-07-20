@@ -163,6 +163,87 @@ body {
 .estado-aceptacion.aceptado  { background: rgba(92,184,122,.1);  border: 1px solid rgba(92,184,122,.25); color: #27500A; }
 .estado-aceptacion.pendiente { background: rgba(226,92,92,.06);  border: 1px solid rgba(226,92,92,.2);  color: #791F1F; }
 
+/* ── Visor de manuales en PDF (pdf.js, render a canvas) ─────────────
+   Visor propio: sin la barra del navegador y sin botones de descarga. Las
+   paginas se dibujan dentro de la hoja del manual, con el diseño del sistema.
+   Sin capa de texto: no se selecciona ni se copia (tampoco se busca). */
+/* Manual PDF: la hoja se ensancha y casi no lleva padding.
+   Un PDF ya trae sus propios margenes impresos; sumarle los 80px de la hoja
+   dejaba la pagina chica y con doble margen. La barra, el pie y las notas
+   acompañan el ancho para que todo quede alineado.
+   Los manuales EDITABLES siguen en 800px: ahi el contenido es texto y una
+   columna mas ancha empeora la lectura (renglones demasiado largos). */
+body.lectura-pdf .doc-topbar,
+body.lectura-pdf .doc-page,
+body.lectura-pdf .doc-footer,
+body.lectura-pdf .notas-box {
+  max-width: 1100px;
+}
+body.lectura-pdf .doc-page {
+  padding: 28px 28px 36px;
+}
+@media (max-width: 1180px) {
+  body.lectura-pdf .doc-page { padding: 16px 14px 24px; }
+}
+
+.pdfjs-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: #F7F5F0;
+  border: 1px solid #E0DDD6;
+  border-radius: 8px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  color: #444;
+}
+.pdfjs-btn {
+  min-width: 40px;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid #D8D4CC;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pdfjs-btn:hover  { background: #EFECE5; }
+.pdfjs-btn:active { transform: scale(.98); }
+.pdfjs-info { min-width: 92px; text-align: center; }
+.pdfjs-sep  { width: 1px; height: 22px; background: #DCD8D0; }
+.pdfjs-paginas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.pdfjs-pagina {
+  position: relative;
+  max-width: 100%;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, .12);
+}
+.pdfjs-pagina canvas { display: block; max-width: 100%; height: auto; }
+/* Marca de agua por encima del canvas (con el iframe no se podia). */
+.pdfjs-wm { position: absolute; inset: 0; pointer-events: none; }
+.pdfjs-msg {
+  text-align: center;
+  color: #999;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  padding: 40px 0;
+}
+
 .btn-aceptar-doc {
   width: 100%; padding: 16px; background: var(--dorado);
   color: #1A1A1A; border: none; border-radius: 10px;
@@ -394,7 +475,7 @@ body {
         <span id="doc-version">—</span>
         <span style="color:#ccc">·</span>
         <span id="doc-fecha">—</span>
-        <button class="doc-find-btn" onclick="toggleBuscador()" title="Buscar en el documento (Ctrl+F)">
+        <button class="doc-find-btn" id="btn-buscar" onclick="toggleBuscador()" title="Buscar en el documento (Ctrl+F)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
         </button>
         <!-- Imprimir / Descargar PDF — visible SOLO para super_admin y franquiciante.
@@ -501,11 +582,22 @@ body {
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
 <script>
-const MANUAL_ID = new URLSearchParams(location.search).get('id');
+// La URL usa el identificador PUBLICO (?m=<ulid>): no expone el id de la base.
+// Se acepta ?id= como respaldo, porque las pantallas de admin siguen linkeando
+// asi y porque puede haber enlaces viejos ya guardados.
+const _qs        = new URLSearchParams(location.search);
+const MANUAL_REF = _qs.get('m') || _qs.get('id');
+
+// Id NUMERICO real del manual. Se completa al cargarlo. Los endpoints de notas,
+// pdf y archivo trabajan con el id, no con el identificador publico: usar
+// MANUAL_REF en ellos daria 404.
+let manualIdNum = null;
 
 let versionActivaId = null;
 let yaAceptado      = false;
 let rolUsuario      = '';
+// Manual cuyo contenido es un archivo PDF subido (no HTML editable).
+let manualEsPdf     = false;
 
 const LISTADO_POR_ROL = {
   franquiciado:  'mis-manuales.php',
@@ -537,7 +629,7 @@ async function volverAlListado(mensaje) {
 }
 
 async function init() {
-  if (!MANUAL_ID) {
+  if (!MANUAL_REF) {
     await volverAlListado('No se especificó un manual.');
     return;
   }
@@ -566,7 +658,8 @@ async function init() {
     const back = document.querySelector('.doc-back');
     if (back) back.setAttribute('href', destinoListado(rolUsuario));
 
-    const manual  = await apiFetch('GET', `/manuales/${MANUAL_ID}`);
+    const manual  = await apiFetch('GET', `/manuales/${MANUAL_REF}`);
+    manualIdNum   = manual.id;
     const version = manual.version_activa?.[0];
 
     if (!version) {
@@ -589,8 +682,14 @@ async function init() {
     //
     // El ?? manual.* es fallback para versiones anteriores a la migración; después
     // del backfill no debería usarse nunca.
-    const encabezado = version.encabezado_html ?? manual.encabezado_html;
-    const pie        = version.pie_pagina_html ?? manual.pie_pagina_html;
+    // Manual PDF: el contenido es un archivo, no HTML. Se detecta por el tipo
+    // del manual, con la ruta del archivo como respaldo.
+    manualEsPdf = manual.tipo === 'pdf' || !!version.archivo_path;
+
+    // En un manual PDF el encabezado/pie del sistema NO aplican: el archivo ya
+    // trae los suyos impresos adentro. Mostrarlos duplicaria el membrete.
+    const encabezado = manualEsPdf ? null : (version.encabezado_html ?? manual.encabezado_html);
+    const pie        = manualEsPdf ? null : (version.pie_pagina_html ?? manual.pie_pagina_html);
 
     const headerEl = document.getElementById('doc-header');
     const footerEl = document.getElementById('doc-footer-manual');
@@ -609,8 +708,31 @@ async function init() {
     document.getElementById('doc-version').textContent  = `v${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))}`;
     document.getElementById('doc-fecha').textContent    = formatFecha(version.publicado_at);
 
-    document.getElementById('doc-content-wrap').innerHTML =
-      version.contenido_html || '<p style="color:#999">Sin contenido.</p>';
+    if (manualEsPdf) {
+      // Enlace opaco y temporal que devuelve el backend: no lleva el id del
+      // manual, esta atado a este usuario y caduca. Si no viniera (manual
+      // servido por una version vieja del backend), se cae a la ruta con id,
+      // que ahora solo funciona para admins.
+      const urlArchivo = manual.archivo_token
+        ? `${API}/manuales/archivo/${manual.archivo_token}`
+        : `${API}/manuales/${manualIdNum}/archivo`;
+
+      // Visor propio (pdf.js). Se pide por fetch, NO como src de un iframe: el
+      // archivo nunca queda como URL navegable ni aparece la barra del navegador
+      // con sus botones de descargar e imprimir.
+      // Hoja ancha y sin padding grande: lo maneja el CSS de body.lectura-pdf.
+      document.body.classList.add('lectura-pdf');
+
+      abrirVisorPdf(urlArchivo);
+
+      // El buscador del sistema recorre el DOM y las paginas son canvas: no hay
+      // texto que encontrar. Se oculta para no ofrecer algo que no funciona.
+      const btnBuscar = document.getElementById('btn-buscar');
+      if (btnBuscar) btnBuscar.style.display = 'none';
+    } else {
+      document.getElementById('doc-content-wrap').innerHTML =
+        version.contenido_html || '<p style="color:#999">Sin contenido.</p>';
+    }
 
     document.getElementById('doc-footer').style.display = 'flex';
 
@@ -717,7 +839,7 @@ async function cargarNotas() {
   const el = document.getElementById('notas-list');
   el.innerHTML = `<div class="notas-empty">Cargando notas...</div>`;
   try {
-    const notas = await apiFetch('GET', `/manuales/${MANUAL_ID}/notas`);
+    const notas = await apiFetch('GET', `/manuales/${manualIdNum}/notas`);
     renderNotas(notas);
   } catch (e) {
     el.innerHTML = `<div class="notas-empty" style="color:#E25C5C">Error al cargar las notas.</div>`;
@@ -755,7 +877,7 @@ async function agregarNota() {
   const btn = document.getElementById('btn-nota-enviar');
   btn.disabled = true;
   try {
-    await apiFetch('POST', `/manuales/${MANUAL_ID}/notas`, { contenido: txt });
+    await apiFetch('POST', `/manuales/${manualIdNum}/notas`, { contenido: txt });
     ta.value = '';
     mostrarToast('Sugerencia enviada.', 'exito');
     await cargarNotas();
@@ -839,7 +961,223 @@ function imprimirManual() {
   //
   // API es la misma constante global que usa apiFetch (definida en layout), así
   // que resuelve bien el subpath de XAMPP sin depender de BASE_PHP.
-  window.open(`${API}/manuales/${MANUAL_ID}/pdf`, '_blank');
+  // Manual PDF: se abre el archivo original. Pedirle a mPDF que lo genere no
+  // tendria sentido (no hay HTML) y devolveria 409.
+  if (manualEsPdf) {
+    window.open(`${API}/manuales/${manualIdNum}/archivo`, '_blank');
+    return;
+  }
+  window.open(`${API}/manuales/${manualIdNum}/pdf`, '_blank');
+}
+
+// ══════════════════════════════════════════════════════════
+// VISOR DE PDF (pdf.js, render a canvas)
+// ══════════════════════════════════════════════════════════
+//
+// Sin capa de texto A PROPOSITO: el texto no se puede seleccionar ni copiar.
+// La contra asumida es que tampoco se puede buscar ni leerlo con un lector de
+// pantalla; por eso los controles de zoom estan a la vista.
+//
+// Esto es FRICCION, no impedimento: los bytes del PDF llegan igual al navegador
+// y con DevTools se pueden guardar. Sube el escalon, no lo vuelve imposible.
+
+let pdfDoc       = null;
+let pdfEscala    = 1.2;   // valor inicial; se recalcula para ajustar al ancho
+let pdfEscalaAjustada = false;
+let pdfPagActual = 1;
+let pdfObs       = null;
+let pdfLib       = null;
+
+// La libreria vive en public/js/pdfjs. API ya resuelve el subpath de XAMPP, asi
+// que la base se deriva de ahi en vez de depender de otra constante global.
+const PDFJS_BASE = API.replace(/\/api\/?$/, '') + '/js/pdfjs';
+
+// Import dinamico: un manual editable NO se descarga 350 KB de libreria al pedo.
+async function cargarLibPdfJs() {
+  if (pdfLib) return pdfLib;
+  const lib = await import(`${PDFJS_BASE}/pdf.min.mjs`);
+  lib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}/pdf.worker.min.mjs`;
+  pdfLib = lib;
+  return lib;
+}
+
+async function abrirVisorPdf(url) {
+  const cont = document.getElementById('doc-content-wrap');
+  cont.innerHTML = `<div class="pdfjs-msg">Cargando documento…</div>`;
+
+  try {
+    const lib  = await cargarLibPdfJs();
+    const resp = await fetch(url, { credentials: 'include' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    pdfDoc = await lib.getDocument({ data: await resp.arrayBuffer() }).promise;
+    cont.innerHTML = plantillaVisorPdf(pdfDoc.numPages);
+
+    // Friccion menor: sin menu contextual no hay "guardar imagen como".
+    const cajaPaginas = document.getElementById('pdfjs-paginas');
+    cajaPaginas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    await armarPaginasPdf();
+  } catch (e) {
+    cont.innerHTML =
+      `<div class="pdfjs-msg" style="color:#B04A4A">No se pudo mostrar el documento.` +
+      ` Recargá la página; si sigue igual, avisale al administrador.</div>`;
+  }
+}
+
+function plantillaVisorPdf(total) {
+  return `
+    <div class="pdfjs-toolbar">
+      <button class="pdfjs-btn" onclick="pdfIrPagina(pdfPagActual - 1)" title="Página anterior">‹</button>
+      <span class="pdfjs-info">Página <strong id="pdf-pag-actual">1</strong> de ${total}</span>
+      <button class="pdfjs-btn" onclick="pdfIrPagina(pdfPagActual + 1)" title="Página siguiente">›</button>
+      <span class="pdfjs-sep"></span>
+      <button class="pdfjs-btn" onclick="pdfZoom(-1)" title="Reducir">−</button>
+      <span class="pdfjs-info" id="pdf-zoom-lbl">120%</span>
+      <button class="pdfjs-btn" onclick="pdfZoom(1)" title="Ampliar">+</button>
+    </div>
+    <div class="pdfjs-paginas" id="pdfjs-paginas"></div>`;
+}
+
+async function armarPaginasPdf() {
+  const cont = document.getElementById('pdfjs-paginas');
+  cont.innerHTML = '';
+
+  // Se usan las medidas de la pagina 1 como referencia para los marcadores de
+  // todas: pedir el viewport de cada pagina antes de mostrar algo retrasa el
+  // primer dibujo sin necesidad. Cada una se corrige al renderizarse.
+  // AJUSTAR AL ANCHO: la primera vez, la escala se calcula para que la pagina
+  // llene la hoja en vez de usar un valor fijo. Un 1.2 fijo se veia chico en
+  // pantallas grandes y desbordaba en las chicas.
+  const pag1 = await pdfDoc.getPage(1);
+  if (!pdfEscalaAjustada) {
+    const anchoUtil = cont.clientWidth || 900;
+    const anchoBase = pag1.getViewport({ scale: 1 }).width;
+    if (anchoBase > 0) {
+      // Se limita entre 0.8 y 3 para no exagerar en ningun extremo.
+      pdfEscala = Math.min(3, Math.max(0.8, anchoUtil / anchoBase));
+    }
+    pdfEscalaAjustada = true;
+    const lblZoom = document.getElementById('pdf-zoom-lbl');
+    if (lblZoom) lblZoom.textContent = Math.round(pdfEscala * 100) + '%';
+  }
+
+  const vp1 = pag1.getViewport({ scale: pdfEscala });
+
+  for (let n = 1; n <= pdfDoc.numPages; n++) {
+    const div = document.createElement('div');
+    div.className    = 'pdfjs-pagina';
+    div.dataset.pag  = n;
+    div.style.width  = vp1.width + 'px';
+    div.style.height = vp1.height + 'px';
+    cont.appendChild(div);
+  }
+
+  if (pdfObs) pdfObs.disconnect();
+
+  // Render perezoso: dibujar 24 paginas de una revienta la memoria en celular.
+  // El rootMargin adelanta el dibujo para que no se vea el hueco al scrollear.
+  pdfObs = new IntersectionObserver((entradas) => {
+    entradas.forEach((en) => {
+      if (!en.isIntersecting) return;
+      const n = parseInt(en.target.dataset.pag, 10);
+      renderPaginaPdf(n);
+      if (en.intersectionRatio >= 0.5) {
+        pdfPagActual = n;
+        const lbl = document.getElementById('pdf-pag-actual');
+        if (lbl) lbl.textContent = n;
+      }
+    });
+  }, { rootMargin: '600px 0px', threshold: [0, 0.5] });
+
+  cont.querySelectorAll('.pdfjs-pagina').forEach((el) => pdfObs.observe(el));
+}
+
+async function renderPaginaPdf(n) {
+  const div = document.querySelector(`.pdfjs-pagina[data-pag="${n}"]`);
+  // dataset.render guarda la escala con la que se dibujo: si cambia el zoom hay
+  // que rehacerla, si no, no se toca.
+  if (!div || div.dataset.render === String(pdfEscala)) return;
+  div.dataset.render = String(pdfEscala);
+
+  try {
+    const page = await pdfDoc.getPage(n);
+    const vp   = page.getViewport({ scale: pdfEscala });
+
+    // devicePixelRatio: sin esto el texto sale borroso en pantallas HiDPI, que
+    // es justo lo que mas molesta a quien ya le cuesta leer.
+    const dpr    = window.devicePixelRatio || 1;
+    const canvas = document.createElement('canvas');
+    canvas.width        = Math.floor(vp.width  * dpr);
+    canvas.height       = Math.floor(vp.height * dpr);
+    canvas.style.width  = vp.width  + 'px';
+    canvas.style.height = vp.height + 'px';
+
+    div.style.width  = vp.width  + 'px';
+    div.style.height = vp.height + 'px';
+
+    await page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport: vp,
+      transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+    }).promise;
+
+    div.innerHTML = '';
+    div.appendChild(canvas);
+
+    // Marca de agua ENCIMA del canvas. Se reusa el mismo tile SVG que ya arma el
+    // sistema para los manuales editables.
+    const wmBase = document.getElementById('watermark');
+    if (wmBase && wmBase.style.backgroundImage) {
+      const wm = document.createElement('div');
+      wm.className = 'pdfjs-wm';
+      wm.style.backgroundImage = wmBase.style.backgroundImage;
+      div.appendChild(wm);
+    }
+  } catch (e) {
+    delete div.dataset.render;   // que pueda reintentarse
+  }
+}
+
+function pdfIrPagina(n) {
+  if (!pdfDoc) return;
+  n = Math.max(1, Math.min(pdfDoc.numPages, n));
+  const div = document.querySelector(`.pdfjs-pagina[data-pag="${n}"]`);
+  if (!div) return;
+
+  pdfPagActual = n;
+  const lbl = document.getElementById('pdf-pag-actual');
+  if (lbl) lbl.textContent = n;
+
+  // -80px para que la pagina no quede tapada por la barra sticky.
+  window.scrollTo({
+    top: div.getBoundingClientRect().top + window.scrollY - 80,
+    behavior: 'smooth',
+  });
+}
+
+function pdfZoom(dir) {
+  if (!pdfDoc) return;
+
+  const pasos = [0.8, 1, 1.2, 1.5, 2, 2.5, 3];
+  let i = pasos.findIndex((v) => Math.abs(v - pdfEscala) < 0.01);
+  if (i === -1) i = 2;
+  i = Math.max(0, Math.min(pasos.length - 1, i + dir));
+  if (pasos[i] === pdfEscala) return;
+
+  pdfEscala = pasos[i];
+  const lbl = document.getElementById('pdf-zoom-lbl');
+  if (lbl) lbl.textContent = Math.round(pdfEscala * 100) + '%';
+
+  // Se invalida lo dibujado y se rehace SOLO lo que esta en pantalla. No se
+  // reconstruye la lista de paginas para no perder la posicion de lectura.
+  document.querySelectorAll('.pdfjs-pagina').forEach((el) => {
+    delete el.dataset.render;
+    const r = el.getBoundingClientRect();
+    if (r.bottom > -600 && r.top < window.innerHeight + 600) {
+      renderPaginaPdf(parseInt(el.dataset.pag, 10));
+    }
+  });
 }
 
 function toggleBuscador() {

@@ -74,6 +74,16 @@ class NotificationController extends Controller
      */
     private function resolverDestino(Notification $n, User $user, array &$cacheAcceso): array
     {
+        // ── ALERTAS DE SEGURIDAD ──
+        // Va ANTES de la rama de manuales a proposito. Estas alertas cuelgan de
+        // manual_version_id, asi que caerian ahi y terminarian en lectura.php —
+        // y peor: si despues archivan el manual, resolverian [null, false] y la
+        // alerta quedaria muerta. El evento ya ocurrio: el destino util es el
+        // registro de actividad, y tiene que seguir disponible siempre.
+        if ($n->tipo === 'acceso_anomalo_pdf') {
+            return ['log.php', true];
+        }
+
         // ── MANUALES ──
         // El manual puede venir directo (manual_id) o colgando de la version
         // (modificacion_manual, manual_asignado -> manual_version_id).
@@ -110,7 +120,9 @@ class NotificationController extends Controller
                 return ['mis-manuales.php', true];
             }
 
-            return ['lectura.php?id=' . $manual->id, true];
+            // Identificador publico, no el id: si no, los deep-links de las
+            // notificaciones seguirian filtrando el id de la base.
+            return ['lectura.php?m=' . $manual->public_id, true];
         }
 
         // ── DOCUMENTOS ──

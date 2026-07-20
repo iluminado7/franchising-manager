@@ -15,6 +15,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 
 class ManualController extends Controller
 {
@@ -74,13 +76,19 @@ class ManualController extends Controller
     }
 
     // GET /api/manuales/{id}
-    public function show(Request $request, int $id): JsonResponse
+    // El identificador llega como ULID publico (lectura.php) o como id numerico
+    // (pantallas de admin, que siguen trabajando con ids). Por eso `string`.
+    public function show(Request $request, string $id): JsonResponse
     {
         $user   = $request->user();
         // v2.3: cargamos empresasAsignadas para poder devolver empresa_id en
         // el JSON (la tabla manuals no tiene la columna; vive en el pivote).
-        $manual = Manual::with(['versionActiva', 'versiones', 'creador', 'empresasAsignadas'])
-                        ->findOrFail($id);
+        // Se resuelve por una via o por la otra, nunca mezclando: un ULID es
+        // siempre no numerico, asi que no hay ambiguedad posible.
+        $query = Manual::with(['versionActiva', 'versiones', 'creador', 'empresasAsignadas']);
+        $manual = ctype_digit($id)
+            ? $query->findOrFail((int) $id)
+            : $query->where('public_id', $id)->firstOrFail();
 
         // Franquiciante: solo manuales asignados a su empresa
         // v2.3 (post-auditoría): gate único centralizado en ManualAccessService.
@@ -108,6 +116,13 @@ class ManualController extends Controller
             $manual->mi_aceptacion = $version
                 ? $version->acceptances()->where('user_id', $user->id)->exists()
                 : false;
+        }
+
+        // Manual PDF: enlace opaco y temporal para que ESTE usuario lea el
+        // archivo. lectura.php lo usa como src del visor, asi la URL del visor no
+        // lleva ningun ID y ademas caduca.
+        if ($manual->tipo === 'pdf') {
+            $manual->archivo_token = $this->tokenArchivo($manual, $user);
         }
 
         ActivityLog::registrar(
@@ -155,6 +170,9 @@ class ManualController extends Controller
             'categoria'  => 'nullable|string|max:100',
             'orden'      => 'nullable|integer',
             'empresa_id' => 'nullable|integer|exists:empresas,id',
+            // Tipo de manual. 'editable' (default) = se redacta en el editor.
+            // 'pdf' = se sube un archivo y no se edita nunca mas.
+            'tipo'       => 'nullable|in:editable,pdf',
         ]);
 
         $user      = $request->user();
@@ -169,6 +187,12 @@ class ManualController extends Controller
             'estado'     => 'borrador',
             'orden'      => $data['orden'] ?? 0,
         ]);
+
+        // `tipo` esta fuera del $fillable de Manual (ver el comentario alli):
+        // se asigna con setter directo y SOLO en este punto. A partir de aca es
+        // inmutable — update() ni siquiera lo valida, asi que no puede colarse.
+        $manual->tipo = $data['tipo'] ?? 'editable';
+        $manual->save();
 
         // Auto-asignar a la empresa correspondiente
         if ($empresaId) {
@@ -239,6 +263,15 @@ class ManualController extends Controller
 
     // Franquiciante solo puede editar manuales de su empresa
         $this->authorize('gestionar', $manual);
+
+        // Un manual tipo 'pdf' no tiene editor: su contenido es el archivo
+        // subido. Guardar HTML sobre el crearia una version incoherente con su
+        // tipo (y el CHECK chk_mv_contenido lo rechazaria con un 500 crudo).
+        if ($manual->esPdf()) {
+            return response()->json([
+                'error' => 'Este manual es un PDF: no se edita desde el editor.',
+            ], 409);
+        }
 
         // Header/footer viven en 'manuals' (no en 'manual_versions') porque
         // son identidad del manual, no versionables. Setter directo para no
@@ -329,6 +362,14 @@ class ManualController extends Controller
         $notaPub = $notaPub === '' ? null : $notaPub;
 
         $this->authorize('gestionar', $manual);
+
+        // Un manual tipo 'pdf' publica subiendo un archivo, no HTML del editor.
+        // (El endpoint de subida llega en la etapa 2b.)
+        if ($manual->esPdf()) {
+            return response()->json([
+                'error' => 'Este manual es un PDF: se publica subiendo el archivo, no desde el editor.',
+            ], 409);
+        }
 
         // Header/footer: se guardan a nivel manual (identidad, no versionable).
         // Se sanitizan con el mismo HTMLPurifier que contenido_html.
@@ -438,82 +479,15 @@ class ManualController extends Controller
 
                 $manual->update(['estado' => 'publicado']);
 
-                // v2.3: notificar SOLO a usuarios con asignación efectiva al manual
-                // (categoría activa OR individual). Si nadie tiene asignación, no
-                // se notifica a nadie — el manual queda publicado pero invisible
-                // hasta que el franquiciante lo asigne explícitamente.
-                //
-                // Antes (legacy): notificaba a TODOS los franquiciados de TODAS las
-                // empresas asignadas, sin importar si podían verlo.
-                $tipo = $ultimaVersion === 0 ? 'nuevo_manual' : 'modificacion_manual';
-
-                $userIds = $this->usuariosConAccesoAlManual($manual->id);
-
-                // H-020 fix (defense in depth): strip_tags remueve cualquier marcado HTML
-                // del título antes de guardarlo en la notificación. Combinado con el escape
-                // en frontend (layout.js), cierra el vector de XSS almacenado.
-                $tituloManual = strip_tags($manual->titulo ?? '');
-
-                if ($userIds->isNotEmpty()) {
-                    // create() (no insert()) para que dispare el observer de Notification,
-                    // que encola el email a cada destinatario. insert() es un bulk que
-                    // saltea el modelo y por ende el observer — por eso no salían mails.
-                    $tituloNotif = $tipo === 'nuevo_manual'
-                        ? "Nuevo manual asignado: {$tituloManual}"
-                        : "Manual actualizado: {$tituloManual} (v{$versionLabel})";
-
-                    foreach ($userIds as $uid) {
-                        try {
-                            Notification::create([
-                                'user_id'             => $uid,
-                                'tipo'                => $tipo,
-                                'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
-                                'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
-                                'document_id'         => null,
-                                'document_version_id' => null,
-                                'category_id'         => null,
-                                'titulo'              => $tituloNotif,
-                                'created_at'          => now(),
-                            ]);
-                        } catch (\Throwable $e) { /* best-effort: una notif fallida no corta las demás */ }
-                    }
-                }
-
                 $esFranq = $user->esFranquiciante();
 
-                // Si publica un franquiciante: avisar a los super_admin.
-                // v2.3: usamos $user->nombreCompleto() en lugar de buscar en franchiseStaff
-                // (que para un franquiciante siempre era NULL — bug pre-existente).
-                if ($esFranq) {
-                    $nombreAutor = $user->nombreCompleto();
-                    if ($nombreAutor === '') {
-                        $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
-                    }
-                    // H-020 fix: sanitizar el nombre del autor también (viene de la DB
-                    // y es controlable por el usuario en su perfil o al crearse).
-                    $nombreAutor = strip_tags($nombreAutor);
-
-                    $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
-                    $notifSuper  = $superadmins->map(fn($uid) => [
-                        'user_id'             => $uid,
-                        'tipo'                => 'modificacion_manual',
-                        'manual_id'           => null,
-                        'manual_version_id'   => $version->id,
-                        'document_id'         => null,
-                        'document_version_id' => null,
-                        'category_id'         => null,
-                        'titulo'              => "El franquiciante {$nombreAutor} publicó una nueva versión de {$tituloManual} (v{$versionLabel})",
-                        'created_at'          => now(),
-                    ])->toArray();
-                    try {
-                        if (!empty($notifSuper)) {
-                            // insert() a propósito: los super_admin reciben la notif in-app
-                            // (aviso de gestión) pero NO email — no son destinatarios del
-                            // manual. insert() saltea el observer, así que no se encola mail.
-                            Notification::insert($notifSuper);
-                        }
-                    } catch (\Throwable $e) { /* best-effort */ }
-                }
+                // Notificaciones in-app + emails. La logica vive en un metodo
+                // privado porque la comparten DOS caminos de publicacion: este
+                // (manual editable) y publicarArchivo() (manual PDF). Duplicarla
+                // garantizaba que algun dia quedaran desincronizadas.
+                $this->notificarPublicacion(
+                    $manual, $version, $user, $ultimaVersion === 0, $versionLabel
+                );
 
                 ActivityLog::registrar(
                     userId:      $user->id,
@@ -619,6 +593,448 @@ class ManualController extends Controller
      * contenido "C" produciria el mismo string que encabezado "A" + contenido "BC",
      * y por lo tanto el mismo hash para dos documentos distintos.
      */
+    /**
+     * Avisa a los franquiciantes de la empresa del socio y a los super_admin que
+     * alguien pidio el archivo de un manual PDF por fuera del visor.
+     *
+     * Dedupe de 1 hora por (version + socio): sin esto, refrescar la URL diez
+     * veces genera diez mails y la alerta se vuelve ruido que todos ignoran. El
+     * activity_log SI guarda cada acceso, asi que no se pierde trazabilidad.
+     *
+     * tipo 'acceso_anomalo_pdf' requiere la migracion de chk_notif_fk: usa
+     * manual_version_id, misma combinacion de FKs que modificacion_manual.
+     */
+    private function notificarAccesoAnomalo(Manual $manual, ManualVersion $version, User $socio): void
+    {
+        try {
+            $nombreSocio = strip_tags($socio->nombreCompleto() ?: ($socio->email ?? 'Un usuario'));
+            $tituloManual = strip_tags($manual->titulo ?? '');
+            $titulo = mb_substr(
+                "Acceso directo al archivo de {$tituloManual} por {$nombreSocio}",
+                0, 200
+            );
+
+            $yaAvisado = Notification::where('tipo', 'acceso_anomalo_pdf')
+                                     ->where('manual_version_id', $version->id)
+                                     ->where('titulo', $titulo)
+                                     ->where('created_at', '>=', now()->subHour())
+                                     ->exists();
+            if ($yaAvisado) {
+                return;
+            }
+
+            // Franquiciantes de la empresa del socio + todos los super_admin.
+            $destinatarios = User::where('activo', 1)
+                ->whereNull('deleted_at')
+                ->where(function ($q) use ($socio) {
+                    $q->where('rol', 'super_admin')
+                      ->orWhere(function ($q2) use ($socio) {
+                          $q2->where('rol', 'franquiciante')
+                             ->where('empresa_id', $socio->empresa_id);
+                      });
+                })
+                ->pluck('id');
+
+            foreach ($destinatarios as $uid) {
+                try {
+                    // create() (no insert()) para que el observer encole el mail.
+                    Notification::create([
+                        'user_id'             => $uid,
+                        'tipo'                => 'acceso_anomalo_pdf',
+                        'manual_id'           => null,
+                        'manual_version_id'   => $version->id,
+                        'document_id'         => null,
+                        'document_version_id' => null,
+                        'category_id'         => null,
+                        'titulo'              => $titulo,
+                        'created_at'          => now(),
+                    ]);
+                } catch (\Throwable $e) { /* best-effort */ }
+            }
+        } catch (\Throwable $e) {
+            // Nunca romper la lectura del manual por fallar el aviso.
+        }
+    }
+
+    /**
+     * Notificaciones + emails de una publicacion (manual editable o PDF).
+     *
+     * Extraido de publicar() al agregar la publicacion por archivo: los dos
+     * caminos deben avisar EXACTAMENTE igual (para el socio comercial es el
+     * mismo evento). Comportamiento sin cambios respecto del original.
+     *
+     * @param bool $esPrimeraPublicacion antes era ($ultimaVersion === 0)
+     */
+    private function notificarPublicacion(
+        Manual $manual,
+        ManualVersion $version,
+        User $user,
+        bool $esPrimeraPublicacion,
+        string $versionLabel
+    ): void {
+        // v2.3: notificar SOLO a usuarios con asignación efectiva al manual
+        // (categoría activa OR individual). Si nadie tiene asignación, no se
+        // notifica a nadie — el manual queda publicado pero invisible hasta que
+        // el franquiciante lo asigne explícitamente.
+        $tipo = $esPrimeraPublicacion ? 'nuevo_manual' : 'modificacion_manual';
+
+        $userIds = $this->usuariosConAccesoAlManual($manual->id);
+
+        // H-020 fix (defense in depth): strip_tags remueve cualquier marcado HTML
+        // del título antes de guardarlo en la notificación.
+        $tituloManual = strip_tags($manual->titulo ?? '');
+
+        if ($userIds->isNotEmpty()) {
+            // create() (no insert()) para que dispare el observer de Notification,
+            // que encola el email a cada destinatario.
+            $tituloNotif = $tipo === 'nuevo_manual'
+                ? "Nuevo manual asignado: {$tituloManual}"
+                : "Manual actualizado: {$tituloManual} (v{$versionLabel})";
+
+            foreach ($userIds as $uid) {
+                try {
+                    Notification::create([
+                        'user_id'             => $uid,
+                        'tipo'                => $tipo,
+                        'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
+                        'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
+                        'document_id'         => null,
+                        'document_version_id' => null,
+                        'category_id'         => null,
+                        'titulo'              => $tituloNotif,
+                        'created_at'          => now(),
+                    ]);
+                } catch (\Throwable $e) { /* best-effort: una notif fallida no corta las demás */ }
+            }
+        }
+
+        // Si publica un franquiciante: avisar a los super_admin.
+        if ($user->esFranquiciante()) {
+            $nombreAutor = $user->nombreCompleto();
+            if ($nombreAutor === '') {
+                $nombreAutor = $user->empresa?->nombre ?? ($user->email ?? 'Franquiciante');
+            }
+            // H-020 fix: sanitizar el nombre del autor también.
+            $nombreAutor = strip_tags($nombreAutor);
+
+            $superadmins = User::where('rol', 'super_admin')->where('activo', 1)->pluck('id');
+            $notifSuper  = $superadmins->map(fn($uid) => [
+                'user_id'             => $uid,
+                'tipo'                => 'modificacion_manual',
+                'manual_id'           => null,
+                'manual_version_id'   => $version->id,
+                'document_id'         => null,
+                'document_version_id' => null,
+                'category_id'         => null,
+                'titulo'              => "El franquiciante {$nombreAutor} publicó una nueva versión de {$tituloManual} (v{$versionLabel})",
+                'created_at'          => now(),
+            ])->toArray();
+            try {
+                if (!empty($notifSuper)) {
+                    // insert() a propósito: los super_admin reciben la notif in-app
+                    // pero NO email — no son destinatarios del manual.
+                    Notification::insert($notifSuper);
+                }
+            } catch (\Throwable $e) { /* best-effort */ }
+        }
+    }
+
+    // POST /api/manuales/{id}/archivo — solo super_admin y franquiciante.
+    //
+    // Publica una version de un manual tipo 'pdf' subiendo el archivo. Espeja
+    // publicar(): misma numeracion mayor/menor, misma desactivacion de la
+    // version anterior, mismo paso a estado 'publicado', mismas notificaciones.
+    public function publicarArchivo(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            // mimes: valida extension + tipo adivinado. mimetypes: valida el MIME
+            // REAL leido del contenido (finfo). Los dos: no alcanza con renombrar
+            // cualquier cosa a .pdf. max en KB (51200 = 50 MB).
+            'archivo'          => 'required|file|mimes:pdf|mimetypes:application/pdf|max:51200',
+            'nota_publicacion' => 'nullable|string|max:2000',
+            'tipo_cambio'      => 'nullable|in:mayor,menor',
+            'version_inicial_number' => 'nullable|integer|min:1|max:999',
+            'version_inicial_minor'  => 'nullable|integer|min:0|max:999',
+        ]);
+
+        $manual = Manual::findOrFail($id);
+        $user   = $request->user();
+
+        $this->authorize('gestionar', $manual);
+
+        if (!$manual->esPdf()) {
+            return response()->json([
+                'error' => 'Este manual es editable: se publica desde el editor, no subiendo un archivo.',
+            ], 409);
+        }
+
+        $archivo = $request->file('archivo');
+        $hash    = hash_file('sha256', $archivo->getRealPath());
+
+        // La ruta se deriva SIEMPRE del manual_id + hash. El nombre que mando el
+        // cliente nunca toca el filesystem (podria traer ../ o caracteres raros):
+        // se guarda aparte, solo como metadato para la descarga.
+        $rutaRel = "manuales/archivos/{$manual->id}/{$hash}.pdf";
+        if (!Storage::disk('local')->exists($rutaRel)) {
+            Storage::disk('local')->put($rutaRel, file_get_contents($archivo->getRealPath()));
+        }
+
+        $nombreOriginal = mb_substr(basename($archivo->getClientOriginalName()), 0, 255);
+        $tamano         = $archivo->getSize();
+        $mime           = $archivo->getMimeType() ?: 'application/pdf';
+
+        $notaPub = trim($request->nota_publicacion ?? '');
+        $notaPub = $notaPub === '' ? null : $notaPub;
+
+        $version = null;
+
+        try {
+            DB::transaction(function () use (
+                $manual, $user, $request, $notaPub, $hash, $rutaRel,
+                $nombreOriginal, $tamano, $mime, &$version
+            ) {
+                // Misma mecanica que publicar(): capturar la activa antes de
+                // bajarla, porque su numero es la base de un cambio menor.
+                $activaActual = ManualVersion::where('manual_id', $manual->id)
+                                             ->where('es_activa', 1)
+                                             ->first();
+
+                ManualVersion::where('manual_id', $manual->id)
+                             ->where('es_activa', 1)
+                             ->update(['es_activa' => 0]);
+
+                $ultimaVersion = ManualVersion::where('manual_id', $manual->id)
+                                              ->max('version_number') ?? 0;
+
+                if ($ultimaVersion === 0) {
+                    // Primera publicacion: el usuario puede declarar la version que
+                    // el manual ya tenia fuera del sistema. Igual que en publicar(),
+                    // este campo SOLO se lee dentro de esta rama (V2-H-027).
+                    $nuevoNumber = (int) ($request->input('version_inicial_number') ?: 1);
+                    $nuevoMinor  = (int) ($request->input('version_inicial_minor') ?? 0);
+                } elseif ($request->tipo_cambio === 'menor' && $activaActual) {
+                    $nuevoNumber = $activaActual->version_number;
+                    $nuevoMinor  = (ManualVersion::where('manual_id', $manual->id)
+                                        ->where('version_number', $nuevoNumber)
+                                        ->max('version_minor') ?? 0) + 1;
+                } else {
+                    $nuevoNumber = $ultimaVersion + 1;
+                    $nuevoMinor  = 0;
+                }
+
+                // contenido_html queda NULL (satisface chk_mv_contenido) y el hash
+                // del ARCHIVO cumple los dos roles: contenido_hash (obligatorio) y
+                // documento_hash (lo que la aceptacion certifica). En un PDF no hay
+                // encabezado/pie separados: el archivo ya los trae adentro.
+                $version = new ManualVersion([
+                    'manual_id'        => $manual->id,
+                    'version_number'   => $nuevoNumber,
+                    'version_minor'    => $nuevoMinor,
+                    'contenido_hash'   => $hash,
+                    'documento_hash'   => $hash,
+                    'archivo_path'     => $rutaRel,
+                    'archivo_nombre'   => $nombreOriginal,
+                    'archivo_mime'     => $mime,
+                    'archivo_tamano'   => $tamano,
+                    'publicado_por'    => $user->id,
+                    'publicado_at'     => now(),
+                    'nota_publicacion' => $notaPub,
+                ]);
+                // V2-H-019: es_activa fuera de $fillable -> setter directo.
+                $version->es_activa = 1;
+                $version->save();
+
+                $versionLabel = $version->version_number . '.' . $version->version_minor;
+
+                $manual->update(['estado' => 'publicado']);
+
+                $this->notificarPublicacion(
+                    $manual, $version, $user, $ultimaVersion === 0, $versionLabel
+                );
+
+                ActivityLog::registrar(
+                    userId:      $user->id,
+                    accion:      $user->esFranquiciante() ? 'version_publicada_franquiciante' : 'manual_publicado',
+                    ip:          $request->ip(),
+                    entidadTipo: 'manual_versions',
+                    entidadId:   $version->id,
+                    detalle:     [
+                        'manual_titulo' => $manual->titulo,
+                        'version'       => $version->version_number,
+                    ],
+                    userAgent:   $request->userAgent()
+                );
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Violacion del UNIQUE uq_mv_manual_version: dos publicaciones que
+            // calcularon el mismo numero.minor casi a la vez.
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'error' => 'Esa version ya existe para este manual. Actualiza la pagina e intenta de nuevo.',
+                ], 409);
+            }
+            throw $e;
+        }
+
+        return response()->json([
+            'message' => 'Archivo publicado correctamente.',
+            'manual'  => $manual->fresh('versionActiva'),
+        ]);
+    }
+
+    // GET /api/manuales/{id}/archivo — SOLO super_admin y franquiciante.
+    //
+    // La ruta con ID quedo reservada a los admins, que ya ven los IDs en todo el
+    // panel. El socio comercial entra por servirArchivoToken(), con un enlace
+    // opaco y temporal que no revela nada de la base.
+    public function servirArchivo(Request $request, int $id)
+    {
+        $user = $request->user();
+
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json([
+                'error' => 'Sin permiso para acceder al archivo por esta via.',
+            ], 403);
+        }
+
+        return $this->entregarArchivo($request, Manual::findOrFail($id));
+    }
+
+    // GET /api/manuales/archivo/{token} — todos los roles.
+    //
+    // El token es un payload CIFRADO con Crypt (que ademas autentica con MAC, asi
+    // que no se puede forjar ni alterar) con el manual, el usuario y el
+    // vencimiento. Tres propiedades:
+    //   - no expone el ID del manual: no se puede enumerar la base;
+    //   - esta atado al usuario: si lo comparte, al otro no le sirve;
+    //   - caduca: guardarselo para despues tampoco sirve.
+    //
+    // NO es autorizacion: entregarArchivo() revalida el acceso igual. El token
+    // define QUE se pide, no SI se puede.
+    public function servirArchivoToken(Request $request, string $token)
+    {
+        $user = $request->user();
+
+        try {
+            $datos = json_decode(Crypt::decryptString(strtr($token, '-_~', '+/=')), true);
+        } catch (\Throwable $e) {
+            $datos = null;
+        }
+
+        if (!is_array($datos) || !isset($datos['m'], $datos['u'], $datos['exp'])) {
+            return response()->json(['error' => 'Enlace invalido.'], 403);
+        }
+        if ((int) $datos['u'] !== (int) $user->id) {
+            return response()->json(['error' => 'Este enlace no corresponde a tu usuario.'], 403);
+        }
+        if ((int) $datos['exp'] < time()) {
+            return response()->json([
+                'error' => 'El enlace expiro. Volve a abrir el manual.',
+            ], 410);
+        }
+
+        return $this->entregarArchivo($request, Manual::findOrFail((int) $datos['m']));
+    }
+
+    /**
+     * Token opaco y temporal para que UN usuario lea UN manual.
+     *
+     * strtr en vez de base64url: el string que devuelve Crypt ya es base64, solo
+     * hay que sacarle los caracteres que romperian la URL (+ / =).
+     */
+    private function tokenArchivo(Manual $manual, User $user, int $minutos = 60): string
+    {
+        $payload = json_encode([
+            'm'   => $manual->id,
+            'u'   => $user->id,
+            'exp' => now()->addMinutes($minutos)->timestamp,
+        ]);
+
+        return strtr(Crypt::encryptString($payload), '+/=', '-_~');
+    }
+
+    /**
+     * Entrega efectiva del archivo. Comun a las dos rutas (ID y token): el
+     * control de acceso, el log y la deteccion de acceso anomalo viven ACA, para
+     * que no dependan de por donde entro el pedido.
+     */
+    private function entregarArchivo(Request $request, Manual $manual)
+    {
+        $user = $request->user();
+
+        if (!ManualAccessService::usuarioTieneAccesoAlManual($user, $manual->id)) {
+            return response()->json(['error' => 'Sin acceso a este manual.'], 403);
+        }
+
+        $version = ManualVersion::where('manual_id', $manual->id)
+                                ->where('es_activa', 1)
+                                ->first();
+
+        if (!$version || !$version->esPdf()) {
+            return response()->json([
+                'error' => 'Este manual no tiene un archivo publicado.',
+            ], 409);
+        }
+
+        if (!Storage::disk('local')->exists($version->archivo_path)) {
+            return response()->json([
+                'error' => 'El archivo de esta version no esta disponible.',
+            ], 404);
+        }
+
+        $nombre = $version->archivo_nombre ?: ('manual-' . $manual->id . '.pdf');
+
+        $esSocio = $user->esFranquiciado() || $user->esEmpleado();
+
+        // ?descargar=1 fuerza la descarga, pero SOLO para admins. Si lo manda un
+        // socio se ignora: el manual maestro se lee, no se baja de un click.
+        $dispo = ($request->boolean('descargar') && !$esSocio) ? 'attachment' : 'inline';
+
+        // ACCESO ANOMALO: el socio pidio el archivo por fuera del visor embebido.
+        //
+        // Sec-Fetch-Dest dice en que contexto se pidio el recurso: 'iframe' cuando
+        // lo carga el visor de lectura.php, 'document' cuando alguien navega
+        // directo a la URL. El Referer descarta el falso positivo del link de
+        // respaldo ("Abrilo en una pestaña nueva") que la propia lectura.php ofrece.
+        //
+        // LIMITE: el boton de descarga del visor NO genera request, asi que esa
+        // descarga es indetectable. Esto detecta al que se guarda la URL.
+        $dest    = strtolower((string) $request->header('Sec-Fetch-Dest', ''));
+        $referer = (string) $request->header('Referer', '');
+        $anomalo = $esSocio
+                   && $dest !== 'iframe'
+                   && !str_contains($referer, 'lectura.php');
+
+        // Log SIEMPRE (barato y forense). Las claves del detalle son las unicas
+        // que admite chk_detalle_schema; ip y user_agent son columnas propias.
+        ActivityLog::registrar(
+            userId:      $user->id,
+            accion:      $anomalo ? 'manual_pdf_acceso_directo' : 'manual_pdf_abierto',
+            ip:          $request->ip(),
+            empresaId:   $user->empresa_id,
+            entidadTipo: 'manual_versions',
+            entidadId:   $version->id,
+            detalle:     [
+                'manual_titulo' => $manual->titulo,
+                'version'       => $version->version_number,
+            ],
+            userAgent:   $request->userAgent()
+        );
+
+        if ($anomalo) {
+            $this->notificarAccesoAnomalo($manual, $version, $user);
+        }
+
+        // nosniff: el archivo lo subio un franquiciante y lo abre un socio de otra
+        // sucursal; se sirve SIEMPRE como application/pdf, sin dejar que el
+        // navegador adivine otro tipo. El nombre se escapa por el header.
+        return Storage::disk('local')->response($version->archivo_path, $nombre, [
+            'Content-Type'           => 'application/pdf',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Disposition'    => $dispo . '; filename="' . addslashes($nombre) . '"',
+        ]);
+    }
+
     private function hashDocumento(?string $encabezado, string $contenido, ?string $pie): string
     {
         return hash('sha256',

@@ -35,6 +35,15 @@ class ManualVersion extends Model
         'version_minor',
         'contenido_html',
         'contenido_hash',
+        // Manuales tipo 'pdf': la version guarda el archivo en vez del HTML.
+        // Son datos derivados del archivo subido (ruta, nombre, mime, tamano),
+        // no privilegios, por eso si van en $fillable. La ruta la calcula
+        // siempre el servidor a partir del hash: nunca viene del request.
+        // El CHECK chk_mv_contenido impide que coexistan con contenido_html.
+        'archivo_path',
+        'archivo_nombre',
+        'archivo_mime',
+        'archivo_tamano',
         // Snapshot inmutable del encabezado/pie tal como estaban al publicar esta
         // version. La copia de trabajo (editable) sigue en manuals.
         'encabezado_html',
@@ -50,6 +59,7 @@ class ManualVersion extends Model
 
     protected $casts = [
         'es_activa'      => 'boolean',
+        'archivo_tamano' => 'integer',
         'version_number' => 'integer',
         'version_minor'  => 'integer',
     ];
@@ -116,6 +126,13 @@ class ManualVersion extends Model
     public function tieneNotaPublicacion(): bool
     {
         return !empty($this->nota_publicacion);
+    }
+
+    // Version de un manual tipo 'pdf': su contenido es un archivo, no HTML.
+    // (chk_mv_contenido garantiza que es uno u otro, nunca ambos.)
+    public function esPdf(): bool
+    {
+        return !empty($this->archivo_path);
     }
 
     // Etiqueta de version en formato mayor.menor, p. ej. "3.1".

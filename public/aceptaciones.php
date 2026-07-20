@@ -628,7 +628,7 @@ function renderTabla(filas) {
         </div>
       </td>
       <td>${sucursal}</td>
-      <td>${esc(f.manual.titulo)}</td>
+      <td>${esc(f.manual.titulo)}${f.manual.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</td>
       <td>
         <span class="badge-version ${f.version.es_activa ? 'activa' : ''}">v${f.version.version_number}${f.version.es_activa ? ' · activa' : ''}</span>
       </td>

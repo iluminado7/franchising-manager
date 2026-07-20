@@ -32,6 +32,10 @@ class NotificationObserver
         // Actualizados
         'modificacion_manual',
         'nueva_version_documento',
+        // Alerta de seguridad: un socio pidio el archivo de un manual PDF por
+        // fuera del visor. Va por mail porque el destinatario (franquiciante /
+        // super_admin) no vive mirando el panel.
+        'acceso_anomalo_pdf',
     ];
 
     public function created(Notification $notificacion): void
@@ -68,7 +72,11 @@ class NotificationObserver
         // URL del frontend. Definir FRONTEND_URL en el .env si el frontend vive en
         // un subpath (ej. http://localhost/manuales-franquiciantes/public).
         $base = rtrim((string) (config('app.frontend_url') ?: config('app.url')), '/');
-        $url  = $base . '/dashboard.php';
+        // Las alertas de acceso llevan al registro de actividad, no al panel:
+        // lo que el destinatario quiere ver es QUIEN accedio y cuando.
+        $url  = $notificacion->tipo === 'acceso_anomalo_pdf'
+            ? $base . '/log.php'
+            : $base . '/dashboard.php';
 
         try {
             Mail::to($user->email)->queue(

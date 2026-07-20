@@ -249,12 +249,12 @@ function renderTabla(lista) {
       ? 'class="btn btn-primary" style="padding:5px 12px;font-size:12px"'
       : 'class="btn btn-ghost" style="padding:5px 12px;font-size:12px"';
     const btnOnclick = (!aceptado && rolUsuario === 'franquiciado' && version)
-      ? `onclick="abrirParaAceptar(${m.id}, ${version.id})"`
-      : `onclick="abrirManual(${m.id})"`;
+      ? `onclick="abrirParaAceptar('${m.public_id}', ${version.id})"`
+      : `onclick="abrirManual('${m.public_id}')"`;
 
     return `<tr>
       <td>
-        <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}</div>
+        <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
       </td>
       <td>${esc(m.categoria) || '—'}</td>
       <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">${fecha}</td>
@@ -274,7 +274,7 @@ function renderTabla(lista) {
 // ── NAVEGACIÓN ────────────────────────────────────────────────
 // Abre lectura.php en modo solo lectura
 function abrirManual(manualId) {
-  window.location.href = `${BASE_PHP}/lectura.php?id=${manualId}`;
+  window.location.href = `${BASE_PHP}/lectura.php?m=${manualId}`;
 }
 
 // Abre lectura.php en modo aceptación (franquiciado con manual pendiente)
@@ -282,7 +282,7 @@ function abrirParaAceptar(manualId, versiónId) {
   versionActivaId   = versiónId;
   manualPendienteId = manualId;
   // Pasamos ?aceptar=1 para que lectura.php muestre el botón de aceptación
-  window.location.href = `${BASE_PHP}/lectura.php?id=${manualId}&aceptar=1`;
+  window.location.href = `${BASE_PHP}/lectura.php?m=${manualId}&aceptar=1`;
 }
 
 // ── ACEPTACIÓN DIGITAL ────────────────────────────────────────

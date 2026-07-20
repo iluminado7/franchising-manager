@@ -27,17 +27,14 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Middleware\EnsureActiveTenant;
 
 // ── Rutas públicas ────────────────────────────────────────────────────
-// H-014 fix: throttle compuesto (IP + email) — ver AppServiceProvider::boot().
-// Reemplaza el throttle simple por IP que permitía credential stuffing con IPs
-// rotadas.
+
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
 
-// H-025 fix: endpoint público (sin auth) para recibir reportes de violaciones
-// de Content-Security-Policy del navegador. Sin auth porque los navegadores no
-// mandan cookies con report-uri. Con throttle agresivo para evitar spam.
+
 Route::post('/csp-report', [CspReportController::class, 'receive'])
     ->middleware('throttle:60,1');
+
 
 // ── Rutas protegidas ──────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function () {
@@ -67,7 +64,9 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     // Manuales — lectura para todos los roles
     Route::get('/manuales',      [ManualController::class, 'index']);
     Route::get('/manuales/{id}', [ManualController::class, 'show']);
+    Route::get('/manuales/{id}/archivo', [ManualController::class, 'servirArchivo']);
 
+    Route::get('/manuales/archivo/{token}', [ManualController::class, 'servirArchivoToken']);
     // Feature imágenes: descarga de imagen de manual. El controller valida
     // que el usuario tenga acceso al manual antes de servir la imagen.
     Route::get('/manuales-imagenes/{id}/descargar', [ManualImageController::class, 'descargar']);
@@ -164,6 +163,7 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::delete('/manuales/{id}',           [ManualController::class, 'destroy']);
         Route::post('/manuales/{id}/restore',     [ManualController::class, 'restore']);
         Route::post('/manuales/{id}/publicar',    [ManualController::class, 'publicar']);
+        Route::post('/manuales/{id}/archivo', [ManualController::class, 'publicarArchivo']);
         Route::get('/manuales/{id}/pdf',          [PdfController::class, 'generar']);
         Route::post('/manuales/{id}/archivar',    [ManualController::class, 'archivar']);
         Route::post('/manuales/{id}/borrador',    [ManualController::class, 'guardarBorrador']);
