@@ -202,7 +202,7 @@ include 'layout/head.php';
 
 .accion-pill {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 500;
+  font-size: 10px; font-weight: 500;
   padding: 3px 9px; border-radius: 20px;
   white-space: nowrap;
 }
@@ -231,7 +231,7 @@ include 'layout/head.php';
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; background: var(--gris1); z-index: 1;
 }
-.modal-header h3 { font-size: 15px; font-weight: 600; color: var(--blanco); }
+.modal-header h3 { font-size: 14px; font-weight: 600; color: var(--blanco); }
 
 .modal-close {
   background: transparent; border: none; cursor: pointer;

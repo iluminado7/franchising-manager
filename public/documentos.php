@@ -585,7 +585,7 @@ include 'layout/head.php';
 .version-card.eliminada:hover { background: rgba(226,92,92,.07); }
 .version-eliminada-pill {
   display: inline-block; padding: 2px 8px; border-radius: 10px;
-  font-size: 9px; font-weight: 600; letter-spacing: .04em;
+  font-size: 10px; font-weight: 600; letter-spacing: .04em;
   background: rgba(226,92,92,.15); color: var(--error);
   border: 1px solid rgba(226,92,92,.3);
   font-family: 'Archivo', sans-serif; text-transform: uppercase;
@@ -612,7 +612,7 @@ include 'layout/head.php';
 }
 .version-vigente-pill {
   display: inline-block; padding: 2px 8px; border-radius: 10px;
-  font-size: 9px; font-weight: 600; letter-spacing: .04em;
+  font-size: 10px; font-weight: 600; letter-spacing: .04em;
   background: rgba(166,200,132,.15); color: var(--exito);
   border: 1px solid rgba(166,200,132,.3);
   font-family: 'Archivo', sans-serif; text-transform: uppercase;
@@ -623,7 +623,7 @@ include 'layout/head.php';
   font-family: 'Roboto', sans-serif; margin-bottom: 4px;
 }
 .version-info-meta {
-  font-size: 11px; color: var(--gris4);
+  font-size: 10px; color: var(--gris4);
   font-family: 'Roboto', sans-serif;
   display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
 }

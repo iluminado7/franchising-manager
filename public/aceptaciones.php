@@ -205,7 +205,7 @@ include 'layout/head.php';
 /* ── Celda del socio (nombre + email chico) ───────────────── */
 .socio-cell { display: flex; flex-direction: column; gap: 2px; }
 .socio-nombre { font-weight: 500; color: var(--blanco); }
-.socio-email { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.socio-email { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 
 /* ── Badge de versión ─────────────────────────────────────── */
 .badge-version {
@@ -234,7 +234,7 @@ include 'layout/head.php';
 .acciones-cell { text-align: right; white-space: nowrap; }
 .accion-btn {
   background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
-  padding: 5px 10px; font-size: 11px; color: var(--gris5);
+  padding: 5px 10px; font-size: 10px; color: var(--gris5);
   font-family: 'Roboto', sans-serif; cursor: pointer;
   display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
   transition: all .15s;

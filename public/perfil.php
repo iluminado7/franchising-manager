@@ -247,7 +247,7 @@ include 'layout/head.php';
 .foto-acciones { display: flex; gap: 8px; margin-top: 6px; }
 .foto-btn {
   background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
-  color: var(--gris5); cursor: pointer; font-size: 11px; padding: 3px 10px;
+  color: var(--gris5); cursor: pointer; font-size: 10px; padding: 3px 10px;
   font-family: 'Roboto', sans-serif; transition: border-color .12s, color .12s;
 }
 .foto-btn:hover { border-color: var(--dorado); color: var(--blanco); }
@@ -261,7 +261,7 @@ include 'layout/head.php';
   background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px;
   padding: 20px; width: 92%; max-width: 420px;
 }
-.cropper-header { font-size: 15px; font-weight: 600; color: var(--blanco); margin-bottom: 14px; font-family: 'Archivo', sans-serif; }
+.cropper-header { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 14px; font-family: 'Archivo', sans-serif; }
 .cropper-area { max-height: 360px; }
 .cropper-area img { max-width: 100%; display: block; }
 .cropper-controles { display: flex; gap: 8px; justify-content: center; margin: 12px 0; }
@@ -293,7 +293,7 @@ include 'layout/head.php';
   border: 1px solid var(--gris2);
 }
 .dato-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -313,7 +313,7 @@ include 'layout/head.php';
 .form-group:last-of-type { margin-bottom: 16px; }
 .form-group label {
   display: block;
-  font-size: 11px; font-weight: 500;
+  font-size: 10px; font-weight: 500;
   letter-spacing: .06em; text-transform: uppercase;
   color: var(--gris5); margin-bottom: 6px;
 }
@@ -362,7 +362,7 @@ include 'layout/head.php';
   padding: 16px;
 }
 .plan-nombre {
-  font-size: 15px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   color: var(--dorado); margin-bottom: 10px;
 }
 .plan-detalle {

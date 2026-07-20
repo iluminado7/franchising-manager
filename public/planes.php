@@ -199,7 +199,7 @@ include 'layout/head.php';
 /* ── Sección título ───────────────────────────────────────── */
 .seccion-titulo {
   display: flex; align-items: center; gap: 8px;
-  font-size: 11px; font-weight: 600;
+  font-size: 10px; font-weight: 600;
   letter-spacing: .08em; text-transform: uppercase;
   color: var(--gris4);
   margin-bottom: 16px;
@@ -259,7 +259,7 @@ include 'layout/head.php';
   padding-top: 12px; border-top: 1px solid var(--gris2);
 }
 .plan-meta-item {
-  font-size: 11px; color: var(--gris4);
+  font-size: 10px; color: var(--gris4);
   font-family: 'Roboto', sans-serif;
   display: flex; align-items: center; gap: 5px;
 }

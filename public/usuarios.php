@@ -362,7 +362,7 @@ include 'layout/head.php';
   background: var(--gris2);
   border: 1px solid var(--gris3);
   color: var(--gris5);
-  font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  font-size: 10px; font-weight: 700; letter-spacing: .02em;
   font-family: 'Archivo', sans-serif;
   overflow: hidden;
   user-select: none;

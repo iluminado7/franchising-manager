@@ -661,7 +661,7 @@ include 'layout/head.php';
 }
 .find-input::placeholder { color: var(--gris4); }
 .find-count {
-  font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif;
+  font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif;
   min-width: 38px; text-align: center; white-space: nowrap;
 }
 .find-sep { width: 1px; height: 18px; background: var(--gris2); margin: 0 3px; }
@@ -740,7 +740,7 @@ include 'layout/head.php';
 .tb-color-more, .tb-color-none {
   width: 100%; padding: 6px; cursor: pointer;
   background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
-  color: var(--gris5); font-family: 'Roboto', sans-serif; font-size: 11px;
+  color: var(--gris5); font-family: 'Roboto', sans-serif; font-size: 10px;
   display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: border-color .12s, color .12s;
 }
@@ -770,7 +770,7 @@ include 'layout/head.php';
 .editor-content {
   outline: none;
   font-family: 'Roboto', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.8;
   color: var(--blanco);
   min-height: 780px;
@@ -812,7 +812,7 @@ include 'layout/head.php';
   background: transparent; border: 1px solid transparent;
   color: var(--gris5); cursor: pointer;
   padding: 3px 8px; border-radius: 4px;
-  font-family: 'Roboto', sans-serif; font-size: 11px;
+  font-family: 'Roboto', sans-serif; font-size: 10px;
   min-width: 24px; height: 24px;
   display: inline-flex; align-items: center; justify-content: center;
   transition: background .15s, color .15s;
@@ -822,7 +822,7 @@ include 'layout/head.php';
 .mini-sep { width: 1px; height: 14px; background: var(--gris2); margin: 0 2px; }
 .mini-select {
   background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
-  border-radius: 4px; padding: 2px 6px; font-size: 11px; height: 24px;
+  border-radius: 4px; padding: 2px 6px; font-size: 10px; height: 24px;
   font-family: 'Roboto', sans-serif; cursor: pointer;
 }
 .mini-select option { background: var(--gris1); }
@@ -900,7 +900,7 @@ include 'layout/head.php';
   cursor: pointer;
   padding: 5px 10px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-family: 'Roboto', sans-serif;
   transition: background .15s;
   display: inline-flex;
@@ -928,7 +928,7 @@ include 'layout/head.php';
 
 .editor-content h1 { font-family: 'Roboto', sans-serif; font-size: 24px; font-weight: 700; color: var(--blanco); margin: 0 0 16px; border-bottom: 1px solid var(--gris2); padding-bottom: 10px; }
 .editor-content h2 { font-family: 'Roboto', sans-serif; font-size: 18px; font-weight: 600; color: var(--blanco); margin: 24px 0 10px; }
-.editor-content h3 { font-family: 'Roboto', sans-serif; font-size: 15px; font-weight: 600; color: var(--gris5); margin: 16px 0 8px; }
+.editor-content h3 { font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 600; color: var(--gris5); margin: 16px 0 8px; }
 .editor-content p  { margin: 0 0 10px; }
 .editor-content ul, .editor-content ol { padding-left: 22px; margin: 0 0 10px; }
 .editor-content li { margin-bottom: 4px; }
@@ -1000,8 +1000,8 @@ include 'layout/head.php';
 
 .version-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
 .version-num  { font-size: 13px; font-weight: 600; color: var(--blanco); }
-.version-fecha { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
-.version-autor { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.version-fecha { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.version-autor { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .version-tag   { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(201,168,76,.15); color: var(--dorado); margin-top: 4px; }
 
 /* Modal elegir tipo de version (menor / mayor) */
@@ -1034,7 +1034,7 @@ include 'layout/head.php';
   padding: 16px 20px; border-bottom: 1px solid var(--gris2);
   display: flex; align-items: center; justify-content: space-between;
 }
-.modal-header h3 { font-size: 15px; font-weight: 600; color: var(--blanco); }
+.modal-header h3 { font-size: 14px; font-weight: 600; color: var(--blanco); }
 
 .modal-close {
   background: transparent; border: none; cursor: pointer;
@@ -1053,7 +1053,7 @@ include 'layout/head.php';
 .form-group { margin-bottom: 16px; }
 .form-group:last-of-type { margin-bottom: 0; }
 .form-label {
-  display: block; font-size: 11px; font-weight: 600;
+  display: block; font-size: 10px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.6px;
   color: var(--gris4); margin-bottom: 6px;
   font-family: 'Archivo', sans-serif;

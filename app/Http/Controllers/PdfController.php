@@ -22,10 +22,22 @@ class PdfController extends Controller
     public function generar(Request $request, int $id)
     {
         $user   = $request->user();
+
+        // Guard de rol EXPLICITO (defensa en profundidad). La ruta ya filtra con
+        // role:super_admin,franquiciante, pero esa es la UNICA barrera de rol: el
+        // chequeo de mas abajo valida EMPRESA, no rol, asi que un franquiciado o
+        // empleado de una empresa con acceso al manual lo pasaria. Si un refactor
+        // de api.php moviera esta ruta de grupo, el PDF maestro quedaria expuesto
+        // al socio comercial en silencio. Va antes del findOrFail para no revelar
+        // si el manual existe (siempre 403, nunca 404).
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json(['error' => 'Sin permiso para imprimir manuales.'], 403);
+        }
+
         $manual = Manual::findOrFail($id);
 
-        // Defensa en profundidad: la ruta ya filtra por rol, pero el franquiciante
-        // solo puede imprimir manuales de su empresa.
+        // Scoping por tenant: el super_admin imprime cualquier manual; el
+        // franquiciante, solo los de su empresa. (El rol ya se valido arriba.)
         if (!$user->esSuperAdmin() &&
             !ManualAccessService::empresaTieneAccesoAlManual($manual->id, $user->empresa_id)) {
             return response()->json(['error' => 'Sin acceso a este manual.'], 403);
@@ -107,7 +119,7 @@ class PdfController extends Controller
         $css = '
             body { font-family: sans-serif; font-size: 12px; color: #000; line-height: 1.5; }
             h1 { font-size: 18px; margin: 0 0 10px; }
-            h2 { font-size: 15px; margin: 14px 0 8px; }
+            h2 { font-size: 14px; margin: 14px 0 8px; }
             h3 { font-size: 13px; margin: 12px 0 6px; }
             p  { margin: 0 0 9px; }
             table { width: 100%; border-collapse: collapse; margin: 12px 0; }
