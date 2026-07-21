@@ -378,6 +378,44 @@ include 'layout/head.php';
   border-radius: 50%;
 }
 
+/* ── Lightbox de foto de perfil ─────────────────────────────────────
+   Se abre al hacer clic en un avatar CON foto. La imagen no se escala mas
+   alla de su tamaño natural: el endpoint devuelve el archivo original sin
+   miniaturas, y agrandar una foto chica solo la dejaria pixelada. */
+.avatar-lb {
+  position: fixed; inset: 0; z-index: 900;
+  display: none; align-items: center; justify-content: center;
+  padding: 48px 20px;
+  background: rgba(0, 0, 0, .82);
+}
+.avatar-lb.visible { display: flex; }
+.avatar-lb-fig { margin: 0; text-align: center; cursor: default; }
+.avatar-lb-fig img {
+  display: block;
+  width: auto; height: auto;
+  max-width: min(72vw, 560px);
+  max-height: 72vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+}
+.avatar-lb-cap {
+  margin-top: 14px;
+  color: #F5F3EE;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+}
+.avatar-lb-x {
+  position: absolute; top: 18px; right: 22px;
+  width: 38px; height: 38px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .35);
+  color: #fff; font-size: 24px; line-height: 1;
+  cursor: pointer;
+}
+.avatar-lb-x:hover { background: rgba(255, 255, 255, .12); }
+/* Solo los avatares CON foto invitan a hacer clic. */
+.u-avatar-click { cursor: zoom-in; }
 .cat-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 260px; }
 .cat-chip {
   display: inline-flex; align-items: center;
@@ -591,10 +629,77 @@ function inicialesDe(u) {
 function renderAvatar(u) {
   const ini = esc(inicialesDe(u));
   if (!u.avatar_url) {
+    // Sin foto no hay nada que ampliar: circulo con iniciales y listo.
     return `<span class="u-avatar">${ini}</span>`;
   }
-  return `<span class="u-avatar">${ini}<img class="u-avatar-img" src="${API}/perfil/foto/${u.id}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+
+  // Con foto: ampliable. El nombre viaja por data-nom y no interpolado dentro
+  // del onclick, porque un apellido con apostrofe romperia el atributo.
+  const nom = esc(`${u.nombre || ''} ${u.apellido || ''}`.trim() || u.email || '');
+  return `<span class="u-avatar u-avatar-click" data-uid="${u.id}" data-nom="${nom}"`
+       + ` title="Ver foto de perfil">${ini}`
+       + `<img class="u-avatar-img" src="${API}/perfil/foto/${u.id}" alt="" loading="lazy" onerror="this.remove()"></span>`;
 }
+
+// ── LIGHTBOX DE FOTO DE PERFIL ─────────────────────────────────────
+// Cierra con clic afuera, Escape o la X. La politica de "los modales no
+// cierran al hacer clic afuera" protege datos cargados; aca es solo lectura.
+function abrirFotoPerfil(userId, nombre) {
+  let lb = document.getElementById('avatar-lightbox');
+
+  // Se construye una sola vez, la primera vez que hace falta.
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'avatar-lightbox';
+    lb.className = 'avatar-lb';
+    lb.innerHTML =
+      '<button class="avatar-lb-x" type="button" title="Cerrar" aria-label="Cerrar">&times;</button>' +
+      '<figure class="avatar-lb-fig">' +
+        '<img id="avatar-lb-img" alt="">' +
+        '<figcaption class="avatar-lb-cap" id="avatar-lb-cap"></figcaption>' +
+      '</figure>';
+
+    // Clic en el fondo cierra; clic en la figura no (si no, no se puede
+    // ni seleccionar la imagen sin que se cierre).
+    lb.addEventListener('click', cerrarFotoPerfil);
+    lb.querySelector('.avatar-lb-fig')
+      .addEventListener('click', (e) => e.stopPropagation());
+
+    document.body.appendChild(lb);
+  }
+
+  const img = document.getElementById('avatar-lb-img');
+  img.src = `${API}/perfil/foto/${userId}`;
+  img.alt = nombre || '';
+  document.getElementById('avatar-lb-cap').textContent = nombre || '';
+
+  lb.classList.add('visible');
+  document.body.style.overflow = 'hidden';   // que no scrollee el fondo
+}
+
+function cerrarFotoPerfil() {
+  const lb = document.getElementById('avatar-lightbox');
+  if (!lb) return;
+  lb.classList.remove('visible');
+  document.body.style.overflow = '';
+
+  // Se suelta la imagen: si no, al abrir otra se ve un instante la anterior.
+  const img = document.getElementById('avatar-lb-img');
+  if (img) img.removeAttribute('src');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarFotoPerfil();
+});
+
+// Delegado: cubre los avatares que se dibujan despues (paginacion, filtros).
+document.addEventListener('click', (e) => {
+  const av = e.target.closest ? e.target.closest('.u-avatar-click') : null;
+  if (!av) return;
+  e.stopPropagation();   // en log.php la fila entera abre el detalle
+  abrirFotoPerfil(av.dataset.uid, av.dataset.nom || '');
+});
+
 
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');

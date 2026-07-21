@@ -211,6 +211,66 @@ include 'layout/head.php';
 .accion-auth     { background: rgba(55,138,221,.12);  color: #378ADD; }
 .accion-manual   { background: rgba(201,168,76,.12);  color: var(--dorado); }
 .accion-usuario  { background: rgba(92,184,122,.12);  color: var(--exito); }
+
+/* Avatar del usuario que genero el registro. Mismo circulo que en
+   usuarios.php: la foto se apoya sobre las iniciales y, si falla, el
+   onerror la borra y quedan las iniciales a la vista. */
+.u-avatar {
+  position: relative; flex-shrink: 0;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--gris2);
+  border: 1px solid var(--gris3);
+  color: var(--gris5);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .02em;
+  font-family: 'Archivo', sans-serif;
+  overflow: hidden; user-select: none;
+}
+.u-avatar-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; border-radius: 50%;
+}
+/* ── Lightbox de foto de perfil ─────────────────────────────────────
+   Se abre al hacer clic en un avatar CON foto. La imagen no se escala mas
+   alla de su tamaño natural: el endpoint devuelve el archivo original sin
+   miniaturas, y agrandar una foto chica solo la dejaria pixelada. */
+.avatar-lb {
+  position: fixed; inset: 0; z-index: 900;
+  display: none; align-items: center; justify-content: center;
+  padding: 48px 20px;
+  background: rgba(0, 0, 0, .82);
+}
+.avatar-lb.visible { display: flex; }
+.avatar-lb-fig { margin: 0; text-align: center; cursor: default; }
+.avatar-lb-fig img {
+  display: block;
+  width: auto; height: auto;
+  max-width: min(72vw, 560px);
+  max-height: 72vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+}
+.avatar-lb-cap {
+  margin-top: 14px;
+  color: #F5F3EE;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+}
+.avatar-lb-x {
+  position: absolute; top: 18px; right: 22px;
+  width: 38px; height: 38px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .35);
+  color: #fff; font-size: 24px; line-height: 1;
+  cursor: pointer;
+}
+.avatar-lb-x:hover { background: rgba(255, 255, 255, .12); }
+/* Solo los avatares CON foto invitan a hacer clic. */
+.u-avatar-click { cursor: zoom-in; }
+
 .accion-archivo  { background: rgba(136,136,136,.12); color: var(--gris5); }
 .accion-sistema  { background: rgba(226,92,92,.12);   color: var(--error); }
 
@@ -532,8 +592,13 @@ function renderTabla() {
       return `<tr style="cursor:pointer" onclick="verDetalle(${inicio + i})" title="Ver detalle">
         <td style="font-family:'Roboto',sans-serif;font-size:12px;white-space:nowrap;color:var(--gris4)">${formatFechaHora(l.created_at)}</td>
         <td>
-          <div style="font-size:13px;font-weight:500;color:var(--blanco)">${esc(nombre)}</div>
-          <div style="font-size:11px;color:var(--gris4)">${esc(d.manual_titulo || '')}${d.version ? ' · v' + d.version : ''}</div>
+          <div style="display:flex;align-items:center;gap:9px">
+            ${avatarLog(l.user)}
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--blanco)">${esc(nombre)}</div>
+              <div style="font-size:11px;color:var(--gris4)">${esc(d.manual_titulo || '')}${d.version ? ' · v' + d.version : ''}</div>
+            </div>
+          </div>
         </td>
         <td style="font-size:12px;color:var(--gris5)">${esc(empresa)}</td>
         <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">${esc(l.user?.email || '—')}</td>
@@ -567,8 +632,13 @@ function renderTabla() {
         ${formatFechaHora(l.created_at)}
       </td>
       <td>
-        <div style="font-size:13px;font-weight:500;color:var(--blanco)">${esc(nombre)}</div>
-        <div style="font-size:11px;color:var(--gris4)">${rol}</div>
+        <div style="display:flex;align-items:center;gap:9px">
+          ${avatarLog(l.user)}
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--blanco)">${esc(nombre)}</div>
+            <div style="font-size:11px;color:var(--gris4)">${rol}</div>
+          </div>
+        </div>
       </td>
       <td>${accionPill(l.accion)}</td>
       <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">
@@ -718,6 +788,86 @@ function formatFechaHora(str) {
 
 // v2.3: el nombre del usuario vive en la tabla users (nombre/apellido), no en
 // system_admin/franchise_staff. Fallback a email y luego a #id.
+// Iniciales de respaldo cuando no hay foto (o no carga).
+function inicialesDeLog(u) {
+  if (!u) return '?';
+  const n = (u.nombre || '').trim();
+  const a = (u.apellido || '').trim();
+  const ini = ((n[0] || '') + (a[0] || '')).toUpperCase();
+  return ini || (u.email || '?').charAt(0).toUpperCase();
+}
+
+// Avatar del autor del registro. Solo es ampliable si TIENE foto.
+// La URL se arma con API (global) y no con u.avatar_url, que es absoluta
+// y en el subpath de XAMPP resolveria contra la raiz del servidor.
+function avatarLog(u) {
+  if (!u) return `<span class="u-avatar">?</span>`;
+  const ini = esc(inicialesDeLog(u));
+  if (!u.avatar_url) return `<span class="u-avatar">${ini}</span>`;
+
+  const nom = esc(`${u.nombre || ''} ${u.apellido || ''}`.trim() || u.email || '');
+  return `<span class="u-avatar u-avatar-click" data-uid="${u.id}" data-nom="${nom}"`
+       + ` title="Ver foto de perfil">${ini}`
+       + `<img class="u-avatar-img" src="${API}/perfil/foto/${u.id}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+}
+// ── LIGHTBOX DE FOTO DE PERFIL ─────────────────────────────────────
+// Cierra con clic afuera, Escape o la X. La politica de "los modales no
+// cierran al hacer clic afuera" protege datos cargados; aca es solo lectura.
+function abrirFotoPerfil(userId, nombre) {
+  let lb = document.getElementById('avatar-lightbox');
+
+  // Se construye una sola vez, la primera vez que hace falta.
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'avatar-lightbox';
+    lb.className = 'avatar-lb';
+    lb.innerHTML =
+      '<button class="avatar-lb-x" type="button" title="Cerrar" aria-label="Cerrar">&times;</button>' +
+      '<figure class="avatar-lb-fig">' +
+        '<img id="avatar-lb-img" alt="">' +
+        '<figcaption class="avatar-lb-cap" id="avatar-lb-cap"></figcaption>' +
+      '</figure>';
+
+    // Clic en el fondo cierra; clic en la figura no (si no, no se puede
+    // ni seleccionar la imagen sin que se cierre).
+    lb.addEventListener('click', cerrarFotoPerfil);
+    lb.querySelector('.avatar-lb-fig')
+      .addEventListener('click', (e) => e.stopPropagation());
+
+    document.body.appendChild(lb);
+  }
+
+  const img = document.getElementById('avatar-lb-img');
+  img.src = `${API}/perfil/foto/${userId}`;
+  img.alt = nombre || '';
+  document.getElementById('avatar-lb-cap').textContent = nombre || '';
+
+  lb.classList.add('visible');
+  document.body.style.overflow = 'hidden';   // que no scrollee el fondo
+}
+
+function cerrarFotoPerfil() {
+  const lb = document.getElementById('avatar-lightbox');
+  if (!lb) return;
+  lb.classList.remove('visible');
+  document.body.style.overflow = '';
+
+  // Se suelta la imagen: si no, al abrir otra se ve un instante la anterior.
+  const img = document.getElementById('avatar-lb-img');
+  if (img) img.removeAttribute('src');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarFotoPerfil();
+});
+
+// Delegado: cubre los avatares que se dibujan despues (paginacion, filtros).
+document.addEventListener('click', (e) => {
+  const av = e.target.closest ? e.target.closest('.u-avatar-click') : null;
+  if (!av) return;
+  e.stopPropagation();   // en log.php la fila entera abre el detalle
+  abrirFotoPerfil(av.dataset.uid, av.dataset.nom || '');
+});
 function nombreUsuario(u, fallbackId) {
   if (!u) return fallbackId ? `Usuario #${fallbackId}` : '—';
   const nom = `${u.nombre || ''} ${u.apellido || ''}`.trim();
