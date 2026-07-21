@@ -299,7 +299,7 @@ body.tema-claro {
   }
 
   .rol-badge {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     padding: 3px 10px;
     border-radius: 20px;
@@ -335,7 +335,7 @@ body.tema-claro {
     top: 2px; right: 2px;
     background: var(--dorado);
     color: var(--negro);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     width: 16px; height: 16px;
     border-radius: 50%;
@@ -384,7 +384,7 @@ body.tema-claro {
   }
 
   .nav-section-label {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -461,7 +461,7 @@ body.tema-claro {
   }
 
   .stat-card-label {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -507,7 +507,7 @@ body.tema-claro {
 
   thead th {
     text-align: left;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -555,7 +555,7 @@ body.tema-claro {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     padding: 3px 9px;
     border-radius: 20px;

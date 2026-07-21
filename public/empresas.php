@@ -254,7 +254,7 @@ include 'layout/head.php';
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px; }
 
 .seccion-titulo {
-  font-size: 10px; font-weight: 600; letter-spacing: .08em;
+  font-size: 11px; font-weight: 600; letter-spacing: .08em;
   text-transform: uppercase; color: var(--dorado);
   margin-bottom: 14px; padding-bottom: 6px;
   border-bottom: 1px solid rgba(201,168,76,.2);

@@ -199,7 +199,7 @@ include 'layout/head.php';
 /* ── Sección título ───────────────────────────────────────── */
 .seccion-titulo {
   display: flex; align-items: center; gap: 8px;
-  font-size: 10px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   letter-spacing: .08em; text-transform: uppercase;
   color: var(--gris4);
   margin-bottom: 16px;
@@ -230,7 +230,7 @@ include 'layout/head.php';
   font-size: 16px; font-weight: 700; color: var(--blanco);
 }
 .plan-tipo-badge {
-  font-size: 10px; font-weight: 600; letter-spacing: .06em;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
   white-space: nowrap;
 }
@@ -259,7 +259,7 @@ include 'layout/head.php';
   padding-top: 12px; border-top: 1px solid var(--gris2);
 }
 .plan-meta-item {
-  font-size: 10px; color: var(--gris4);
+  font-size: 11px; color: var(--gris4);
   font-family: 'Roboto', sans-serif;
   display: flex; align-items: center; gap: 5px;
 }
@@ -299,7 +299,7 @@ include 'layout/head.php';
 }
 .tabla-facturas { width: 100%; border-collapse: collapse; }
 .tabla-facturas th {
-  font-size: 10px; font-weight: 600; letter-spacing: .07em;
+  font-size: 11px; font-weight: 600; letter-spacing: .07em;
   text-transform: uppercase; color: var(--gris4);
   padding: 10px 16px; text-align: left;
   border-bottom: 1px solid var(--gris2);

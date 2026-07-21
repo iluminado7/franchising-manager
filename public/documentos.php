@@ -490,7 +490,7 @@ include 'layout/head.php';
 .tabla-wrap { background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px; overflow: hidden; }
 .tabla-header { padding: 14px 18px; border-bottom: 1px solid var(--gris2); font-size: 13px; font-weight: 500; color: var(--gris5); }
 .tabla { width: 100%; border-collapse: collapse; }
-.tabla th { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--gris4); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--gris2); white-space: nowrap; }
+.tabla th { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--gris4); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--gris2); white-space: nowrap; }
 .tabla td { padding: 13px 16px; font-size: 13px; color: var(--gris5); border-bottom: 1px solid var(--gris2); font-family: 'Roboto', sans-serif; vertical-align: middle; }
 .tabla tr:last-child td { border-bottom: none; }
 .tabla tr:hover td { background: rgba(255,255,255,.02); }
@@ -499,7 +499,7 @@ include 'layout/head.php';
 .tipo-badge {
   display: inline-flex; align-items: center;
   padding: 3px 9px; border-radius: 20px;
-  font-size: 10px; font-weight: 600; letter-spacing: .06em;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap;
 }
 .tipo-contrato  { background: rgba(101,163,255,.12); color: #65a3ff;       border: 1px solid rgba(101,163,255,.25); }
@@ -585,7 +585,7 @@ include 'layout/head.php';
 .version-card.eliminada:hover { background: rgba(226,92,92,.07); }
 .version-eliminada-pill {
   display: inline-block; padding: 2px 8px; border-radius: 10px;
-  font-size: 10px; font-weight: 600; letter-spacing: .04em;
+  font-size: 11px; font-weight: 600; letter-spacing: .04em;
   background: rgba(226,92,92,.15); color: var(--error);
   border: 1px solid rgba(226,92,92,.3);
   font-family: 'Archivo', sans-serif; text-transform: uppercase;
@@ -612,7 +612,7 @@ include 'layout/head.php';
 }
 .version-vigente-pill {
   display: inline-block; padding: 2px 8px; border-radius: 10px;
-  font-size: 10px; font-weight: 600; letter-spacing: .04em;
+  font-size: 11px; font-weight: 600; letter-spacing: .04em;
   background: rgba(166,200,132,.15); color: var(--exito);
   border: 1px solid rgba(166,200,132,.3);
   font-family: 'Archivo', sans-serif; text-transform: uppercase;
@@ -623,7 +623,7 @@ include 'layout/head.php';
   font-family: 'Roboto', sans-serif; margin-bottom: 4px;
 }
 .version-info-meta {
-  font-size: 10px; color: var(--gris4);
+  font-size: 11px; color: var(--gris4);
   font-family: 'Roboto', sans-serif;
   display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
 }

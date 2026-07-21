@@ -247,7 +247,7 @@ include 'layout/head.php';
 .foto-acciones { display: flex; gap: 8px; margin-top: 6px; }
 .foto-btn {
   background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
-  color: var(--gris5); cursor: pointer; font-size: 10px; padding: 3px 10px;
+  color: var(--gris5); cursor: pointer; font-size: 11px; padding: 3px 10px;
   font-family: 'Roboto', sans-serif; transition: border-color .12s, color .12s;
 }
 .foto-btn:hover { border-color: var(--dorado); color: var(--blanco); }
@@ -293,7 +293,7 @@ include 'layout/head.php';
   border: 1px solid var(--gris2);
 }
 .dato-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -313,7 +313,7 @@ include 'layout/head.php';
 .form-group:last-of-type { margin-bottom: 16px; }
 .form-group label {
   display: block;
-  font-size: 10px; font-weight: 500;
+  font-size: 11px; font-weight: 500;
   letter-spacing: .06em; text-transform: uppercase;
   color: var(--gris5); margin-bottom: 6px;
 }
@@ -382,7 +382,7 @@ include 'layout/head.php';
 /* ── Facturas ─────────────────────────────────────────────── */
 .facturas-tabla { width: 100%; border-collapse: collapse; }
 .facturas-tabla th {
-  font-size: 10px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   letter-spacing: .07em; text-transform: uppercase;
   color: var(--gris4); padding: 6px 10px;
   text-align: left; border-bottom: 1px solid var(--gris2);

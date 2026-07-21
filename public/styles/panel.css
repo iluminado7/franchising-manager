@@ -88,7 +88,7 @@ body.tema-claro {
 }
 
 .rol-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   padding: 3px 10px;
   border-radius: 20px;
@@ -121,7 +121,7 @@ body.tema-claro {
   top: 2px; right: 2px;
   background: var(--dorado);
   color: var(--negro);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   width: 16px; height: 16px;
   border-radius: 50%;
@@ -324,7 +324,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   padding: 3px 9px;
   border-radius: 20px;
@@ -587,7 +587,7 @@ body.tema-claro {
     -webkit-overflow-scrolling: touch;
   }
   table { min-width: 640px; }
-  thead th { padding: 9px 12px; font-size: 10px; }
+  thead th { padding: 9px 12px; font-size: 11px; }
   tbody td { padding: 10px 12px; font-size: 12px; }
   thead th:first-child,
   tbody td:first-child {

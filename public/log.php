@@ -202,7 +202,7 @@ include 'layout/head.php';
 
 .accion-pill {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 10px; font-weight: 500;
+  font-size: 11px; font-weight: 500;
   padding: 3px 9px; border-radius: 20px;
   white-space: nowrap;
 }

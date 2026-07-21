@@ -136,7 +136,7 @@ body {
 }
 .find-input::placeholder { color: #aaa; }
 .find-count {
-  font-size: 10px; color: #999; font-family: 'Roboto', sans-serif;
+  font-size: 11px; color: #999; font-family: 'Roboto', sans-serif;
   min-width: 38px; text-align: center; white-space: nowrap;
 }
 .find-sep { width: 1px; height: 18px; background: #E0DDD6; margin: 0 3px; }
@@ -256,7 +256,7 @@ body.lectura-pdf .doc-page {
 .btn-aceptar-doc:disabled { opacity: .4; cursor: not-allowed; }
 
 .nota-legal {
-  font-size: 10px; color: #999; text-align: center;
+  font-size: 11px; color: #999; text-align: center;
   font-family: 'Roboto', sans-serif; line-height: 1.5; padding: 0 8px;
 }
 
@@ -447,9 +447,9 @@ body.lectura-pdf .doc-page {
   background: #F7F5F0; border: 1px solid #E8E4DC; border-radius: 10px; padding: 12px 14px;
 }
 .nota-item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
-.nota-fecha { font-size: 10px; color: #999; font-family: 'Roboto', sans-serif; }
+.nota-fecha { font-size: 11px; color: #999; font-family: 'Roboto', sans-serif; }
 .nota-contenido { font-size: 13.5px; color: #333; font-family: 'Roboto', sans-serif; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
-.nota-estado { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+.nota-estado { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
 .nota-estado.pendiente { background: rgba(201,168,76,.15); color: #8A6D1B; }
 .nota-estado.leida     { background: rgba(55,138,221,.12); color: #2A5E9E; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: #27500A; }

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -107,7 +108,7 @@ class ProfilePhotoController extends Controller
 
     // GET /api/perfil/foto/{userId}
     // Sirve la foto por stream desde el disco privado.
-    public function ver(Request $request, int $userId): StreamedResponse|JsonResponse
+    public function ver(Request $request, int $userId): Response
     {
         $actor   = $request->user();
         $usuario = User::find($userId);
@@ -136,6 +137,20 @@ class ProfilePhotoController extends Controller
             return response()->json(['error' => 'Sin foto.'], 404);
         }
 
+        // CACHE: la clave del archivo ya lleva un hash del contenido
+        // (avatars/{id}/{sha256:16}.jpg), asi que cambia sola cuando cambia la
+        // foto. Sirve de ETag sin releer ni rehashear nada.
+        $etag = '"' . substr(hash('sha256', $usuario->foto_url), 0, 32) . '"';
+
+        // Se responde el 304 ANTES de tocar Storage: con S3 eso evita leer el
+        // objeto del bucket en cada revalidacion.
+        if ($this->etagCoincide($request->headers->get('If-None-Match'), $etag)) {
+            return response('', 304, [
+                'ETag'          => $etag,
+                'Cache-Control' => 'private, max-age=0, must-revalidate',
+            ]);
+        }
+
         $disk = config('filesystems.default');
         if (!Storage::disk($disk)->exists($usuario->foto_url)) {
             Log::warning('ProfilePhoto.ver: archivo faltante en disk', [
@@ -161,7 +176,11 @@ class ProfilePhotoController extends Controller
             [
                 'Content-Type'        => 'image/jpeg',
                 'Content-Disposition' => 'inline; filename="avatar-' . $usuario->id . '.jpg"',
-                'Cache-Control'       => 'private, max-age=3600',
+                // max-age=0 + must-revalidate: el navegador pregunta SIEMPRE.
+                // Antes habia un max-age=3600 que dejaba la foto vieja hasta una
+                // hora en los listados (la URL del avatar nunca cambia).
+                'ETag'                => $etag,
+                'Cache-Control'       => 'private, max-age=0, must-revalidate',
             ]
         );
     }
@@ -184,6 +203,35 @@ class ProfilePhotoController extends Controller
         $user->save();
 
         return response()->json(['message' => 'Foto de perfil eliminada.']);
+    }
+
+    /**
+     * Compara el If-None-Match del pedido contra el ETag actual.
+     *
+     * El header puede traer varios valores separados por coma y con el prefijo
+     * W/ (weak). Se normaliza antes de comparar; un '*' matchea siempre.
+     */
+    private function etagCoincide(?string $ifNoneMatch, string $etag): bool
+    {
+        $ifNoneMatch = trim((string) $ifNoneMatch);
+        if ($ifNoneMatch === '') {
+            return false;
+        }
+        if ($ifNoneMatch === '*') {
+            return true;
+        }
+
+        foreach (explode(',', $ifNoneMatch) as $candidato) {
+            $candidato = trim($candidato);
+            if (str_starts_with($candidato, 'W/')) {
+                $candidato = substr($candidato, 2);
+            }
+            if ($candidato === $etag) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

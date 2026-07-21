@@ -197,7 +197,7 @@ include 'layout/head.php';
 
 /* ── Tabla ────────────────────────────────────────────────── */
 .tabla { width: 100%; border-collapse: collapse; }
-.tabla th { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--gris4); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--gris2); white-space: nowrap; }
+.tabla th { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--gris4); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--gris2); white-space: nowrap; }
 .tabla td { padding: 13px 16px; font-size: 13px; color: var(--gris5); border-bottom: 1px solid var(--gris2); font-family: 'Roboto', sans-serif; vertical-align: middle; }
 .tabla tr:last-child td { border-bottom: none; }
 .tabla tr:hover td { background: rgba(255,255,255,.02); }
@@ -205,7 +205,7 @@ include 'layout/head.php';
 /* ── Celda del socio (nombre + email chico) ───────────────── */
 .socio-cell { display: flex; flex-direction: column; gap: 2px; }
 .socio-nombre { font-weight: 500; color: var(--blanco); }
-.socio-email { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.socio-email { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 
 /* ── Badge de versión ─────────────────────────────────────── */
 .badge-version {
@@ -213,7 +213,7 @@ include 'layout/head.php';
   background: rgba(101,163,255,.12); color: #65a3ff;
   border: 1px solid rgba(101,163,255,.25);
   padding: 3px 9px; border-radius: 20px;
-  font-size: 10px; font-weight: 600; letter-spacing: .06em;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap;
 }
 .badge-version.activa {
@@ -234,7 +234,7 @@ include 'layout/head.php';
 .acciones-cell { text-align: right; white-space: nowrap; }
 .accion-btn {
   background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
-  padding: 5px 10px; font-size: 10px; color: var(--gris5);
+  padding: 5px 10px; font-size: 11px; color: var(--gris5);
   font-family: 'Roboto', sans-serif; cursor: pointer;
   display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
   transition: all .15s;

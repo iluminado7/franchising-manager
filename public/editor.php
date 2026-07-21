@@ -661,7 +661,7 @@ include 'layout/head.php';
 }
 .find-input::placeholder { color: var(--gris4); }
 .find-count {
-  font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif;
+  font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif;
   min-width: 38px; text-align: center; white-space: nowrap;
 }
 .find-sep { width: 1px; height: 18px; background: var(--gris2); margin: 0 3px; }
@@ -740,7 +740,7 @@ include 'layout/head.php';
 .tb-color-more, .tb-color-none {
   width: 100%; padding: 6px; cursor: pointer;
   background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
-  color: var(--gris5); font-family: 'Roboto', sans-serif; font-size: 10px;
+  color: var(--gris5); font-family: 'Roboto', sans-serif; font-size: 11px;
   display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: border-color .12s, color .12s;
 }
@@ -792,7 +792,7 @@ include 'layout/head.php';
 .mini-editor-label {
   display: flex; align-items: center; gap: 6px;
   padding: 6px 10px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--gris5);
   font-family: 'Roboto', sans-serif;
   text-transform: uppercase;
@@ -812,7 +812,7 @@ include 'layout/head.php';
   background: transparent; border: 1px solid transparent;
   color: var(--gris5); cursor: pointer;
   padding: 3px 8px; border-radius: 4px;
-  font-family: 'Roboto', sans-serif; font-size: 10px;
+  font-family: 'Roboto', sans-serif; font-size: 11px;
   min-width: 24px; height: 24px;
   display: inline-flex; align-items: center; justify-content: center;
   transition: background .15s, color .15s;
@@ -822,7 +822,7 @@ include 'layout/head.php';
 .mini-sep { width: 1px; height: 14px; background: var(--gris2); margin: 0 2px; }
 .mini-select {
   background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
-  border-radius: 4px; padding: 2px 6px; font-size: 10px; height: 24px;
+  border-radius: 4px; padding: 2px 6px; font-size: 11px; height: 24px;
   font-family: 'Roboto', sans-serif; cursor: pointer;
 }
 .mini-select option { background: var(--gris1); }
@@ -850,7 +850,7 @@ include 'layout/head.php';
   display: flex; align-items: center; justify-content: center;
   gap: 12px;
   margin: 12px 0;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--gris4);
   font-family: 'Roboto', sans-serif;
   text-transform: uppercase;
@@ -900,7 +900,7 @@ include 'layout/head.php';
   cursor: pointer;
   padding: 5px 10px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-family: 'Roboto', sans-serif;
   transition: background .15s;
   display: inline-flex;
@@ -965,7 +965,7 @@ include 'layout/head.php';
 }
 
 .panel-section-title {
-  font-size: 10px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   letter-spacing: .1em; text-transform: uppercase;
   color: var(--gris3); margin-bottom: 10px;
 }
@@ -1000,9 +1000,9 @@ include 'layout/head.php';
 
 .version-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
 .version-num  { font-size: 13px; font-weight: 600; color: var(--blanco); }
-.version-fecha { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
-.version-autor { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
-.version-tag   { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(201,168,76,.15); color: var(--dorado); margin-top: 4px; }
+.version-fecha { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.version-autor { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.version-tag   { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(201,168,76,.15); color: var(--dorado); margin-top: 4px; }
 
 /* Modal elegir tipo de version (menor / mayor) */
 .ver-opciones { display: flex; flex-direction: column; gap: 10px; }
@@ -1053,7 +1053,7 @@ include 'layout/head.php';
 .form-group { margin-bottom: 16px; }
 .form-group:last-of-type { margin-bottom: 0; }
 .form-label {
-  display: block; font-size: 10px; font-weight: 600;
+  display: block; font-size: 11px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.6px;
   color: var(--gris4); margin-bottom: 6px;
   font-family: 'Archivo', sans-serif;
@@ -1129,7 +1129,7 @@ include 'layout/head.php';
 .nota-estado.pendiente { background: rgba(201,168,76,.15); color: var(--dorado); }
 .nota-estado.leida     { background: rgba(55,138,221,.15); color: #378ADD; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: var(--exito); }
-.nota-ver { font-size: 10px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
+.nota-ver { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .nota-acciones { display: flex; gap: 6px; margin-top: 8px; }
 .nota-btn {
   flex: 1; font-size: 10.5px; font-family: 'Roboto', sans-serif;
