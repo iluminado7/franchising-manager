@@ -20,7 +20,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *   POST /api/manuales/{manualId}/imagenes      → upload de imagen (super_admin, franquiciante)
  *   GET  /api/manuales-imagenes/{id}/descargar  → sirve la imagen (todos los roles con acceso al manual)
  *
- * Storage: disk 'local' (privado, no accesible via URL directa).
+ * Storage: disco por defecto (config('filesystems.default')) = local en
+ * desarrollo, s3 en produccion. Siempre PRIVADO: se sirve por el endpoint
+ * autenticado, nunca por URL directa del bucket.
  * Deduplicación: SHA-256 dentro del mismo manual. Si el mismo archivo se sube
  * dos veces al mismo manual, devuelve la fila existente en vez de crear duplicado.
  *
@@ -91,9 +93,9 @@ class ManualImageController extends Controller
         $ext  = self::MIMES_PERMITIDOS[$mime];
         $path = "manuales/imagenes/{$manual->id}/{$hash}.{$ext}";
 
-        // Storage en disk 'local' (privado). Usamos putFileAs para controlar
-        // el nombre exacto y evitar random UUIDs de Laravel.
-        Storage::disk('local')->putFileAs(
+        // Disco por configuracion (local en dev, s3 en prod). putFileAs para
+        // controlar el nombre exacto y evitar los UUID aleatorios de Laravel.
+        Storage::disk(config('filesystems.default'))->putFileAs(
             "manuales/imagenes/{$manual->id}",
             $archivo,
             "{$hash}.{$ext}"
@@ -140,7 +142,9 @@ class ManualImageController extends Controller
             return response()->json(['error' => 'Sin acceso.'], 403);
         }
 
-        if (!Storage::disk('local')->exists($imagen->archivo_path)) {
+        $disk = config('filesystems.default');
+
+        if (!Storage::disk($disk)->exists($imagen->archivo_path)) {
             Log::warning('ManualImage.descargar: archivo faltante en disk', [
                 'imagen_id'    => $imagen->id,
                 'archivo_path' => $imagen->archivo_path,
@@ -148,7 +152,7 @@ class ManualImageController extends Controller
             return response()->json(['error' => 'Archivo no encontrado.'], 404);
         }
 
-        $stream = Storage::disk('local')->readStream($imagen->archivo_path);
+        $stream = Storage::disk($disk)->readStream($imagen->archivo_path);
         if (!$stream) {
             return response()->json(['error' => 'Error al abrir el archivo.'], 500);
         }
@@ -229,11 +233,13 @@ class ManualImageController extends Controller
                                 )
                                 ->get();
 
+        $disk = config('filesystems.default');
+
         $eliminadas = 0;
         foreach ($huerfanas as $img) {
             try {
-                if (Storage::disk('local')->exists($img->archivo_path)) {
-                    Storage::disk('local')->delete($img->archivo_path);
+                if (Storage::disk($disk)->exists($img->archivo_path)) {
+                    Storage::disk($disk)->delete($img->archivo_path);
                 }
                 $img->delete();
                 $eliminadas++;

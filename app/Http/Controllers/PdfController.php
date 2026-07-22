@@ -19,6 +19,12 @@ use Mpdf\Mpdf;
  */
 class PdfController extends Controller
 {
+    /**
+     * Rutas temporales creadas para que mPDF pueda leer imagenes que viven en
+     * un disco remoto (S3). Se borran al terminar de generar el PDF.
+     */
+    private array $tempImagenes = [];
+
     public function generar(Request $request, int $id)
     {
         $user   = $request->user();
@@ -142,7 +148,16 @@ class PdfController extends Controller
 
         // 'S' = mPDF devuelve el documento como string y Laravel lo envuelve en
         // la response. ('I' imprimiria directo a la salida; 'D' forzaria descarga.)
-        return response($mpdf->Output($nombre, 'S'), 200)
+        //
+        // finally: si el disco es remoto se bajaron imagenes a temporales, y hay
+        // que borrarlas AUNQUE mPDF explote. Si no, se acumulan en mpdf-tmp.
+        try {
+            $pdf = $mpdf->Output($nombre, 'S');
+        } finally {
+            $this->limpiarTemporales();
+        }
+
+        return response($pdf, 200)
             ->header('Content-Type', 'application/pdf');
     }
 
@@ -187,12 +202,14 @@ class PdfController extends Controller
 
     /**
      * Reescribe los <img> que apuntan al endpoint autenticado
-     * (/api/manuales-imagenes/{id}/descargar) por la RUTA LOCAL del archivo.
+     * (/api/manuales-imagenes/{id}/descargar) por una RUTA DE ARCHIVO LOCAL.
      *
      * mPDF corre server-side sin la cookie de sesión del usuario, así que no puede
-     * descargar la imagen por HTTP: se le da la ruta física del disco 'local', que
-     * lee directo. Solo se resuelven imágenes de ESTE manual (no se sirve nada de
-     * otro tenant aunque el HTML lo pidiera).
+     * descargar la imagen por HTTP: necesita un archivo en disco. Como el storage
+     * puede ser S3, la ruta la resuelve rutaLocalDeImagen().
+     *
+     * Solo se resuelven imágenes de ESTE manual (no se sirve nada de otro tenant
+     * aunque el HTML lo pidiera).
      */
   private function resolverImagenes(string $html, int $manualId): string
     {
@@ -210,8 +227,8 @@ class PdfController extends Controller
                     return 'src=""';
                 }
 
-                $full = Storage::disk('local')->path($imagen->archivo_path);
-                if (!is_file($full)) {
+                $full = $this->rutaLocalDeImagen($imagen);
+                if ($full === null) {
                     return 'src=""';
                 }
 
@@ -222,6 +239,72 @@ class PdfController extends Controller
 
         return $resultado;
     }
+    /**
+     * Devuelve una ruta de ARCHIVO LOCAL para la imagen, o null si no se pudo.
+     *
+     * mPDF lee del filesystem: no sabe hablar con S3. Por eso:
+     *   - disco local  -> se devuelve la ruta fisica, sin copiar nada;
+     *   - disco remoto -> se baja el objeto a un temporal en mpdf-tmp.
+     *
+     * Antes esto era un ->path() directo sobre disk('local'), que en S3 no existe
+     * y dejaba TODAS las imagenes del PDF rotas.
+     */
+    private function rutaLocalDeImagen(ManualImage $imagen): ?string
+    {
+        $disk = config('filesystems.default');
+        $fs   = Storage::disk($disk);
+
+        try {
+            if (!$fs->exists($imagen->archivo_path)) {
+                return null;
+            }
+
+            // Disco local: la ruta fisica sirve tal cual, sin copiar.
+            if (config("filesystems.disks.{$disk}.driver") === 'local') {
+                $full = $fs->path($imagen->archivo_path);
+                return is_file($full) ? $full : null;
+            }
+
+            // Disco remoto: hay que materializar el archivo para mPDF.
+            $contenido = $fs->get($imagen->archivo_path);
+            if ($contenido === null || $contenido === '') {
+                return null;
+            }
+
+            $dir = storage_path('app/mpdf-tmp');
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0775, true);
+            }
+
+            $ext = pathinfo($imagen->archivo_path, PATHINFO_EXTENSION) ?: 'img';
+            $tmp = $dir . '/img-' . $imagen->id . '-' . uniqid('', true) . '.' . $ext;
+
+            if (file_put_contents($tmp, $contenido) === false) {
+                return null;
+            }
+
+            $this->tempImagenes[] = $tmp;
+            return $tmp;
+        } catch (\Throwable $e) {
+            // Una imagen que no se puede resolver no debe tumbar el PDF entero:
+            // sale sin esa imagen, igual que cuando el archivo no existe.
+            return null;
+        }
+    }
+
+    /**
+     * Borra los temporales creados para mPDF. Idempotente.
+     */
+    private function limpiarTemporales(): void
+    {
+        foreach ($this->tempImagenes as $ruta) {
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        $this->tempImagenes = [];
+    }
+
    /**
      * Acota las imágenes de encabezado/pie para mPDF.
      *

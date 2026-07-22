@@ -775,8 +775,17 @@ class ManualController extends Controller
         // cliente nunca toca el filesystem (podria traer ../ o caracteres raros):
         // se guarda aparte, solo como metadato para la descarga.
         $rutaRel = "manuales/archivos/{$manual->id}/{$hash}.pdf";
-        if (!Storage::disk('local')->exists($rutaRel)) {
-            Storage::disk('local')->put($rutaRel, file_get_contents($archivo->getRealPath()));
+
+        // Disco por configuracion (local en dev, s3 en prod). Hardcodear 'local'
+        // en produccion guardaria el PDF en el filesystem del servidor, que es
+        // efimero: el archivo se perderia en el siguiente deploy y la version
+        // publicada quedaria apuntando a la nada.
+        $disk = config('filesystems.default');
+
+        // exists() antes de put(): la ruta deriva del hash, asi que si ya esta
+        // es byte a byte el mismo archivo y no hace falta volver a subirlo.
+        if (!Storage::disk($disk)->exists($rutaRel)) {
+            Storage::disk($disk)->put($rutaRel, file_get_contents($archivo->getRealPath()));
         }
 
         $nombreOriginal = mb_substr(basename($archivo->getClientOriginalName()), 0, 255);
@@ -976,7 +985,9 @@ class ManualController extends Controller
             ], 409);
         }
 
-        if (!Storage::disk('local')->exists($version->archivo_path)) {
+        $disk = config('filesystems.default');
+
+        if (!Storage::disk($disk)->exists($version->archivo_path)) {
             return response()->json([
                 'error' => 'El archivo de esta version no esta disponible.',
             ], 404);
@@ -1028,7 +1039,7 @@ class ManualController extends Controller
         // nosniff: el archivo lo subio un franquiciante y lo abre un socio de otra
         // sucursal; se sirve SIEMPRE como application/pdf, sin dejar que el
         // navegador adivine otro tipo. El nombre se escapa por el header.
-        return Storage::disk('local')->response($version->archivo_path, $nombre, [
+        return Storage::disk($disk)->response($version->archivo_path, $nombre, [
             'Content-Type'           => 'application/pdf',
             'X-Content-Type-Options' => 'nosniff',
             'Content-Disposition'    => $dispo . '; filename="' . addslashes($nombre) . '"',

@@ -2,7 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Schema;
 /**
  * v2.3 — Paso 2/19
  * Copia nombre/apellido/dni desde las tres tablas de perfil a `users`.
@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     public function up(): void
-    {
+    { 
+        if (DB::table('users')->count() === 0) {
+            return;
+        }
         DB::transaction(function () {
             // 1. Desde super_admins
             DB::statement("

@@ -453,6 +453,35 @@ body.lectura-pdf .doc-page {
 .nota-estado.pendiente { background: rgba(201,168,76,.15); color: #8A6D1B; }
 .nota-estado.leida     { background: rgba(55,138,221,.12); color: #2A5E9E; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: #27500A; }
+
+/* Mensaje del publicador (release note): anuncio al publicar una version.
+   Va destacado y SIN badge de estado — no es feedback que alguien gestione.
+   Paleta clara, la de esta pantalla (mis-manuales.php usa el tema oscuro). */
+.nota-item.nota-release {
+  background: rgba(201,168,76,.06);
+  border-color: rgba(201,168,76,.3);
+  border-left: 3px solid #C9A84C;
+}
+.nota-release-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background: rgba(201,168,76,.18);
+  color: #8A6D1B;
+  border: 1px solid rgba(201,168,76,.4);
+  font-family: 'Archivo', sans-serif;
+}
+.nota-autor {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #888;
+  font-family: 'Roboto', sans-serif;
+}
 .notas-empty { font-size: 12.5px; color: #aaa; font-family: 'Roboto', sans-serif; padding: 4px 0; }
 
 </style>
@@ -850,13 +879,49 @@ function escNota(str) {
   return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
+// Nombre legible del autor de un mensaje del publicador.
+// Si no hay nombre NO se cae al email: se muestra el rol generico.
+function autorReleaseLabel(n) {
+  const u = n.autor;
+  if (!u) return 'Publicador';
+  const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ').trim();
+  return nombre || 'Publicador';
+}
+
+// Etiqueta de version de una nota, tolerante a como venga del backend.
+function versionNotaLabel(n) {
+  if (!n.version) return 'Sin versión publicada';
+  const v = n.version;
+  return 'v' + (v.version_label || (v.version_number + '.' + (v.version_minor ?? 0)));
+}
+
 function renderNotas(notas) {
   const el = document.getElementById('notas-list');
   if (!notas.length) {
     el.innerHTML = `<div class="notas-empty">Todavía no dejaste ninguna nota en este manual.</div>`;
     return;
   }
+
   el.innerHTML = notas.map(n => {
+    // MENSAJE DEL PUBLICADOR: anuncio del franquiciante o del admin al publicar
+    // una version. No lleva estado: no hay nada que gestionar. Mostrar
+    // "PENDIENTE" sobre un anuncio hacia creer que alguien debia responderlo.
+    if (n.tipo === 'release') {
+      return `
+        <div class="nota-item nota-release">
+          <div class="nota-item-header">
+            <div>
+              <span class="nota-release-tag">Mensaje del publicador · ${escNota(versionNotaLabel(n))}</span>
+              <span class="nota-autor">${escNota(autorReleaseLabel(n))}</span>
+            </div>
+            <span class="nota-fecha">${formatFecha(n.created_at)}</span>
+          </div>
+          <div class="nota-contenido">${escNota(n.contenido || '')}</div>
+        </div>`;
+    }
+
+    // SUGERENCIA propia del socio: esta si se gestiona, y el estado le dice en
+    // que punto esta (pendiente / leida / resuelta).
     const estado = n.estado || 'pendiente';
     return `
       <div class="nota-item">
@@ -937,7 +1002,7 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Bloquear F12 o Ctrl+Shift+I (Inspeccionar elemento)
-    if (e.key === 'F14' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
         e.preventDefault();
     }
 });

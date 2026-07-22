@@ -27,13 +27,6 @@ return new class extends Migration
                 $table->index('empresa_id');
             });
 
-            // CHECK antes de la FK
-            DB::statement("ALTER TABLE users ADD CONSTRAINT chk_empresa_rol CHECK (
-                (rol = 'super_admin' AND empresa_id IS NULL)
-                OR
-                (rol != 'super_admin' AND empresa_id IS NOT NULL)
-            )");
-
             Schema::table('users', function (Blueprint $table) {
                 $table->foreign('empresa_id')->references('id')->on('empresas')->nullOnDelete();
             });
