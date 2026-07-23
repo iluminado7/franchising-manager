@@ -63,7 +63,31 @@ return [
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
-
+        'mysql_deploy' => array_merge(
+            [
+                'driver' => 'mysql',
+                'url' => env('DB_URL'),
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '3306'),
+                'database' => env('DB_DATABASE', 'laravel'),
+                'unix_socket' => env('DB_SOCKET', ''),
+                'charset' => env('DB_CHARSET', 'utf8mb4'),
+                'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'strict' => true,
+                'engine' => null,
+                'options' => extension_loaded('pdo_mysql') ? array_filter([
+                    (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+                ]) : [],
+            ],
+            [
+                // Si no estan definidas, cae al usuario de la app y la migracion
+                // falla con un error de permisos claro, en vez de a medias.
+                'username' => env('DB_DEPLOY_USERNAME', env('DB_USERNAME')),
+                'password' => env('DB_DEPLOY_PASSWORD', env('DB_PASSWORD')),
+            ]
+        ),
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
