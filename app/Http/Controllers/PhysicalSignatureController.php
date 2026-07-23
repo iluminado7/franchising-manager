@@ -62,7 +62,13 @@ class PhysicalSignatureController extends Controller
         $archivo = $request->file('archivo');
         $hash    = hash_file('sha256', $archivo->getRealPath());
 
-        $path = Storage::disk('local')
+        // Disco por configuracion (local en dev, s3 en prod). Hardcodear 'local'
+        // dejaria las firmas en el filesystem de la instancia: efimero en Cloud y
+        // no compartido entre instancias. Son PDFs con firmas manuscritas que
+        // respaldan aceptaciones: perderlos no es recuperable.
+        $disk = config('filesystems.default');
+
+        $path = Storage::disk($disk)
                        ->putFile(
                            "firmas/{$versionId}/{$socio->id}",
                            $archivo
@@ -364,7 +370,9 @@ class PhysicalSignatureController extends Controller
             return response()->json(['error' => 'Sin permisos.'], 403);
         }
 
-        if (!$firma->archivo_path || !Storage::disk('local')->exists($firma->archivo_path)) {
+        $disk = config('filesystems.default');
+
+        if (!$firma->archivo_path || !Storage::disk($disk)->exists($firma->archivo_path)) {
             Log::warning('PhysicalSignature.descargar: archivo faltante en disk', [
                 'firma_id'     => $firma->id,
                 'archivo_path' => $firma->archivo_path,
@@ -384,7 +392,7 @@ class PhysicalSignatureController extends Controller
             );
         } catch (\Throwable $e) { /* best-effort */ }
 
-        $stream = Storage::disk('local')->readStream($firma->archivo_path);
+        $stream = Storage::disk($disk)->readStream($firma->archivo_path);
         if ($stream === null || $stream === false) {
             return response()->json(['error' => 'Error al abrir el archivo.'], 500);
         }

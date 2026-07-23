@@ -739,15 +739,32 @@ class DocumentController extends Controller
             'Content-Length' => $version->tamano_bytes,
         ];
 
-        if ($disposition === 'inline') {
-            return response()->streamDownload(function () use ($disk, $version) {
-                echo Storage::disk($disk)->get($version->archivo_url);
-            }, $nombre, $headers, 'inline');
-        }
-
+        // Streaming real: readStream() + fpassthru() en vez de get().
+        //
+        // get() devolvia el archivo ENTERO como string de PHP antes de emitir un
+        // solo byte. Con documentos de hasta 50 MB, unas pocas descargas
+        // simultaneas agotaban el memory_limit; y con S3 obligaba a bajar todo el
+        // objeto del bucket antes de responderle nada al usuario.
+        //
+        // Mismo patron que ManualImageController::descargar y ProfilePhotoController::ver.
+        //
+        // Las dos ramas se unifican: $disposition ya llega como 'inline' o
+        // 'attachment' desde los 4 call sites, asi que se pasa directo.
         return response()->streamDownload(function () use ($disk, $version) {
-            echo Storage::disk($disk)->get($version->archivo_url);
-        }, $nombre, $headers);
+            $stream = Storage::disk($disk)->readStream($version->archivo_url);
+
+            // El exists() de arriba ya paso; si aun asi no se puede abrir, se corta
+            // el cuerpo. Las cabeceras ya se enviaron, no se puede devolver un error.
+            if ($stream === null || $stream === false) {
+                return;
+            }
+
+            fpassthru($stream);
+
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, $nombre, $headers, $disposition);
     }
 
     /**

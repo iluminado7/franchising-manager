@@ -12,6 +12,26 @@ return Application::configure(basePath: dirname(__DIR__))
         health:   '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Detras de nginx, sin esto Laravel ignora las cabeceras X-Forwarded-*:
+        //   - $request->ip() devuelve la IP del proxy para TODOS los usuarios,
+        //     lo que vacia de sentido activity_logs (compliance) y hace que el
+        //     rate limiter por IP del login cuente a todo el mundo junto;
+        //   - $request->isSecure() puede dar false aunque el usuario este en
+        //     HTTPS, porque nginx termina el TLS y reenvia por HTTP.
+        //
+        // Se confia SOLO en el nginx local, no en '*'. Con '*' Laravel confia en
+        // toda la cadena de X-Forwarded-For y toma el primer valor, que es el que
+        // el cliente puede escribir: un atacante mandaria una IP falsa y quedaria
+        // registrada como suya. Confiando solo en el proxy conocido, Laravel
+        // descarta lo falsificado y toma la IP real que nginx agrego.
+        //
+        // SI CAMBIA LA INFRA (ALB, CloudFront, Laravel Cloud): agregar aca el
+        // rango del proxy, por ejemplo el CIDR de la VPC.
+        $middleware->trustProxies(at: [
+            '127.0.0.1',
+            '::1',
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
