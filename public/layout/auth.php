@@ -1,4 +1,13 @@
 <?php
+// Acceso directo por HTTP: este archivo es un include, no una pagina. Si se
+// pide como /layout/<archivo>.php se responde 404 y se corta.
+//
+// El guard va en PHP y no en un .htaccess porque nginx (Laravel Cloud) ignora
+// los .htaccess: la proteccion tiene que ser portable entre servidores.
+if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    http_response_code(404);
+    exit;
+}
 // src/auth.php
 // Verificación server-side de sesión y rol.
 // super_admin tiene acceso a TODAS las páginas sin importar el rol requerido.
@@ -30,11 +39,11 @@ function verificarSesion(?string $rol_requerido = null): void
         $pdo = new PDO(
             sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-                $_ENV['DB_HOST']  ,
-                $_ENV['DB_PORT']  ,
+                $_ENV['DB_HOST'] ?? '127.0.0.1',
+                $_ENV['DB_PORT'] ?? '3306',
                 $_ENV['DB_DATABASE'] ?? ''
             ),
-            $_ENV['DB_USERNAME'],
+            $_ENV['DB_USERNAME'] ?? '',
             $_ENV['DB_PASSWORD'] ?? '',
             [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
