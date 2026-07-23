@@ -15,8 +15,21 @@ class Notification extends Model
     public $timestamps = false;
     protected $dates = ['created_at', 'leida_at'];
 
+    // V2-H-020 (mass assignment): user_id NO esta en $fillable.
+    //
+    // Es el campo que decide A QUIEN le llega la notificacion. Si quedara en
+    // $fillable, un Notification::create($request->all()) permitiria emitir
+    // notificaciones a nombre de cualquier usuario — incluidas las alertas de
+    // seguridad que recibe el super_admin.
+    //
+    // Se asigna con setter directo desde el codigo que las crea:
+    //     $n = new Notification([...]);
+    //     $n->user_id = $uid;
+    //     $n->save();
+    //
+    // Los Notification::insert() masivos NO pasan por $fillable y siguen
+    // funcionando sin cambios.
     protected $fillable = [
-        'user_id',
         'tipo',
         'manual_id',
         'manual_version_id',

@@ -873,8 +873,8 @@ class DocumentController extends Controller
         //    el modelo y por ende el observer — con insert() no saldria ningun mail.
         foreach ($userIds as $uid) {
             try {
-                Notification::create([
-                    'user_id'             => $uid,
+                // V2-H-020: user_id fuera de $fillable -> setter directo.
+                $notifNueva = new Notification([
                     'tipo'                => $tipo,
                     'manual_id'           => null,
                     'manual_version_id'   => null,
@@ -884,6 +884,8 @@ class DocumentController extends Controller
                     'titulo'              => $titulo,
                     'created_at'          => now(),
                 ]);
+                $notifNueva->user_id = $uid;
+                $notifNueva->save();
             } catch (\Throwable $e) { /* best-effort: una notif fallida no corta las demas */ }
         }
     }

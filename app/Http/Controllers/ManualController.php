@@ -638,8 +638,8 @@ class ManualController extends Controller
             foreach ($destinatarios as $uid) {
                 try {
                     // create() (no insert()) para que el observer encole el mail.
-                    Notification::create([
-                        'user_id'             => $uid,
+                    // V2-H-020: user_id fuera de $fillable -> setter directo.
+                    $notifNueva = new Notification([
                         'tipo'                => 'acceso_anomalo_pdf',
                         'manual_id'           => null,
                         'manual_version_id'   => $version->id,
@@ -649,6 +649,8 @@ class ManualController extends Controller
                         'titulo'              => $titulo,
                         'created_at'          => now(),
                     ]);
+                    $notifNueva->user_id = $uid;
+                    $notifNueva->save();
                 } catch (\Throwable $e) { /* best-effort */ }
             }
         } catch (\Throwable $e) {
@@ -693,8 +695,8 @@ class ManualController extends Controller
 
             foreach ($userIds as $uid) {
                 try {
-                    Notification::create([
-                        'user_id'             => $uid,
+                    // V2-H-020: user_id fuera de $fillable -> setter directo.
+                    $notifNueva = new Notification([
                         'tipo'                => $tipo,
                         'manual_id'           => $tipo === 'nuevo_manual' ? $manual->id : null,
                         'manual_version_id'   => $tipo === 'modificacion_manual' ? $version->id : null,
@@ -704,6 +706,8 @@ class ManualController extends Controller
                         'titulo'              => $tituloNotif,
                         'created_at'          => now(),
                     ]);
+                    $notifNueva->user_id = $uid;
+                    $notifNueva->save();
                 } catch (\Throwable $e) { /* best-effort: una notif fallida no corta las demás */ }
             }
         }

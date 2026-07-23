@@ -93,8 +93,8 @@ class ManualAssignmentController extends Controller
         $versionActiva = $manual->versionActiva()->first();
         if ($versionActiva) {
             try {
-                Notification::create([
-                    'user_id'             => $userId,
+                // V2-H-020: user_id fuera de $fillable -> setter directo.
+                $notifNueva = new Notification([
                     'tipo'                => 'manual_asignado',
                     'manual_id'           => null,
                     'manual_version_id'   => $versionActiva->id,
@@ -103,6 +103,8 @@ class ManualAssignmentController extends Controller
                     'category_id'         => null,
                     'titulo'              => "Se te asignó el manual: {$manual->titulo}",
                 ]);
+                $notifNueva->user_id = $userId;
+                $notifNueva->save();
             } catch (\Throwable $e) { /* best-effort */ }
         }
 
@@ -258,8 +260,8 @@ class ManualAssignmentController extends Controller
                 // en chk_notif_fk). Best-effort: no rompe la transaccion si falla.
                 if ($versionActiva) {
                     try {
-                        Notification::create([
-                            'user_id'             => $uid,
+                        // V2-H-020: user_id fuera de $fillable -> setter directo.
+                        $notifNueva = new Notification([
                             'tipo'                => 'manual_asignado',
                             'manual_id'           => null,
                             'manual_version_id'   => $versionActiva->id,
@@ -268,6 +270,8 @@ class ManualAssignmentController extends Controller
                             'category_id'         => null,
                             'titulo'              => "Se te asignó el manual: {$manual->titulo}",
                         ]);
+                        $notifNueva->user_id = $uid;
+                        $notifNueva->save();
                     } catch (\Throwable $e) { /* best-effort */ }
                 }
 

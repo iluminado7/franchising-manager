@@ -684,8 +684,8 @@ class DocumentAssignmentController extends Controller
         if (!$document->visible_franquiciado) return;
 
         try {
-            Notification::create([
-                'user_id'             => $usuario->id,
+            // V2-H-020: user_id fuera de $fillable -> setter directo.
+            $notifNueva = new Notification([
                 'tipo'                => 'documento_asignado',
                 'manual_id'           => null,
                 'manual_version_id'   => null,
@@ -694,6 +694,8 @@ class DocumentAssignmentController extends Controller
                 'category_id'         => null,
                 'titulo'              => "Se te asignó el documento \"{$document->titulo}\"",
             ]);
+            $notifNueva->user_id = $usuario->id;
+            $notifNueva->save();
         } catch (\Throwable $e) { /* best-effort */ }
     }
 }
