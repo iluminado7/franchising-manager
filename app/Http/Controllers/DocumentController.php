@@ -501,9 +501,15 @@ class DocumentController extends Controller
         }
 
         DB::transaction(function () use ($version, $id, $user) {
-            // v2.3: lockForUpdate sobre todas las versiones del documento para
-            // evitar carreras con uploads/restores concurrentes.
-            $version->lockForUpdate()->refresh();
+            // v2.3: lock pesimista sobre la fila para evitar carreras con
+            // uploads/restores concurrentes.
+            //
+            // Van DOS pasos y no $version->lockForUpdate()->refresh(): eso
+            // devolvia un Builder (Eloquent reenvia lockForUpdate al query
+            // builder) y Builder::refresh() no existe -> BadMethodCallException.
+            // Ademas nunca tomaba el lock, porque la consulta no se ejecutaba.
+            DocumentVersion::whereKey($version->id)->lockForUpdate()->first();
+            $version->refresh();
 
             // Si la versión a eliminar es la activa, promover la más reciente
             // (por version_number desc) entre las disponibles, distinta a ésta.
@@ -606,8 +612,13 @@ class DocumentController extends Controller
         $promovida = false;
 
         DB::transaction(function () use ($version, $documento, &$promovida) {
-            // Lock sobre la versión a restaurar
-            $version->lockForUpdate()->refresh();
+            // Lock pesimista sobre la versión a restaurar. Dos pasos: el SELECT
+            // ... FOR UPDATE toma el lock hasta el fin de la transacción, y
+            // refresh() recarga el modelo. (Ver el comentario en destroyVersion:
+            // $version->lockForUpdate()->refresh() rompía con
+            // BadMethodCallException.)
+            DocumentVersion::whereKey($version->id)->lockForUpdate()->first();
+            $version->refresh();
 
             // Restaurar inactiva primero (no choca con UNIQUE generado)
             // V2-H-019: es_activa fuera de $fillable -> setters directos, un solo save().

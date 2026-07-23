@@ -1828,9 +1828,23 @@ async function cargarVersiones(docId) {
   const cont = document.getElementById('versiones-lista');
   cont.innerHTML = `<div class="empty-state" style="padding:24px"><div class="spinner" style="display:block;margin:0 auto 8px"></div>Cargando versiones...</div>`;
 
-  // Mostrar el toggle "Mostrar eliminadas" solo para super_admin
+  // Toggle "Mostrar eliminadas": super_admin y franquiciante.
+  //
+  // Antes era solo super_admin, pero el franquiciante YA podia restaurar
+  // (puedeAdministrar lo incluye, las rutas de restore estan en el grupo
+  // role:super_admin,franquiciante y el backend no filtra include_deleted por
+  // rol). Le faltaba poder VER las eliminadas para hacerlo: era una
+  // inconsistencia del frontend, no una restriccion de seguridad.
+  //
+  // El socio comercial y el empleado no lo ven: para ellos una version
+  // eliminada simplemente no existe.
   const btnToggle = document.getElementById('btn-mostrar-eliminadas-ver');
-  if (btnToggle) btnToggle.style.display = (rolUsuario === 'super_admin') ? 'inline-flex' : 'none';
+  const puedeVerEliminadas = (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante');
+  if (btnToggle) btnToggle.style.display = puedeVerEliminadas ? 'inline-flex' : 'none';
+
+  // Guard: si el rol no corresponde, se fuerza la vista sin eliminadas aunque
+  // el flag haya quedado en true de una sesion anterior.
+  if (!puedeVerEliminadas) mostrarVersionesEliminadas = false;
 
   try {
     const url = mostrarVersionesEliminadas
@@ -1878,11 +1892,19 @@ function renderVersiones(versiones) {
   };
 
   // Nombre legible del autor según el perfil cargado
+  // Nombre de quien subio o elimino una version.
+  //
+  // v2.3: nombre y apellido viven en `users`. Antes esto los buscaba en las
+  // tablas de perfil (system_admin / super_admin / franchise_staff), que desde
+  // esa migracion son solo marcadores de rol y NO tienen esos campos: la
+  // busqueda daba undefined y siempre se terminaba mostrando el email.
+  //
+  // El email queda como ultimo recurso, por si alguna cuenta no tuviera
+  // nombre cargado.
   const nombreAutor = (rel) => {
-    const user = rel || null;
-    const p = user?.system_admin || user?.super_admin || user?.franchise_staff;
-    if (p?.nombre) return `${p.nombre} ${p.apellido}`;
-    return user?.email || '—';
+    if (!rel) return '—';
+    const nombre = [rel.nombre, rel.apellido].filter(Boolean).join(' ').trim();
+    return nombre || rel.email || '—';
   };
 
   // Cuántas versiones disponibles (no eliminadas) hay
@@ -2022,7 +2044,7 @@ function abrirModalEliminarVersion(docId, versionId, label, esVigente) {
   const titulo = documentoActivo?.titulo || 'este documento';
   document.getElementById('eliminar-ver-msg').innerHTML =
     `¿Eliminar <strong>${esc(label)}</strong> de "<em>${esc(titulo)}</em>"?<br><br>
-     Esta acción se puede deshacer desde el toggle <strong>Mostrar eliminadas</strong> (solo super_admin).`;
+     Esta acción se puede deshacer desde el toggle <strong>Mostrar eliminadas</strong>.`;
 
   // Aviso especial si es la vigente
   document.getElementById('eliminar-ver-aviso').style.display = esVigente ? 'block' : 'none';
