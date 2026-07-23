@@ -679,6 +679,7 @@ async function init() {
     if (rolUsuario === 'franquiciado' || rolUsuario === 'empleado') {
       ponerMarcaDeAgua(me);
       document.getElementById('doc-content-wrap')?.classList.add('sin-seleccion');
+      activarBloqueosLectura();
     }
 
     // Destino del boton "Volver" segun el rol (ver LISTADO_POR_ROL).
@@ -978,34 +979,65 @@ function escaparXML(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
-document.addEventListener('contextmenu', (e) => {
+// ── BLOQUEOS ANTI-COPIA (solo socio comercial y empleado) ──────────
+//
+// Se activan desde init(), UNICAMENTE para 'franquiciado' y 'empleado' — mismo
+// criterio que la marca de agua y .sin-seleccion. Antes se registraban para
+// todos, asi que el super_admin y el franquiciante (los que ESCRIBEN los
+// manuales) no podian copiar ni pegar en su propia pantalla, y a un admin con
+// el boton de imprimir a la vista le saltaba un alert al hacer Ctrl+P.
+//
+// ESTO ES FRICCION, NO IMPEDIMENTO. En particular, el bloqueo de F12 NO
+// funciona en ningun navegador moderno: el atajo y el menu de DevTools no son
+// cancelables desde la pagina. Se deja por consistencia, sin contarlo como
+// proteccion real.
+function activarBloqueosLectura() {
+  // ¿El evento viene de un campo donde el usuario escribe? Ahi NO se bloquea:
+  // el socio tiene que poder trabajar con su propia sugerencia.
+  const enCampoDeTexto = (e) => {
+    const t = e.target;
+    if (!t || !t.tagName) return false;
+    return t.tagName === 'TEXTAREA'
+        || t.tagName === 'INPUT'
+        || t.isContentEditable;
+  };
+
+  document.addEventListener('contextmenu', (e) => {
+    if (enCampoDeTexto(e)) return;
     e.preventDefault();
-    // Opcional: mostrar un toast diciendo "Acción no permitida por confidencialidad"
-});
+  });
 
-
-document.addEventListener('keydown', (e) => {
-    // Bloquear Ctrl + P (Imprimir)
-    if (e.ctrlKey && e.key === 'p') {
-        e.preventDefault();
-        alert('La impresión de este documento está deshabilitada.');
-    }
-    // Bloquear Ctrl + S (Guardar página)
-    if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-    }
-    if (e.ctrlKey && e.key === 'c') {
-        e.preventDefault();
-    }
-    if (e.ctrlKey && e.key === 'v') {
-        e.preventDefault();
+  document.addEventListener('keydown', (e) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      // F12: se intenta, aunque el navegador lo ignore.
+      if (e.key === 'F12') e.preventDefault();
+      return;
     }
 
-    // Bloquear F12 o Ctrl+Shift+I (Inspeccionar elemento)
-    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
-        e.preventDefault();
+    const k = (e.key || '').toLowerCase();
+
+    // Ctrl+P (imprimir) y Ctrl+S (guardar pagina): bloqueados, sin alert.
+    // El cartel del navegador interrumpia mas de lo que aportaba.
+    if (k === 'p' || k === 's') {
+      e.preventDefault();
+      return;
     }
-});
+
+    // Ctrl+C: solo fuera de los campos de texto.
+    if (k === 'c' && !enCampoDeTexto(e)) {
+      e.preventDefault();
+      return;
+    }
+
+    // Ctrl+V NO se bloquea: es pegar, no copiar. Bloquearlo solo conseguia que
+    // el socio no pudiera pegar el texto de su propia sugerencia.
+
+    // Ctrl+Shift+I (inspeccionar): mismo caso que F12.
+    if (e.shiftKey && k === 'i') {
+      e.preventDefault();
+    }
+  });
+}
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 // ── BUSCADOR EN EL DOCUMENTO ─────────────────────
 // Resalta con la CSS Custom Highlight API (sin tocar el DOM). El contenido
