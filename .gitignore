@@ -5,6 +5,7 @@
 .env.backup
 .env.production
 .env.local
+.env.example
 .phpactor.json
 .phpunit.result.cache
 .gitignore
@@ -25,3 +26,4 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
