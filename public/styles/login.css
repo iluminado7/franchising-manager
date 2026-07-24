@@ -68,10 +68,14 @@ body.tema-claro {
     pointer-events: none;
   }
 
+  /* Logo ARRIBA del nombre, no al lado.
+     Alineado a la izquierda (no centrado) para que la marca comparta la misma
+     linea vertical que el titulo grande y las features del panel. */
   .brand {
     display: flex;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .brand-icon {
@@ -83,8 +87,25 @@ body.tema-claro {
 
   .brand-icon svg { width: 22px; height: 22px; fill: var(--negro); }
 
+  /* Logo de marca. Reemplaza al cuadrado dorado del candado.
+     El archivo es apaisado (1080x438): se fija el ALTO y el ancho sale solo,
+     asi no se deforma.
+
+     mix-blend-mode: screen -> el logo es un JPEG con fondo negro solido, sin
+     transparencia. Sobre el panel se veria un rectangulo mas oscuro alrededor;
+     con blend screen el negro se funde con el fondo y queda solo el texto
+     blanco. Si algun dia se reemplaza por un PNG con transparencia, esta linea
+     se puede sacar. */
+  .brand-logo {
+    height: 64px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+    mix-blend-mode: screen;
+  }
+
   .brand-name {
-    font-size: 14px;
+    font-size: 19px;
     font-weight: 600;
     letter-spacing: .02em;
     color: var(--blanco);
@@ -93,7 +114,7 @@ body.tema-claro {
 
   .brand-name span {
     display: block;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--gris4);
     letter-spacing: .06em;
@@ -591,8 +612,39 @@ body.tema-claro {
 
   /* Responsive */
   @media (max-width: 768px) {
+    /* El panel izquierdo pasa a ser una franja de marca ARRIBA del
+       formulario. Antes se ocultaba entero (.login-izq { display:none }) y en
+       celular quedaba un formulario suelto, sin decir de que sistema es ni de
+       quien. Se conserva la marca y se ocultan el titulo grande y las features,
+       que si sobran en pantalla chica. */
     #screen-login { grid-template-columns: 1fr; }
-    .login-izq    { display: none; }
-    .app-body     { grid-template-columns: 1fr; }
-    .sidebar      { display: none; }
+
+    .login-izq {
+      padding: 28px 24px;
+      justify-content: center;
+      /* Centra el bloque .brand en el eje horizontal. Sin esto quedaria
+         estirado a lo ancho y pegado a la izquierda. */
+      align-items: center;
+      border-bottom: 1px solid var(--gris2);
+    }
+    .login-izq-copy,
+    .login-features { display: none; }
+
+    /* Los circulos dorados de fondo estan pensados para un panel alto; en una
+       franja de ~90px se ven como manchas cortadas. */
+    .login-izq::before,
+    .login-izq::after { display: none; }
+
+    /* En una franja superior angosta la marca pegada a la izquierda queda
+       desbalanceada; centrada ocupa el ancho de forma pareja. */
+    .brand           { align-items: center; }
+    .brand-name      { font-size: 22px; text-align: center; }
+    .brand-name span { font-size: 15px; }
+    .brand-logo      { height: 58px; }
+
+    .login-der  { padding: 40px 24px; }
+    .login-card { max-width: 100%; }
+
+    .app-body   { grid-template-columns: 1fr; }
+    .sidebar    { display: none; }
   }
