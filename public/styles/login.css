@@ -71,15 +71,23 @@ body.tema-claro {
   /* Logo ARRIBA del nombre, no al lado.
      Alineado a la izquierda (no centrado) para que la marca comparta la misma
      linea vertical que el titulo grande y las features del panel. */
+  /* Ancho de columna compartido por la marca y el titulo grande.
+     Es el unico numero a tocar si el logo no calza con "manuales operativos":
+     subirlo o bajarlo hasta que las dos lineas terminen a la par.
+     No se puede automatizar -- ver cabecera del patch. */
+  .login-izq { --marca-ancho: 420px; }
+
   .brand {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 14px;
+    width: 100%;
+    max-width: var(--marca-ancho);
   }
 
   .brand-icon {
-    width: 44px; height: 44px;
+    width: 54px; height: 44px;
     background: var(--dorado);
     border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
@@ -96,16 +104,19 @@ body.tema-claro {
      con blend screen el negro se funde con el fondo y queda solo el texto
      blanco. Si algun dia se reemplaza por un PNG con transparencia, esta linea
      se puede sacar. */
+  /* Antes era 'height: 64px; width: auto'. Ahora manda el ANCHO: el logo
+     llena la columna --marca-ancho y el alto sale solo por la proporcion del
+     archivo (1080x438), asi que no se deforma. */
   .brand-logo {
-    height: 64px;
-    width: auto;
+    width: 100%;
+    height: auto;
     display: block;
     flex-shrink: 0;
     mix-blend-mode: screen;
   }
 
   .brand-name {
-    font-size: 19px;
+    font-size: 30px;
     font-weight: 600;
     letter-spacing: .02em;
     color: var(--blanco);
@@ -114,7 +125,7 @@ body.tema-claro {
 
   .brand-name span {
     display: block;
-    font-size: 14px;
+    font-size: 19px;
     font-weight: 400;
     color: var(--gris4);
     letter-spacing: .06em;
@@ -133,6 +144,7 @@ body.tema-claro {
     line-height: 1.1;
     color: var(--blanco);
     margin-bottom: 20px;
+    max-width: var(--marca-ancho);
   }
 
   .login-izq-copy h1 em {
@@ -612,38 +624,77 @@ body.tema-claro {
 
   /* Responsive */
   @media (max-width: 768px) {
-    /* El panel izquierdo pasa a ser una franja de marca ARRIBA del
-       formulario. Antes se ocultaba entero (.login-izq { display:none }) y en
-       celular quedaba un formulario suelto, sin decir de que sistema es ni de
-       quien. Se conserva la marca y se ocultan el titulo grande y las features,
-       que si sobran en pantalla chica. */
-    #screen-login { grid-template-columns: 1fr; }
+    /* Orden en celular:  marca -> formulario -> copy -> features
+       Quien entra desde el telefono viene a loguearse, no a leer la propuesta
+       de valor: el formulario va primero y el texto de marca queda abajo.
 
-    .login-izq {
-      padding: 28px 24px;
-      justify-content: center;
-      /* Centra el bloque .brand en el eje horizontal. Sin esto quedaria
-         estirado a lo ancho y pegado a la izquierda. */
+       El problema a resolver: .brand, .login-izq-copy y .login-features son
+       hijos de .login-izq, mientras que el formulario (.login-der) es HERMANO
+       de .login-izq. Con 'order' solo no se puede meter .login-der entre dos
+       hijos de otro contenedor.
+
+       'display: contents' en .login-izq elimina su caja y sube sus tres hijos
+       a ser items directos del flex de #screen-login. Recien ahi los cuatro
+       comparten contenedor y 'order' funciona. No hace falta tocar el HTML.
+
+       Contrapartida: al no haber caja, .login-izq pierde su background, su
+       padding y su borde. Por eso el gris1 se reasigna abajo a .brand (franja
+       superior) y al par copy+features (bloque inferior). */
+    #screen-login {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .login-izq { display: contents; }
+
+    /* Franja de marca, arriba de todo. */
+    .brand {
+      order: 1;
+      width: 100%;
+      max-width: none;
       align-items: center;
+      gap: 10px;
+      padding: 28px 24px;
+      background: var(--gris1);
       border-bottom: 1px solid var(--gris2);
     }
-    .login-izq-copy,
-    .login-features { display: none; }
-
-    /* Los circulos dorados de fondo estan pensados para un panel alto; en una
-       franja de ~90px se ven como manchas cortadas. */
-    .login-izq::before,
-    .login-izq::after { display: none; }
-
-    /* En una franja superior angosta la marca pegada a la izquierda queda
-       desbalanceada; centrada ocupa el ancho de forma pareja. */
-    .brand           { align-items: center; }
     .brand-name      { font-size: 22px; text-align: center; }
     .brand-name span { font-size: 15px; }
-    .brand-logo      { height: 58px; }
+    /* En celular el logo vuelve a mandar por ALTO: a 100% de ancho en una
+       pantalla de 380px quedaria desproporcionado frente al formulario. */
+    .brand-logo      { width: auto; height: 58px; }
 
-    .login-der  { padding: 40px 24px; }
+    /* Formulario. */
+    .login-der  { order: 2; padding: 40px 24px; }
     .login-card { max-width: 100%; }
+
+    /* Copy + features, debajo del formulario. Los dos sobre gris1 para que
+       se lean como un solo bloque de cierre, igual que el panel de escritorio. */
+    .login-izq-copy {
+      order: 3;
+      display: block;
+      padding: 36px 24px 22px;
+      background: var(--gris1);
+      border-top: 1px solid var(--gris2);
+    }
+    .login-izq-copy h1 {
+      font-size: 30px;
+      max-width: none;
+      margin-bottom: 16px;
+    }
+    .login-izq-copy p { max-width: none; }
+
+    .login-features {
+      order: 4;
+      display: flex;
+      padding: 0 24px 36px;
+      background: var(--gris1);
+    }
+
+    /* Los circulos dorados de fondo estan pensados para un panel alto y
+       ademas dependen de la caja de .login-izq, que en celular ya no existe. */
+    .login-izq::before,
+    .login-izq::after { display: none; }
 
     .app-body   { grid-template-columns: 1fr; }
     .sidebar    { display: none; }
