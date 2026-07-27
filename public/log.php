@@ -52,23 +52,51 @@ include 'layout/head.php';
 
         <select id="filtro-accion" onchange="aplicarFiltros()" class="filtro-select">
           <option value="">Todas las acciones</option>
-          <option value="login">Login</option>
-          <option value="logout">Logout</option>
-          <option value="manual_creado">Manual creado</option>
-          <option value="manual_editado">Manual editado</option>
-          <option value="manual_publicado">Manual publicado</option>
-          <option value="version_publicada_franquiciante">Versión publicada (franquiciante)</option>
-          <option value="manual_archivado">Manual archivado</option>
-          <option value="manual_abierto">Manual abierto</option>
-          <option value="manual_aceptado">Manual aceptado</option>
-          <option value="manual_asignado">Manual asignado</option>
-          <option value="manual_desasignado">Manual desasignado</option>
-          <option value="usuario_creado">Usuario creado</option>
-          <option value="usuario_desactivado">Usuario desactivado</option>
-          <option value="documento_subido">Documento subido</option>
-          <option value="firma_fisica_subida">Firma física subida</option>
-          <option value="archivo_subido">Archivo subido</option>
-          <option value="franquicia_creada">Franquicia creada</option>
+
+          <optgroup label="Autenticación">
+            <option value="login">Login</option>
+            <option value="logout">Logout</option>
+            <option value="password_actualizada">Contraseña actualizada</option>
+            <option value="email_actualizado">Email actualizado</option>
+          </optgroup>
+
+          <optgroup label="Seguridad">
+            <option value="login_fallido_password_incorrecta">Login fallido — contraseña incorrecta</option>
+            <option value="login_fallido_email_inexistente">Login fallido — email inexistente</option>
+            <option value="login_fallido_cuenta_suspendida">Login fallido — cuenta suspendida</option>
+            <option value="login_fallido_empresa_suspendida">Login fallido — empresa suspendida</option>
+            <option value="login_fallido_franquicia_suspendida">Login fallido — sucursal suspendida</option>
+            <option value="password_actualizada_fallo">Cambio de contraseña fallido</option>
+            <option value="email_actualizado_fallo">Cambio de email fallido</option>
+            <option value="usuario_desactivado">Usuario desactivado</option>
+            <option value="config_modificada">Config modificada</option>
+          </optgroup>
+
+          <optgroup label="Manuales">
+            <option value="manual_creado">Manual creado</option>
+            <option value="manual_editado">Manual editado</option>
+            <option value="manual_publicado">Manual publicado</option>
+            <option value="version_publicada_franquiciante">Versión publicada (franquiciante)</option>
+            <option value="manual_archivado">Manual archivado</option>
+            <option value="manual_abierto">Manual abierto</option>
+            <option value="manual_pdf_abierto">Manual PDF abierto</option>
+            <option value="manual_aceptado">Manual aceptado</option>
+            <option value="manual_asignado">Manual asignado</option>
+            <option value="manual_desasignado">Manual desasignado</option>
+            <option value="manual_asignado_categoria">Manual asignado por categoría</option>
+          </optgroup>
+
+          <optgroup label="Usuarios y estructura">
+            <option value="usuario_creado">Usuario creado</option>
+            <option value="franquicia_creada">Franquicia creada</option>
+            <option value="categoria_creada">Categoría creada</option>
+          </optgroup>
+
+          <optgroup label="Archivos">
+            <option value="documento_subido">Documento subido</option>
+            <option value="firma_fisica_subida">Firma física subida</option>
+            <option value="archivo_subido">Archivo subido</option>
+          </optgroup>
         </select>
 
         <!-- Combobox usuario (buscador) — mismo patrón que el de empresa -->
@@ -743,25 +771,53 @@ function exportarCSV() {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+// Toda accion que no este aca cae en el fallback de accionPill(): se muestra
+// en snake_case crudo y con la pildora gris de "archivo". Si el backend
+// empieza a escribir una accion nueva, hay que sumarla aca Y al <select>
+// de filtros, sino queda invisible.
+//
+// Para ver que esta escribiendo la base hoy:
+//   SELECT accion, COUNT(*) FROM activity_logs GROUP BY accion ORDER BY 2 DESC;
 const ACCION_MAP = {
+  // Autenticacion
   login:               ['accion-auth',    'Login'],
   logout:              ['accion-auth',    'Logout'],
+  password_actualizada:['accion-auth',    'Contraseña actualizada'],
+  email_actualizado:   ['accion-auth',    'Email actualizado'],
+
+  // Seguridad — en rojo a proposito: son las que se miran cuando algo pasa
+  login_fallido_password_incorrecta:   ['accion-sistema', 'Login fallido — contraseña'],
+  login_fallido_email_inexistente:     ['accion-sistema', 'Login fallido — email inexistente'],
+  login_fallido_cuenta_suspendida:     ['accion-sistema', 'Login fallido — cuenta suspendida'],
+  login_fallido_empresa_suspendida:    ['accion-sistema', 'Login fallido — empresa suspendida'],
+  login_fallido_franquicia_suspendida: ['accion-sistema', 'Login fallido — sucursal suspendida'],
+  password_actualizada_fallo:          ['accion-sistema', 'Cambio de contraseña fallido'],
+  email_actualizado_fallo:             ['accion-sistema', 'Cambio de email fallido'],
+  usuario_desactivado: ['accion-sistema', 'Usuario desactivado'],
+  config_modificada:   ['accion-sistema', 'Config modificada'],
+
+  // Manuales
   manual_creado:       ['accion-manual',  'Manual creado'],
   manual_editado:      ['accion-manual',  'Manual editado'],
   manual_publicado:    ['accion-manual',  'Manual publicado'],
   version_publicada_franquiciante: ['accion-manual', 'Versión publicada (franquiciante)'],
   manual_archivado:    ['accion-manual',  'Manual archivado'],
   manual_abierto:      ['accion-manual',  'Manual abierto'],
+  manual_pdf_abierto:  ['accion-manual',  'Manual PDF abierto'],
   manual_aceptado:     ['accion-manual',  'Manual aceptado'],
   manual_asignado:     ['accion-manual',  'Manual asignado'],
   manual_desasignado:  ['accion-manual',  'Manual desasignado'],
+  manual_asignado_categoria: ['accion-manual', 'Manual asignado por categoría'],
+
+  // Usuarios y estructura
   usuario_creado:      ['accion-usuario', 'Usuario creado'],
-  usuario_desactivado: ['accion-sistema', 'Usuario desactivado'],
+  franquicia_creada:   ['accion-usuario', 'Franquicia creada'],
+  categoria_creada:    ['accion-usuario', 'Categoría creada'],
+
+  // Archivos
   documento_subido:    ['accion-archivo', 'Documento subido'],
   firma_fisica_subida: ['accion-archivo', 'Firma física subida'],
   archivo_subido:      ['accion-archivo', 'Archivo subido'],
-  franquicia_creada:   ['accion-usuario', 'Franquicia creada'],
-  config_modificada:   ['accion-sistema', 'Config modificada'],
 };
 
 function accionPill(accion) {

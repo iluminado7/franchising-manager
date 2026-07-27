@@ -51,17 +51,19 @@ la cookie, hay que actualizar **los dos lados**.
 
 | Componente | Versión / detalle |
 |---|---|
-| PHP | 8.2+ |
+| PHP | 8.3 en producción (8.2+ funciona) — socket `php8.3-fpm.sock` |
 | Laravel | 12 |
 | MySQL | 8.0.45 (no subir de versión mayor: se usan CHECK constraints y columnas generadas) |
 | Auth | Laravel Sanctum, token en cookie `HttpOnly` + `SameSite=Strict` |
+| Anti-bot | Cloudflare Turnstile en el login (plan Free) |
 | PDF (generar) | mPDF |
-| PDF (mostrar) | pdf.js 4.10.38, auto-hospedado en `public/js/pdfjs/` |
+| PDF (mostrar) | pdf.js 4.10.38, auto-hospedado en `public/js/pdfjs/` — **módulos ES (`.mjs`)**, ver §11 |
 | Importar Word | Mammoth.js (browser) |
 | Sanitización HTML | HTMLPurifier |
 | Mail | Resend (producción) / `log` (desarrollo) |
 | Storage | Disco por configuración: `local` en dev, `s3` en producción |
 | Local | XAMPP — `C:/xampp/htdocs/manuales-franquiciantes/` |
+| Producción | AWS EC2 (Ubuntu) + nginx 1.24 — `/var/www/franchising-manager`, dominio `businesspartner.goharv.com.ar`, TLS por Certbot |
 
 ---
 
@@ -282,6 +284,62 @@ anómalos. Se consulta en `log.php`.
 - `lectura.php` navega con un **ULID público** (`?m=01K0S7...`), no con el ID de
   la base.
 
+### Anti-bot en el login (Cloudflare Turnstile)
+
+Widget en `login.html` + verificación server-side en
+`AuthController::verificarTurnstile()`. **El widget solo no protege nada**: un
+bot postea directo a `/api/login`. La única verificación real es la llamada a
+Siteverify.
+
+Se controla por `.env` — si `TURNSTILE_ENABLED` no está, queda apagado:
+
+```
+TURNSTILE_ENABLED=true
+TURNSTILE_SECRET_KEY=...      # sin comillas
+```
+
+La **sitekey** es pública y vive hardcodeada en `login.html`. El **secret** solo
+en el `.env`.
+
+**Política de fallo** — está documentada en el propio método y conviene no
+cambiarla sin leerla:
+
+- **Rechaza** solo si la culpa es del cliente: token ausente, forjado, vencido o
+  ya usado.
+- **Deja pasar y loguea** si el problema es nuestro o de Cloudflare: secret vacío
+  o mal pegado (`invalid-input-secret`), timeout, 5xx. Un secret mal copiado no
+  puede dejar a toda la empresa afuera. El rate limiter compuesto
+  (`throttle:login`, middleware de ruta, corre **antes**) sigue cubriendo fuerza
+  bruta en esos casos.
+
+El token dura 300 s y es de **un solo uso**: `login.html` resetea el widget en
+cada error. Sin ese reset, después de un intento fallido el siguiente falla
+siempre aunque la contraseña sea correcta. **Es la prueba de regresión del
+feature**: contraseña mal una vez, después bien.
+
+En modo *Managed* el checkbox no siempre aparece: Cloudflare decide según el
+riesgo y muchas veces resuelve solo con un spinner. Eso es lo esperado.
+
+No se registra en `activity_logs` porque `user_id` es `NOT NULL` y en ese punto
+no hay usuario resuelto — misma limitación que los emails inexistentes (§9).
+
+**Rollback**: `TURNSTILE_ENABLED=false` + `php artisan config:cache`. Sin tocar
+código.
+
+### Cabeceras de seguridad (nginx)
+
+Viven en `/etc/nginx/snippets/security-headers.conf`, **incluido en tres lugares**
+del server block (ver §11 para el porqué): `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`,
+`Permissions-Policy`. Más `server_tokens off` en `nginx.conf`.
+
+`nosniff` es el que más importa acá, porque hay subida de archivos: sin él, un
+archivo servido con el `Content-Type` equivocado puede terminar interpretado como
+HTML y ejecutarse en el propio origen.
+
+Pendiente: **HSTS** (es lo único que separa el A+ en SSL Labs) y **CSP**, ambos
+en §9.
+
 ---
 
 ## 8. Convenciones de trabajo
@@ -293,8 +351,8 @@ masivamente generaría un diff inmanejable. Antes de editar un archivo,
 
 | Archivo | EOL |
 |---|---|
-| `ManualController.php`, `NotificationController.php`, `PdfController.php`, `lectura.php`, `mis-manuales.php`, `api.php` | LF |
-| `ManualImageController.php`, `ProfilePhotoController.php`, `NotificationObserver.php`, `editor.php`, `usuarios.php`, `manuales.php`, `manuales-mi-empresa.php`, `log.php`, `aceptaciones.php`, `panel.css` | CRLF |
+| `ManualController.php`, `NotificationController.php`, `PdfController.php`, `AuthController.php`, `AppServiceProvider.php`, `config/services.php`, `lectura.php`, `mis-manuales.php`, `api.php` | LF |
+| `ManualImageController.php`, `ProfilePhotoController.php`, `NotificationObserver.php`, `editor.php`, `usuarios.php`, `manuales.php`, `manuales-mi-empresa.php`, `log.php`, `aceptaciones.php`, `login.html`, `panel.css` | CRLF |
 
 Los archivos de `public/layout/` están mezclados.
 
@@ -308,7 +366,29 @@ Los cambios de código se aplican con **scripts Python** que usan anclas de stri
 3. Verifica el balance de llaves y paréntesis (excluyendo comentarios: un
    comentario con `1)` desbalancea el conteo).
 4. Es **idempotente**: la segunda corrida aborta limpio.
-5. Para JS, se valida con `node --check` sobre el bloque extraído.
+5. Para JS, se valida con `node --check`; para PHP, con `php -l`. Sobre un
+   temporal, y el temporal se borra siempre.
+6. Deja `.bak` al lado del original. **Borrarlos antes del commit** — el
+   `.gitignore` ya cubre `*.bak`, `*.orig`, `*.old`.
+
+**Dos bugs que costaron una sesión entera, los dos por escribir Python de Unix
+que se corre en Windows:**
+
+- **`os.system('... > /dev/null 2>&1')` no funciona en `cmd`.** Interpreta
+  `/dev/null` como una ruta, imprime "El sistema no puede encontrar la ruta
+  especificada" y devuelve un código distinto de cero. El script lo lee como
+  "el linter falló" y aborta **con el archivo perfectamente bien**. Usar
+  `subprocess.run([...], stdout=PIPE, stderr=STDOUT)`, que no pasa por la shell.
+- **El verificador de balance rompía con URLs.** Si se sacan los comentarios
+  `//` **antes** que los strings, el `//` de `https://...` se come el resto de
+  la línea —incluidos corchetes y la comilla de cierre—, descuadra las comillas
+  siguientes y arrastra llaves de más abajo. Falso positivo sobre código
+  correcto. Se resuelve con un scanner de estados carácter por carácter, no con
+  regex. Ninguno de los dos apareció antes porque ningún patch previo invocaba
+  un binario externo ni insertaba una URL.
+
+Regla general: cuando el verificador dice que algo está roto, **confirmar que el
+roto no es el verificador** antes de tocar el código.
 
 ### Frontend
 - Sin build. Se edita el `.php` y listo.
@@ -351,16 +431,55 @@ confiable.
 Mientras tanto: **todo cambio de esquema nuevo va por migración**. Las que se
 escribieron recientemente corren limpio; el problema es histórico.
 
+### ⚠️ El frontend es incompatible con una CSP estricta
+
+No está puesta, y **no alcanza con agregar el header**. Las 14 páginas usan
+handlers y estilos inline por todos lados:
+
+```html
+<button onclick="hacerLogin()">
+<div style="position:relative">
+```
+
+Una CSP sin `'unsafe-inline'` en `script-src` rompe la aplicación entera. Y
+**con** `'unsafe-inline'` la CSP pierde casi todo su valor contra XSS, que es
+justamente de lo que protegería.
+
+CSP útil = refactor de todos los handlers inline a `addEventListener`. Es trabajo
+real, no una línea de nginx. Mientras tanto va en
+`Content-Security-Policy-Report-Only`, que reporta sin romper.
+
+Cuando se escriba, tiene que incluir sí o sí:
+- `worker-src 'self'` — lo necesita pdf.js
+- `https://challenges.cloudflare.com` en `script-src` **y** `frame-src` — lo
+  necesita Turnstile
+
+Si se pasa a enforce sin eso y con `TURNSTILE_ENABLED=true`, **nadie puede
+entrar**.
+
 ### Otras
 
+- **HSTS no está puesto.** Es lo único que separa el A (actual) del A+ en SSL
+  Labs. La redirección HTTP→HTTPS ya funciona (301), pero queda la primera
+  petición interceptable. Se agrega al snippet de headers y **se escala**:
+  `max-age=300`, verificar un par de días, después subir a un año. Un `max-age`
+  largo mal puesto no se puede revertir para quien ya lo cacheó.
+  `includeSubDomains` aplica al host que envía el header y sus subdominios —
+  desde `businesspartner.goharv.com.ar` **no** afecta a `goharv.com.ar` ni al
+  sitio institucional.
 - Los intentos de login contra **emails inexistentes no se registran**:
   `activity_logs.user_id` es `NOT NULL`. La enumeración de emails queda invisible.
+  Mismo motivo por el que no se loguea un captcha rechazado.
 - No existe forma de **obligar** el cambio de contraseña en el primer ingreso.
   Es una convención, no una regla.
 - El bloqueo de F12 / DevTools en `lectura.php` **no funciona** en navegadores
   modernos. Se deja como fricción, no cuenta como protección.
 - El código del lightbox de avatares está duplicado en `usuarios.php` y
   `log.php`. Si aparece en una tercera pantalla, conviene moverlo a `layout.js`.
+- Los escaneos externos (SSL Labs, securityheaders.com) **no miran nada de la
+  aplicación**. Un A+ es compatible con que un `franquiciado` lea manuales de
+  otra empresa. La superficie real está en los dos caminos de autenticación (§1)
+  y en `ManualAccessService`, y se audita leyendo código.
 
 ---
 
@@ -404,6 +523,28 @@ La app queda en `http://localhost/manuales-franquiciantes/public/`.
 
 ### Producción
 
+**Infraestructura:** AWS EC2 con Ubuntu, nginx 1.24 + PHP-FPM 8.3, TLS por
+Certbot (renovación automática). La app vive en
+`/var/www/franchising-manager`, con document root en `public/`.
+
+Archivos de configuración que hay que conocer:
+
+| Archivo | Qué tiene |
+|---|---|
+| `/etc/nginx/sites-enabled/businesspartner` | el server block del sitio |
+| `/etc/nginx/snippets/security-headers.conf` | las 4 cabeceras de seguridad (§11) |
+| `/etc/nginx/mime.types` | **acá va `mjs`** (§11) |
+| `/etc/nginx/nginx.conf` | `server_tokens off` |
+| `/var/www/franchising-manager/.env` | `640 www-data:www-data` — hace falta `sudo` |
+
+El server block ya trae, además de los headers: bloqueo de `/layout/`, de
+dotfiles, y de extensiones sensibles (`sql|log|bak|old|orig|save|tmp|swp|ini|sh|env|pem|key|dist`)
+con `return 404`. También `fastcgi_hide_header X-Powered-By`, que hace
+innecesario tocar `expose_php`.
+
+Deploy: `git pull` + `config:cache` + `reload php8.3-fpm`. El `.env` **no** viaja
+por git: cualquier variable nueva hay que ponerla a mano en el servidor.
+
 ```bash
 mysql -u <usuario_con_ddl> -p manuales_prod < base_produccion.sql
 ```
@@ -443,11 +584,40 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
 - [ ] `upload_max_filesize` y `post_max_size` ≥ 50M
 - [ ] `mkdir storage/app/mpdf-tmp`
 - [ ] `public/js/pdfjs/` desplegado (1,75 MB, no debe estar en `.gitignore`)
-- [ ] CSP: `worker-src 'self'` antes de pasarla a enforce (lo necesita pdf.js)
+- [ ] **`mjs` agregado en `/etc/nginx/mime.types`** — sin esto el visor de PDF no
+      arranca aunque el archivo cargue con 200 (§11). Un `apt upgrade` puede
+      pisar ese archivo y el problema vuelve sin aviso.
+- [ ] `TURNSTILE_ENABLED=true` + `TURNSTILE_SECRET_KEY` en el `.env`, y el
+      hostname del dominio cargado en el widget de Cloudflare
+- [ ] `include snippets/security-headers.conf` en los **tres** lugares (§11)
+- [ ] `server_tokens off` en `nginx.conf`
+- [ ] Ningún `.bak` / `.orig` / `.old` en `public/`
+- [ ] CSP: `worker-src 'self'` + `challenges.cloudflare.com` antes de pasarla a
+      enforce (§9)
 - [ ] `php artisan config:cache`
+- [ ] `systemctl reload php8.3-fpm` — el opcache no se limpia solo
 
 **Sin el worker de colas los mails no salen nunca, y no hay ningún error
 visible.** Es el fallo más silencioso de la lista.
+
+### Verificación post-deploy
+
+```bash
+# headers en los tres caminos: PHP, estático y pdfjs
+for u in /login.html /styles/style.css /js/pdfjs/pdf.min.mjs; do
+  echo "--- $u"
+  curl -sI https://businesspartner.goharv.com.ar$u \
+    | grep -i "x-content\|x-frame\|referrer\|permissions"
+done
+
+# el .mjs NO debe salir como octet-stream
+curl -sI https://businesspartner.goharv.com.ar/js/pdfjs/pdf.min.mjs | grep -i content-type
+
+# los .bak deben dar 404
+curl -sI https://businesspartner.goharv.com.ar/login.html.bak | head -1
+```
+
+Y a mano, en ventana de incógnito: **contraseña mal una vez, después bien** (§7).
 
 ---
 
@@ -470,8 +640,44 @@ reiniciar Apache para que tome el código nuevo.
 **Algo falla solo con F12 abierto** → revisá el dropdown de throttling en la
 pestaña Network. Modo "Offline" activado.
 
-**`.htaccess` no funciona en producción** → Laravel Cloud usa nginx, que lo
-ignora por completo. Cualquier protección tiene que ser portable (guard en PHP).
+**`.htaccess` no funciona en producción** → producción es nginx, que lo ignora
+por completo. Cualquier protección tiene que ser portable (guard en PHP o en el
+server block).
+
+**pdf.js carga con 200 pero el visor no arranca** → nginx sirve `.mjs` como
+`application/octet-stream` y el navegador **rechaza el módulo**: para scripts de
+tipo módulo el chequeo de MIME es estricto y no negociable. Consola:
+*"Expected a JavaScript-or-Wasm module script"*. Despista mucho porque en Network
+el archivo figura **200 y completo** — llegó bien, lo que falló es la ejecución.
+Se arregla agregando `mjs` a la línea de `application/javascript` en
+`/etc/nginx/mime.types`. Y después **vaciar caché y recargar forzado**: `Ctrl+F5`
+solo no invalida módulos ES.
+
+Corolario de diagnóstico: si `/api/manuales/N/archivo` entrega el PDF pero
+`lectura.php` no lo muestra, **el archivo está**. El problema es del visor, no
+del storage ni de la base.
+
+**`add_header` no se hereda en un `location` que tenga su propio `add_header`.**
+Es la trampa más silenciosa de la config de nginx. Basta un
+`add_header Cache-Control ...` en el location de estáticos para que **todos** los
+headers de seguridad del bloque `server` desaparezcan en esas rutas. Sin error,
+sin aviso. `always` **no** arregla esto (`always` es otra cosa: manda el header
+también en respuestas 4xx/5xx).
+
+Por eso los headers viven en un snippet incluido en **tres** lugares: el `server`,
+`location ^~ /js/pdfjs/` y el location de estáticos. Verificar solo contra la
+home da todo verde con la mitad del sitio desprotegido.
+
+**Si `nginx -t` falla, no corras el `reload`.** No rompe nada —el nginx en
+memoria sigue con la config vieja y el sitio sigue en pie— pero el error del
+reload es mucho menos claro que el del `-t`, y te manda a buscar al lugar
+equivocado. El `-t` te dice archivo y línea.
+
+**`nano archivo` abre un buffer vacío en vez del archivo** → no tenés permiso de
+lectura. El `.env` es `640 www-data:www-data`: hace falta `sudo`. Si guardás ese
+buffer creás un archivo nuevo y el original queda intacto — el síntoma es que
+nano pregunta "File Name to Write". Después de editar con sudo, verificar que el
+dueño no haya cambiado a `root`.
 
 **`$_ENV` vacío en producción** → depende de `variables_order` en php.ini, que
 por defecto no incluye el entorno. Usar `getenv()`.
@@ -544,8 +750,20 @@ Lo que más ayuda a no romper nada:
    reimplementes el filtro.
 7. Cuando algo "no se actualiza" en el navegador, sospechá de la caché **antes**
    que del código (§11).
+8. **Los scripts se corren en Windows.** Nada de `/dev/null`, `os.system` ni
+   rutas con `/`. `subprocess.run` y `os.path.join` (§8).
+9. **Pedí la config antes de opinar sobre la config.** En esta sesión se afirmó
+   que los `.bak` estaban expuestos en producción y que hacía falta cambiar la
+   `Referrer-Policy`: las dos cosas eran falsas, y se vio al leer el server block
+   —que ya bloqueaba los `.bak`— y al revisar qué manda `strict-origin-when-cross-origin`.
+   Vale igual para las herramientas: SSL Labs no mide cabeceras HTTP, eso es
+   securityheaders.com. Confundirlas produce diagnósticos coherentes sobre
+   premisas falsas.
+10. **Antes de tocar el código porque un verificador se queja, confirmá que el
+    roto no sea el verificador** (§8).
 
 ---
 
-*Documento generado en julio de 2026. Si el sistema cambió, este README también
-debería.*
+*Documento generado en julio de 2026, actualizado el 27/07/2026 (migración a
+AWS, Turnstile, cabeceras de seguridad). Si el sistema cambió, este README
+también debería.*
