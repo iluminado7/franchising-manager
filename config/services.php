@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudflare Turnstile
+    |--------------------------------------------------------------------------
+    |
+    | Captcha del login. La sitekey es publica y vive en public/login.html;
+    | aca va solo el secret, que nunca debe salir del backend.
+    |
+    | 'enabled' arranca en false a proposito: en dev (XAMPP) no hace falta
+    | levantar el widget. En produccion hay que poner TURNSTILE_ENABLED=true
+    | en el .env, sino el captcha queda decorativo.
+    |
+    */
+
+    'turnstile' => [
+        'enabled' => (bool) env('TURNSTILE_ENABLED', false),
+        'secret'  => env('TURNSTILE_SECRET_KEY'),
+        'timeout' => (int) env('TURNSTILE_TIMEOUT', 4),
+    ],
+
 ];

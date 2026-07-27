@@ -9,6 +9,9 @@
 .phpactor.json
 .phpunit.result.cache
 .gitignore
+*.bak
+*.orig
+*.old
 /.fleet
 /.idea
 /.nova

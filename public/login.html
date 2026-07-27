@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/style.css">
 <link rel="stylesheet" href="styles/login.css?v=2">
+<link rel="preconnect" href="https://challenges.cloudflare.com">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script src="js/config.js"></script>
 </head>
 <body>
@@ -65,6 +67,16 @@
         </div>
       </div>
 
+      <div class="form-group">
+        <div class="cf-turnstile"
+             data-sitekey="0x4AAAAAAD_Hd3rrFQFfudGj"
+             data-callback="onTurnstileOk"
+             data-expired-callback="onTurnstileExpired"
+             data-error-callback="onTurnstileError"
+             data-theme="dark"
+             data-language="es"></div>
+      </div>
+
       <button class="btn-login" id="btn-login" onclick="hacerLogin()">
         <div class="spinner" id="login-spinner"></div>
         <span id="login-btn-text">Ingresar</span>
@@ -74,6 +86,21 @@
 </div>
 
 <script>
+// --- Turnstile -----------------------------------------------------------
+// El token dura 300s, es de un solo uso, y un token repetido se rechaza
+// con 'timeout-or-duplicate'. Por eso hay que resetear el widget en CADA
+// error, no solo cuando el captcha falla.
+let tsToken = null;
+
+function onTurnstileOk(token)  { tsToken = token; mostrarError(''); }
+function onTurnstileExpired()  { tsToken = null; }
+function onTurnstileError()    { tsToken = null; }
+
+function resetTurnstile() {
+  tsToken = null;
+  if (window.turnstile) { try { turnstile.reset(); } catch (_) {} }
+}
+
 function destinoPorRol(rol) {
   if (rol === 'franquiciante') return '/manuales-mi-empresa.php';
   if (rol === 'super_admin')   return '/dashboard.php';
@@ -90,6 +117,7 @@ async function hacerLogin() {
   mostrarError('');
 
   if (!email || !password) { mostrarError('Completá los dos campos.'); return; }
+  if (!tsToken) { mostrarError('Completá la verificación de seguridad.'); return; }
 
   btn.disabled          = true;
   spinner.style.display = 'block';
@@ -100,12 +128,13 @@ async function hacerLogin() {
       method:      'POST',
       headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       credentials: 'include',
-      body:        JSON.stringify({ email, password }),
+      body:        JSON.stringify({ email, password, turnstile_token: tsToken }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
+      resetTurnstile();
       mostrarError(data?.errors?.email?.[0] || data?.message || 'Credenciales incorrectas.');
       return;
     }
@@ -114,6 +143,7 @@ async function hacerLogin() {
     window.location.href = BASE_URL + destinoPorRol(data.rol);
 
   } catch (err) {
+    resetTurnstile();
     mostrarError('Error de conexión. Verificá que el servidor esté activo.');
   } finally {
     btn.disabled          = false;
