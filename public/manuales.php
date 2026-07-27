@@ -127,8 +127,9 @@ include 'layout/head.php';
         </div>
       </div>
 
-      <!-- Selector de modo -->
-      <div class="form-group">
+      <!-- Selector de modo. En edicion se oculta: el tipo del manual ya esta
+           decidido y su archivo ya existe. -->
+      <div class="form-group" id="grupo-modo">
         <label>¿Cómo querés comenzar?</label>
         <div class="modo-selector">
           <button class="modo-btn active" id="modo-btn-scratch" onclick="seleccionarModo('scratch')">
@@ -181,7 +182,7 @@ include 'layout/head.php';
 
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalNuevo()">Cancelar</button>
-      <button class="btn btn-primary" id="btn-crear" onclick="crearManual()">
+      <button class="btn btn-primary" id="btn-crear" onclick="confirmarModalManual()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         <span id="btn-crear-label">Crear y abrir editor</span>
       </button>
@@ -549,7 +550,11 @@ function renderTabla(lista) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Ver PDF
             </button>
-            <button class="accion-btn" style="color:var(--dorado)" onclick="subirNuevaVersionPdf(${m.id}, '${esc(m.titulo)}')">
+            <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalEditar(${m.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar
+          </button>
+          <button class="accion-btn" style="color:var(--dorado)" onclick="subirNuevaVersionPdf(${m.id}, '${esc(m.titulo)}')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Nueva versión
             </button>` : `
@@ -593,8 +598,142 @@ function renderTabla(lista) {
   tbody.innerHTML = filas.join('');
 }
 
+
+// ── EDICION DE UN MANUAL EXISTENTE ────────────────────────────
+//
+// Reusa el modal de creacion. El arbol de categorias vive en un contenedor de
+// id fijo y depende de estado compartido, asi que duplicarlo para un modal
+// aparte significaria mantener dos copias de la misma logica. Reusandolo, el
+// arbol no se toca.
+//
+// crearManual() queda intacta: el boton del pie llama al dispatcher.
+let manualEditandoId       = null;
+let asignacionesCargadasOk = false;
+
+function confirmarModalManual() {
+  return manualEditandoId ? guardarEdicionManual() : crearManual();
+}
+
+// Marca en el arbol lo que el manual ya tiene asignado.
+//
+// Se hace poniendo cb.checked y llamando a onToggleCategoriaManual(), que es
+// exactamente lo que hace toggleCheckCat() cuando alguien clickea: asi
+// catsCompletas, la sublista y el chevron quedan consistentes sin duplicar esa
+// logica.
+//
+// Si esto falla, asignacionesCargadasOk queda en false y guardar se bloquea:
+// con los checkboxes vacios, un PUT borraria TODAS las asignaciones del manual
+// sin que nadie se diera cuenta.
+async function precargarAsignacionesManual(id) {
+  asignacionesCargadasOk = false;
+  try {
+    const [cats, users] = await Promise.all([
+      apiFetch('GET', `/manuales/${id}/categorias`),
+      apiFetch('GET', `/manuales/${id}/usuarios`),
+    ]);
+
+    (cats || []).forEach(a => {
+      const cb = document.querySelector(`.cat-especifica[data-cat-id="${a.category_id}"]`);
+      if (cb && !cb.checked) { cb.checked = true; onToggleCategoriaManual(a.category_id); }
+    });
+
+    (users || []).forEach(a => usuariosSelManual.add(a.user_id));
+    sincronizarChecksUsuarios();
+
+    asignacionesCargadasOk = true;
+  } catch (e) {
+    mostrarNuevoError('No se pudieron cargar las asignaciones actuales. Cerrá el modal y volvé a abrirlo: guardar ahora las borraría.');
+  }
+}
+
+async function abrirModalEditar(id) {
+  const m = todosLosManuales.find(x => x.id === id);
+  if (!m) return;
+
+  manualEditandoId = id;
+
+  document.getElementById('nuevo-titulo').value    = m.titulo || '';
+  document.getElementById('nuevo-categoria').value = m.categoria || '';
+  document.getElementById('nuevo-error').style.display = 'none';
+  document.getElementById('btn-crear').disabled = false;
+
+  document.getElementById('grupo-modo').style.display  = 'none';
+  document.getElementById('zona-import').style.display = 'none';
+  document.getElementById('zona-pdf').style.display    = 'none';
+
+  document.querySelector('#modal-nuevo .modal-header h3').textContent = 'Editar manual';
+  document.getElementById('btn-crear-label').textContent = 'Guardar cambios';
+
+  // Un manual no se puede mover de empresa: el select queda fijo. Pero hay que
+  // dispararlo igual, porque onCambioEmpresaModal() es lo que carga
+  // categoriasEmpresa y usuariosEmpresa; sin eso el arbol sale vacio.
+  const sel = document.getElementById('nuevo-empresa');
+  sel.value    = m.empresa_id;
+  sel.disabled = true;
+
+  catsCompletas.clear(); usuariosSelManual.clear();
+  document.getElementById('modal-nuevo').classList.add('open');
+  await onCambioEmpresaModal();
+
+  await precargarAsignacionesManual(id);
+}
+
+async function guardarEdicionManual() {
+  const titulo    = document.getElementById('nuevo-titulo').value.trim();
+  const categoria = document.getElementById('nuevo-categoria').value.trim();
+  const empresaId = document.getElementById('nuevo-empresa').value;
+  const btn       = document.getElementById('btn-crear');
+  const label     = document.getElementById('btn-crear-label');
+
+  if (!titulo) { mostrarNuevoError('El título es obligatorio.'); return; }
+  if (!asignacionesCargadasOk) {
+    mostrarNuevoError('No se cargaron las asignaciones actuales. Cerrá el modal y volvé a abrirlo antes de guardar.');
+    return;
+  }
+
+  btn.disabled = true; label.textContent = 'Guardando...';
+  try {
+    await apiFetch('PUT', `/manuales/${manualEditandoId}`, {
+      titulo,
+      categoria: categoria || null,
+    });
+
+    // OJO: super_admin DEBE mandar empresa_id — el backend no lo infiere.
+    // Y los usuarios se mandan SIEMPRE, aunque la lista quede vacia: es la
+    // unica forma de poder desasignar a todos.
+    await apiFetch('PUT', `/manuales/${manualEditandoId}/categorias`, {
+      category_ids: leerCategoriasManualSeleccionadas(),
+      empresa_id:   parseInt(empresaId, 10),
+    });
+    await apiFetch('PUT', `/manuales/${manualEditandoId}/usuarios`, {
+      user_ids:   leerUsuariosManualSeleccionados(),
+      empresa_id: parseInt(empresaId, 10),
+    });
+
+    cerrarModalNuevo();
+    mostrarToast('Manual actualizado.', 'exito');
+    todosLosManuales = await apiFetch('GET', '/manuales');
+    aplicarFiltros();
+  } catch (e) {
+    const msg = e.data?.errors
+      ? Object.values(e.data.errors).flat().join(' ')
+      : e.data?.message || 'Error al guardar los cambios.';
+    mostrarNuevoError(msg);
+  } finally {
+    btn.disabled = false; label.textContent = 'Guardar cambios';
+  }
+}
+
 // ── MODAL NUEVO MANUAL ────────────────────────────────────────
 function abrirModalNuevo() {
+  // Volver a modo creacion: el mismo modal se usa para editar.
+  manualEditandoId = null;
+  document.getElementById('grupo-modo').style.display = '';
+  document.getElementById('nuevo-empresa').disabled = false;
+  document.querySelector('#modal-nuevo .modal-header h3').textContent = 'Nuevo manual';
+  document.getElementById('btn-crear-label').textContent = 'Crear y abrir editor';
+  document.getElementById('btn-crear').disabled = false;
+
   document.getElementById('nuevo-titulo').value    = '';
   document.getElementById('nuevo-categoria').value = '';
   document.getElementById('nuevo-empresa').value   = '';
