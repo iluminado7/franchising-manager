@@ -351,71 +351,6 @@ include 'layout/head.php';
 /* Chips de categorías en la tabla */
 /* ── Avatar en la celda Nombre ────────────────────────────── */
 .u-nombre-cell { display: flex; align-items: center; gap: 10px; }
-
-/* Base: circulo con las iniciales. Siempre se renderiza. */
-.u-avatar {
-  position: relative;
-  flex-shrink: 0;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--gris2);
-  border: 1px solid var(--gris3);
-  color: var(--gris5);
-  font-size: 11px; font-weight: 700; letter-spacing: .02em;
-  font-family: 'Archivo', sans-serif;
-  overflow: hidden;
-  user-select: none;
-}
-
-/* La foto se apoya ENCIMA de las iniciales. Si carga, las tapa; si el endpoint
-   devuelve 404, el onerror la borra y las iniciales quedan a la vista. El
-   fallback es el estado base, no una rama de codigo. */
-.u-avatar-img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-/* ── Lightbox de foto de perfil ─────────────────────────────────────
-   Se abre al hacer clic en un avatar CON foto. La imagen no se escala mas
-   alla de su tamaño natural: el endpoint devuelve el archivo original sin
-   miniaturas, y agrandar una foto chica solo la dejaria pixelada. */
-.avatar-lb {
-  position: fixed; inset: 0; z-index: 900;
-  display: none; align-items: center; justify-content: center;
-  padding: 48px 20px;
-  background: rgba(0, 0, 0, .82);
-}
-.avatar-lb.visible { display: flex; }
-.avatar-lb-fig { margin: 0; text-align: center; cursor: default; }
-.avatar-lb-fig img {
-  display: block;
-  width: auto; height: auto;
-  max-width: min(72vw, 560px);
-  max-height: 72vh;
-  border-radius: 10px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
-}
-.avatar-lb-cap {
-  margin-top: 14px;
-  color: #F5F3EE;
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-}
-.avatar-lb-x {
-  position: absolute; top: 18px; right: 22px;
-  width: 38px; height: 38px;
-  border: 1px solid rgba(255, 255, 255, .25);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, .35);
-  color: #fff; font-size: 24px; line-height: 1;
-  cursor: pointer;
-}
-.avatar-lb-x:hover { background: rgba(255, 255, 255, .12); }
-/* Solo los avatares CON foto invitan a hacer clic. */
-.u-avatar-click { cursor: zoom-in; }
 .cat-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 260px; }
 .cat-chip {
   display: inline-flex; align-items: center;
@@ -613,12 +548,6 @@ async function init() {
 // ── RENDER TABLA ──────────────────────────────────────────────
 // Iniciales del usuario: NA (nombre+apellido) o la primera letra del email.
 // Mismo criterio que perfil.php, para que un usuario se vea igual en las dos pantallas.
-function inicialesDe(u) {
-  return (u.nombre && u.apellido)
-    ? `${u.nombre[0]}${u.apellido[0]}`.toUpperCase()
-    : (u.email ? u.email[0].toUpperCase() : '?');
-}
-
 // Avatar de 32px. Devuelve SIEMPRE el circulo con iniciales; si el usuario tiene
 // foto, le monta la <img> encima. Si la imagen falla (404 del endpoint, sin
 // permiso, archivo faltante) el onerror la elimina y quedan las iniciales.
@@ -626,79 +555,10 @@ function inicialesDe(u) {
 // La URL se arma con API (const global) y NO con u.avatar_url tal cual: ese campo
 // es una ruta absoluta ("/api/perfil/foto/N") y en XAMPP el proyecto vive en un
 // subpath, con lo cual resolveria contra la raiz del servidor y daria 404.
-function renderAvatar(u) {
-  const ini = esc(inicialesDe(u));
-  if (!u.avatar_url) {
-    // Sin foto no hay nada que ampliar: circulo con iniciales y listo.
-    return `<span class="u-avatar">${ini}</span>`;
-  }
-
-  // Con foto: ampliable. El nombre viaja por data-nom y no interpolado dentro
-  // del onclick, porque un apellido con apostrofe romperia el atributo.
-  const nom = esc(`${u.nombre || ''} ${u.apellido || ''}`.trim() || u.email || '');
-  return `<span class="u-avatar u-avatar-click" data-uid="${u.id}" data-nom="${nom}"`
-       + ` title="Ver foto de perfil">${ini}`
-       + `<img class="u-avatar-img" src="${API}/perfil/foto/${u.id}" alt="" loading="lazy" onerror="this.remove()"></span>`;
-}
-
-// ── LIGHTBOX DE FOTO DE PERFIL ─────────────────────────────────────
-// Cierra con clic afuera, Escape o la X. La politica de "los modales no
-// cierran al hacer clic afuera" protege datos cargados; aca es solo lectura.
-function abrirFotoPerfil(userId, nombre) {
-  let lb = document.getElementById('avatar-lightbox');
-
-  // Se construye una sola vez, la primera vez que hace falta.
-  if (!lb) {
-    lb = document.createElement('div');
-    lb.id = 'avatar-lightbox';
-    lb.className = 'avatar-lb';
-    lb.innerHTML =
-      '<button class="avatar-lb-x" type="button" title="Cerrar" aria-label="Cerrar">&times;</button>' +
-      '<figure class="avatar-lb-fig">' +
-        '<img id="avatar-lb-img" alt="">' +
-        '<figcaption class="avatar-lb-cap" id="avatar-lb-cap"></figcaption>' +
-      '</figure>';
-
-    // Clic en el fondo cierra; clic en la figura no (si no, no se puede
-    // ni seleccionar la imagen sin que se cierre).
-    lb.addEventListener('click', cerrarFotoPerfil);
-    lb.querySelector('.avatar-lb-fig')
-      .addEventListener('click', (e) => e.stopPropagation());
-
-    document.body.appendChild(lb);
-  }
-
-  const img = document.getElementById('avatar-lb-img');
-  img.src = `${API}/perfil/foto/${userId}`;
-  img.alt = nombre || '';
-  document.getElementById('avatar-lb-cap').textContent = nombre || '';
-
-  lb.classList.add('visible');
-  document.body.style.overflow = 'hidden';   // que no scrollee el fondo
-}
-
-function cerrarFotoPerfil() {
-  const lb = document.getElementById('avatar-lightbox');
-  if (!lb) return;
-  lb.classList.remove('visible');
-  document.body.style.overflow = '';
-
-  // Se suelta la imagen: si no, al abrir otra se ve un instante la anterior.
-  const img = document.getElementById('avatar-lb-img');
-  if (img) img.removeAttribute('src');
-}
-
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') cerrarFotoPerfil();
 });
 
-// Delegado: cubre los avatares que se dibujan despues (paginacion, filtros).
-document.addEventListener('click', (e) => {
-  const av = e.target.closest ? e.target.closest('.u-avatar-click') : null;
-  if (!av) return;
-  e.stopPropagation();   // en log.php la fila entera abre el detalle
-  abrirFotoPerfil(av.dataset.uid, av.dataset.nom || '');
-});
 
 
 function renderTabla(lista) {
@@ -738,7 +598,7 @@ function renderTabla(lista) {
     if (eliminado) {
       return `<tr style="opacity:.65">
         <td style="color:var(--blanco);font-weight:500">
-          <div class="u-nombre-cell">${renderAvatar(u)}<span>${esc(nombre)}${badgeElim}</span></div>
+          <div class="u-nombre-cell">${avatarUsuario(u)}<span>${esc(nombre)}${badgeElim}</span></div>
         </td>
         <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
         <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
@@ -780,7 +640,7 @@ function renderTabla(lista) {
 
     return `<tr>
       <td style="color:var(--blanco);font-weight:500">
-        <div class="u-nombre-cell">${renderAvatar(u)}<span>${esc(nombre)}</span></div>
+        <div class="u-nombre-cell">${avatarUsuario(u)}<span>${esc(nombre)}</span></div>
       </td>
       <td style="font-size:12px;font-family:'Roboto',sans-serif">${esc(u.email)}</td>
       <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
@@ -1683,7 +1543,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { cerrarModal(); cerrarModalToggle(); cerrarModalManuales(); cerrarModalCategorias(); }
 });
 
-init();
+document.addEventListener('DOMContentLoaded', () => init());
 </script>
 
 <?php include 'layout/footer.php'; ?>

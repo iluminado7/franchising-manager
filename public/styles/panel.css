@@ -686,3 +686,99 @@ body.tema-claro {
   .doc-content h1 { font-size: 20px; }
   .doc-content h2 { font-size: 16px; }
 }
+
+/* ── AVATAR Y LIGHTBOX DE FOTO DE PERFIL ──────────────────────────────
+   Compartido por todas las pantallas. Antes estaba duplicado en log.php y
+   usuarios.php, y las dos copias habian divergido (ver §9 del README).
+
+   El circulo con iniciales se renderiza SIEMPRE; si el usuario tiene foto,
+   la <img> se le monta encima. Si la imagen falla -- 404 del endpoint, sin
+   permiso, archivo faltante -- el onerror la elimina y quedan las iniciales.
+   Por eso el fallback no necesita ninguna logica extra.
+
+   Tamano base 32px. .u-avatar-sm (30px) lo usa log.php, que venia con ese
+   tamano; se conserva para no cambiarle el aspecto en el refactor.
+   ------------------------------------------------------------------- */
+.u-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gris2);
+  border: 1px solid var(--gris3);
+  color: var(--gris5);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  font-family: 'Archivo', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+.u-avatar-sm { width: 30px; height: 30px; font-size: 9.5px; }
+
+.u-avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.u-avatar-click { cursor: zoom-in; }
+
+.avatar-lb {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  background: rgba(0, 0, 0, .82);
+}
+
+.avatar-lb.visible { display: flex; }
+
+.avatar-lb-fig { margin: 0; text-align: center; cursor: default; }
+
+.avatar-lb-fig img {
+  display: block;
+  width: auto; height: auto;
+  max-width: min(72vw, 560px);
+  max-height: 72vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+}
+
+.avatar-lb-cap {
+  margin-top: 14px;
+  color: #F5F3EE;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+}
+
+.avatar-lb-x {
+  position: absolute;
+  top: 18px; right: 22px;
+  width: 38px; height: 38px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .35);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.avatar-lb-x:hover { background: rgba(255, 255, 255, .12); }
+
+/* El boton de usuario del topbar ahora tiene avatar + nombre. */
+.topbar-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

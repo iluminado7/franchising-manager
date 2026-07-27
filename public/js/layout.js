@@ -123,6 +123,27 @@ document.addEventListener('DOMContentLoaded', async function iniciarLayout() {
     // v2.3: nombre/apellido viven en users — vienen al toplevel de /me
     const nombreCompleto = [me.nombre, me.apellido].filter(Boolean).join(' ').trim();
     if (nombreEl) nombreEl.textContent = nombreCompleto || me.email;
+
+    // Avatar del topbar. Se pinta a mano y no con avatarUsuario() porque esa
+    // funcion agrega u-avatar-click, y aca el clic tiene que ir al boton
+    // (perfil.php), no al lightbox.
+    //
+    // La <img> se monta ENCIMA de las iniciales; si el endpoint devuelve 404
+    // (sin foto, archivo faltante) el onerror la borra y quedan las iniciales.
+    const avatarEl = document.getElementById('topbar-avatar');
+    if (avatarEl) {
+      avatarEl.textContent = inicialesDeUsuario(me);
+      if (me.avatar_url) {
+        const img = document.createElement('img');
+        img.className = 'u-avatar-img';
+        img.alt = '';
+        img.onerror = () => img.remove();
+        // Con API y no con me.avatar_url tal cual: ese campo es una ruta
+        // absoluta y en XAMPP el proyecto vive en un subpath.
+        img.src = `${API}/perfil/foto/${me.id}`;
+        avatarEl.appendChild(img);
+      }
+    }
     if (rolEl) {
       rolEl.textContent = me.rol.replace('_', ' ');
       rolEl.className   = `rol-badge ${me.rol}`;
@@ -458,3 +479,106 @@ async function hacerLogout() {
   localStorage.removeItem('cl_rol');
   window.location.href = BASE_URL + '/login.html';
 }
+
+// ── AVATAR Y LIGHTBOX DE FOTO DE PERFIL ───────────────────────────────
+// Compartido por todas las pantallas. Antes estaba duplicado en log.php y
+// usuarios.php; las dos copias habian divergido (ver §9 del README).
+//
+// Al unificar se tomo la version de log.php en los dos casos, que es superset:
+// maneja `u` nulo y resuelve el nombre sin apellido. La de usuarios.php
+// reventaba con null y exigia nombre Y apellido.
+//
+// El CSS vive en panel.css, que head.php carga en todas las paginas.
+
+function inicialesDeUsuario(u) {
+  if (!u) return '?';
+  const n = (u.nombre || '').trim();
+  const a = (u.apellido || '').trim();
+  const ini = ((n[0] || '') + (a[0] || '')).toUpperCase();
+  return ini || (u.email || '?').charAt(0).toUpperCase();
+}
+
+// Devuelve SIEMPRE el circulo con iniciales; si el usuario tiene foto, le monta
+// la <img> encima. Si la imagen falla, el onerror la elimina y quedan las
+// iniciales: por eso no hace falta chequear permisos en el frontend.
+//
+// La URL se arma con API (const global) y NO con u.avatar_url tal cual: ese
+// campo es una ruta absoluta ("/api/perfil/foto/N") y en XAMPP el proyecto vive
+// en un subpath, con lo cual resolveria contra la raiz del servidor y daria 404.
+function avatarUsuario(u, extraClase) {
+  const cls = 'u-avatar' + (extraClase ? ' ' + extraClase : '');
+  if (!u) return `<span class="${cls}">?</span>`;
+
+  const ini = esc(inicialesDeUsuario(u));
+  if (!u.avatar_url) return `<span class="${cls}">${ini}</span>`;
+
+  // El nombre viaja por data-nom y no interpolado dentro del onclick, porque un
+  // apellido con apostrofe romperia el atributo.
+  const nom = esc(`${u.nombre || ''} ${u.apellido || ''}`.trim() || u.email || '');
+  return `<span class="${cls} u-avatar-click" data-uid="${u.id}" data-nom="${nom}"`
+       + ` title="Ver foto de perfil">${ini}`
+       + `<img class="u-avatar-img" src="${API}/perfil/foto/${u.id}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+}
+
+// Cierra con clic afuera, Escape o la X. La politica de "los modales no cierran
+// al hacer clic afuera" protege datos cargados; aca es solo lectura.
+function abrirFotoPerfil(userId, nombre) {
+  let lb = document.getElementById('avatar-lightbox');
+
+  // Se construye una sola vez, la primera vez que hace falta.
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'avatar-lightbox';
+    lb.className = 'avatar-lb';
+    lb.innerHTML =
+      '<button class="avatar-lb-x" type="button" title="Cerrar" aria-label="Cerrar">&times;</button>' +
+      '<figure class="avatar-lb-fig">' +
+        '<img id="avatar-lb-img" alt="">' +
+        '<figcaption class="avatar-lb-cap" id="avatar-lb-cap"></figcaption>' +
+      '</figure>';
+
+    // Clic en el fondo cierra; clic en la figura no (si no, no se puede ni
+    // seleccionar la imagen sin que se cierre).
+    lb.addEventListener('click', cerrarFotoPerfil);
+    lb.querySelector('.avatar-lb-fig')
+      .addEventListener('click', (e) => e.stopPropagation());
+
+    document.body.appendChild(lb);
+  }
+
+  const img = document.getElementById('avatar-lb-img');
+  const cap = document.getElementById('avatar-lb-cap');
+  if (img) img.src = `${API}/perfil/foto/${userId}`;
+  if (cap) cap.textContent = nombre || '';
+  lb.classList.add('visible');
+  document.addEventListener('keydown', cerrarFotoPerfilConEscape);
+}
+
+function cerrarFotoPerfilConEscape(e) {
+  if (e.key === 'Escape') cerrarFotoPerfil();
+}
+
+function cerrarFotoPerfil() {
+  const lb = document.getElementById('avatar-lightbox');
+  if (lb) lb.classList.remove('visible');
+  document.removeEventListener('keydown', cerrarFotoPerfilConEscape);
+  // Soltar la imagen: si no, queda en memoria y se ve la anterior al reabrir.
+  const img = document.getElementById('avatar-lb-img');
+  if (img) img.removeAttribute('src');
+}
+
+// Delegado en document: cubre los avatares que se dibujan despues (paginacion,
+// filtros, tablas que se re-renderizan). Estaba duplicado palabra por palabra
+// en log.php y usuarios.php.
+//
+// El stopPropagation es necesario porque en log.php la fila entera es
+// clickeable y abre el detalle del registro: sin esto, clickear el avatar
+// abriria las dos cosas.
+//
+// El avatar del topbar NO entra aca: se pinta sin u-avatar-click a proposito.
+document.addEventListener('click', (e) => {
+  const av = e.target.closest ? e.target.closest('.u-avatar-click') : null;
+  if (!av) return;
+  e.stopPropagation();
+  abrirFotoPerfil(av.dataset.uid, av.dataset.nom || '');
+});

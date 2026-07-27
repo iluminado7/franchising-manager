@@ -26,7 +26,15 @@ if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
   </div>
 
   <div class="topbar-right">
-    <button class="topbar-user-btn" id="topbar-nombre" onclick="window.location.href='perfil.php'" title="Mi perfil"></button>
+    <!-- El boton entero lleva a perfil.php. El avatar NO abre el lightbox: si
+         tuviera u-avatar-click, un clic navegaria Y abriria el visor, porque el
+         listener delegado escucha en document y el evento burbujea por aca.
+         Ademas es tu propia foto, y este boton ya lleva a donde se cambia.
+         Lo pinta layout.js en iniciarLayout(). -->
+    <button class="topbar-user-btn" onclick="window.location.href='perfil.php'" title="Mi perfil">
+      <span class="u-avatar u-avatar-sm" id="topbar-avatar" aria-hidden="true"></span>
+      <span id="topbar-nombre"></span>
+    </button>
     <button class="notif-btn" onclick="toggleNotificaciones()" title="Notificaciones" aria-label="Notificaciones">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
