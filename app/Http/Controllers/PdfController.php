@@ -58,6 +58,28 @@ class PdfController extends Controller
         if (!$version) {
             return response()->json(['error' => 'El manual no tiene una versión publicada.'], 409);
         }
+
+        // mPDF procesa TODO el HTML con expresiones regulares (AdjustHTML), y
+        // PHP corta el backtracking de PCRE en 1.000.000 por defecto. Al
+        // superarlo, mPDF tira:
+        //
+        //   "The HTML code size is larger than pcre.backtrack_limit"
+        //
+        // La causa real no es el texto sino las IMAGENES EN BASE64 embebidas en
+        // contenido_html: un manual con 4 imagenes medido en produccion daba
+        // 1.114.240 caracteres, contra ~6.000 de los que no tienen ninguna.
+        //
+        // Va ANTES de resolverImagenes() y no solo antes de WriteHTML() porque
+        // esa funcion tambien corre un preg_replace_callback() sobre el mismo
+        // HTML y esta sujeta al mismo limite.
+        //
+        // ini_set y no php.ini: queda acotado a la generacion del PDF, viaja con
+        // el codigo y no depende de la config del sistema (XAMPP vs el servidor).
+        //
+        // ESTO CORRE EL TECHO, NO LO ELIMINA. El arreglo de fondo es sacar las
+        // imagenes del HTML y guardarlas en manual_images, que ya existe.
+        ini_set('pcre.backtrack_limit', '10000000');
+
         $contenido  = $this->resolverImagenes($version->contenido_html ?? '', $manual->id);
         $encabezado = $this->resolverImagenes($version->encabezado_html ?? '', $manual->id);
         $pie        = $this->resolverImagenes($version->pie_pagina_html ?? '', $manual->id);
