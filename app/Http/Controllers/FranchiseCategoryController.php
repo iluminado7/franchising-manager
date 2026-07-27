@@ -33,11 +33,9 @@ class FranchiseCategoryController extends Controller
     {
         $user = $request->user();
 
-        $query = FranchiseCategory::withCount([
-            'usuarios',
-            'manualesAsignados',
-            'documentosAsignados',
-        ]);
+        // Conteos VISIBLES: lo que un socio de la categoria podria ver hoy.
+        // destroy() cuenta distinto a proposito — ver conteosVisibles().
+        $query = FranchiseCategory::withCount(self::conteosVisibles());
 
         if ($user->esSuperAdmin()) {
             if ($request->filled('empresa_id')) {
@@ -67,11 +65,8 @@ class FranchiseCategoryController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $user      = $request->user();
-        $categoria = FranchiseCategory::withCount([
-            'usuarios',
-            'manualesAsignados',
-            'documentosAsignados',
-        ])->findOrFail($id);
+        $categoria = FranchiseCategory::withCount(self::conteosVisibles())
+                                      ->findOrFail($id);
 
         if (!$this->actorPuedeVer($user, $categoria)) {
             return response()->json(['error' => 'Sin acceso a esta categoría.'], 403);
@@ -230,6 +225,15 @@ class FranchiseCategoryController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         $user      = $request->user();
+
+        // A DIFERENCIA de index() y show(), aca se cuenta TODO lo asignado, sin
+        // filtrar por estado ni por visibilidad. No es un descuido.
+        //
+        // Aca el conteo no es informativo: es la barrera que impide borrar
+        // fisicamente una categoria que todavia tiene cosas colgando. Si se
+        // contara solo lo visible, una categoria con manuales en borrador o
+        // archivados daria total 0, se borraria, y quedarian filas huerfanas en
+        // manual_category_assignments apuntando a una categoria inexistente.
         $categoria = FranchiseCategory::withCount([
             'usuarios',
             'manualesAsignados',
@@ -276,6 +280,43 @@ class FranchiseCategoryController extends Controller
     }
 
     // ── PRIVADOS ─────────────────────────────────────────────────────
+
+    /**
+     * Conteos para las pantallas: SOLO lo que un socio de esta categoría
+     * podría ver hoy.
+     *
+     * Antes se contaba todo lo asignado, incluidos eliminados, archivados y
+     * borradores. El número quedaba inflado y no significaba nada útil: la
+     * pantalla decía 5 manuales donde llegaban 2.
+     *
+     * Las DOS condiciones en cada caso, no una sola: un registro borrado puede
+     * haber quedado con estado 'publicado' o con visible_franquiciado en 1, así
+     * que filtrar por uno solo deja pasar los eliminados.
+     *
+     * Los alias son obligatorios: sin ellos Laravel nombraría las columnas
+     * según la relación y el frontend (categorias.php) dejaría de encontrar
+     * manuales_asignados_count y documentos_asignados_count.
+     *
+     * El conteo de usuarios queda sin filtrar: "cuántos usuarios pertenecen a
+     * la categoría" es otra pregunta, y no fue reportado como incorrecto.
+     *
+     * NO usar esto en destroy(): ahí el conteo es una barrera de integridad y
+     * necesita ver TODO lo asignado. Está explicado en ese método.
+     */
+    private static function conteosVisibles(): array
+    {
+        return [
+            'usuarios',
+
+            'manualesAsignados as manuales_asignados_count' => fn ($q) =>
+                $q->where('manuals.estado', 'publicado')
+                  ->whereNull('manuals.deleted_at'),
+
+            'documentosAsignados as documentos_asignados_count' => fn ($q) =>
+                $q->where('documents.visible_franquiciado', 1)
+                  ->whereNull('documents.deleted_at'),
+        ];
+    }
 
     /**
      * Si el actor puede ver (leer) la categoría.
