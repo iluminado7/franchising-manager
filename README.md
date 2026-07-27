@@ -195,6 +195,23 @@ Si `facturable = 0`, entonces `plan_id` y los precios custom **deben ser NULL**.
 Y la columna generada `unica_exenta` garantiza que **solo puede existir una
 empresa exenta** en todo el sistema: Cerrajería Leonardo.
 
+### `chk_estado_previo` (manuals)
+
+`estado_previo` guarda en qué estado estaba un manual antes de archivarse, para
+poder devolverlo ahí al restaurarlo. Solo admite `NULL`, `'borrador'` o
+`'publicado'` — **nunca `'archivado'`**: si se pudiera, archivar dos veces el
+mismo manual lo dejaría sin estado al cual volver.
+
+Se asigna con **setter directo, nunca con `update()` masivo**: es un campo
+derivado del servidor y no debe poder llegar desde el request. No está en el
+`$fillable` de `Manual` y así debe quedar.
+
+Antes de esto, `desarchivar()` forzaba `'borrador'`. Un manual publicado que se
+archivaba y se restauraba quedaba invisible para los socios, y sacarlo de
+borrador obligaba a publicar, lo que a su vez obligaba a subir de versión sin
+que el documento hubiera cambiado. En los manuales PDF directamente no había
+salida: no tienen `editor.php` y por lo tanto no tenían botón de publicar.
+
 ### Regla general de MySQL
 
 **Una columna no puede tener a la vez un CHECK y una FK con `ON DELETE SET NULL`
@@ -256,6 +273,25 @@ y hay manuales PDF publicados: para retomarla alcanza con poner la constante en
 El visor (`pdf.js` renderizando a canvas, sin capa de texto, con marca de agua
 superpuesta) quedó terminado y funcionando.
 
+**Editar un manual PDF.** No tienen `editor.php`, así que el título, la categoría
+y las asignaciones se cambian desde un modal en `manuales.php` y
+`manuales-mi-empresa.php`. Reusa el modal de creación en "modo edición" en vez de
+tener uno propio: el árbol de categorías está atado al contenedor
+`manual-categorias-lista` por id fijo y a estado compartido (`catsCompletas`,
+`usuariosSelManual`), así que duplicarlo serían cuatro copias de la misma lógica.
+`crearManual()` no se tocó — el botón del pie llama a un dispatcher que decide
+entre crear y guardar.
+
+Ese modal **precarga** las asignaciones actuales. Si esa precarga falla, guardar
+queda bloqueado por el flag `asignacionesCargadasOk`: con los checkboxes vacíos,
+un `PUT` borraría todas las asignaciones del manual sin que nadie se entere.
+
+**Vista previa.** Tanto la vista previa como "Ver PDF" navegan a
+`lectura.php?m=<public_id>`, nunca al id de la base. En el caso del PDF eso además
+importa de verdad: `lectura.php` entrega el archivo con `manual.archivo_token`
+—opaco, atado al usuario, con vencimiento— y lo abre en el visor propio. La ruta
+vieja (`/api/manuales/{id}/archivo`) se salteaba todo eso.
+
 ### Documentos
 Subida y versionado de archivos, sin aceptación. Es el lugar correcto para
 material que **no** requiere firma.
@@ -263,6 +299,20 @@ material que **no** requiere firma.
 ### Aceptaciones
 Digital (el socio confirma en pantalla, se registra contra el `documento_hash`) o
 física (el franquiciante sube el PDF firmado). Se consultan en `aceptaciones.php`.
+
+### Categorías
+
+Los contadores de `categorias.php` (`manuales_asignados_count`,
+`documentos_asignados_count`) cuentan **solo lo visible**: manuales
+`publicado` + no eliminados, documentos `visible_franquiciado` + no eliminados.
+Las dos condiciones en cada caso — un registro borrado puede haber quedado con
+estado publicado.
+
+⚠️ **`destroy()` cuenta distinto a propósito.** Ahí el conteo no es informativo:
+es la barrera que impide borrar físicamente una categoría con cosas colgando. Si
+contara solo lo visible, una categoría con manuales en borrador daría 0, se
+borraría, y quedarían filas huérfanas en `manual_category_assignments`. No
+unificar los dos criterios.
 
 ### Notificaciones
 In-app (badge en la topbar) + email vía un **observer** de `Notification`. La
@@ -326,6 +376,23 @@ no hay usuario resuelto — misma limitación que los emails inexistentes (§9).
 **Rollback**: `TURNSTILE_ENABLED=false` + `php artisan config:cache`. Sin tocar
 código.
 
+### Foto de perfil y avatares
+
+`avatarUsuario(u, extraClase)`, `inicialesDeUsuario()`, `abrirFotoPerfil()`,
+`cerrarFotoPerfil()` y el listener delegado viven en **`js/layout.js`**; el CSS
+(`.u-avatar*`, `.avatar-lb*`) en **`panel.css`**, que `head.php` carga en todas
+las páginas.
+
+El círculo con iniciales se renderiza **siempre**; si hay foto, la `<img>` se le
+monta encima y su `onerror` la elimina si el endpoint devuelve 404. Por eso el
+fallback no necesita lógica de permisos en el frontend.
+
+Tamaño base 32 px; `.u-avatar-sm` (30 px) lo usa `log.php`.
+
+El avatar del **topbar** se pinta aparte, en `iniciarLayout()`, y **sin**
+`u-avatar-click`: vive dentro del botón que va a `perfil.php` y con esa clase un
+clic dispararía las dos cosas.
+
 ### Cabeceras de seguridad (nginx)
 
 Viven en `/etc/nginx/snippets/security-headers.conf`, **incluido en tres lugares**
@@ -351,8 +418,13 @@ masivamente generaría un diff inmanejable. Antes de editar un archivo,
 
 | Archivo | EOL |
 |---|---|
-| `ManualController.php`, `NotificationController.php`, `PdfController.php`, `AuthController.php`, `AppServiceProvider.php`, `config/services.php`, `lectura.php`, `mis-manuales.php`, `api.php` | LF |
-| `ManualImageController.php`, `ProfilePhotoController.php`, `NotificationObserver.php`, `editor.php`, `usuarios.php`, `manuales.php`, `manuales-mi-empresa.php`, `log.php`, `aceptaciones.php`, `login.html`, `panel.css` | CRLF |
+| `ManualController.php`, `NotificationController.php`, `PdfController.php`, `AuthController.php`, `AppServiceProvider.php`, `config/services.php`, `lectura.php`, `mis-manuales.php`, `api.php`, **`usuarios.php`**, **`js/layout.js`**, **`layout/topbar.php`**, **`layout/footer.php`**, **`layout/head.php`** | LF |
+| `ManualImageController.php`, `ProfilePhotoController.php`, `NotificationObserver.php`, `FranchiseCategoryController.php`, `ManualCategoryAssignmentController.php`, `editor.php`, `manuales.php`, `manuales-mi-empresa.php`, `log.php`, `aceptaciones.php`, `categorias.php`, `documentos.php`, `login.html`, `styles/panel.css`, `styles/login.css` | CRLF |
+
+⚠️ **`usuarios.php` es LF, no CRLF.** Esta tabla lo listaba mal y se detectó al
+deduplicar el avatar. Un script que asuma CRLF ahí le mete `\r` a las 1.500
+líneas del archivo. Moraleja: **la tabla es una ayuda, no la fuente de verdad**
+— el script tiene que detectar el EOL del archivo, no confiar en esta lista.
 
 Los archivos de `public/layout/` están mezclados.
 
@@ -389,6 +461,21 @@ que se corre en Windows:**
 
 Regla general: cuando el verificador dice que algo está roto, **confirmar que el
 roto no es el verificador** antes de tocar el código.
+
+Esa regla se ganó en un solo día, con tres falsos positivos seguidos, todos por
+aplicar un patrón sobre el texto equivocado:
+
+1. El `//` de una URL, al quitar comentarios antes que los strings.
+2. `border: 1px` matcheando como `order: 1` — faltaba un límite de palabra.
+3. Buscar `['borrador', 'publicado']` en el código **ya limpiado de strings**,
+   donde por definición no puede aparecer.
+
+Antes de creerle a un chequeo que falla: mirar **sobre qué texto** está mirando.
+
+**Para borrar bloques grandes, no uses anclas literales.** Reproducir 55 líneas
+de CSS a mano es una fuente de typos, y un typo ahí borra de más. Cortá entre
+una marca de inicio y una de fin, y **antes de cortar verificá que el bloque no
+contenga selectores o funciones ajenas**. Es más seguro que la alternativa.
 
 ### Frontend
 - Sin build. Se edita el `.php` y listo.
@@ -474,12 +561,43 @@ entrar**.
   Es una convención, no una regla.
 - El bloqueo de F12 / DevTools en `lectura.php` **no funciona** en navegadores
   modernos. Se deja como fricción, no cuenta como protección.
-- El código del lightbox de avatares está duplicado en `usuarios.php` y
-  `log.php`. Si aparece en una tercera pantalla, conviene moverlo a `layout.js`.
+- ~~El código del lightbox de avatares está duplicado en `usuarios.php` y
+  `log.php`.~~ **Resuelto.** El CSS vive en `panel.css`, y `avatarUsuario()`,
+  `inicialesDeUsuario()`, `abrirFotoPerfil()`, `cerrarFotoPerfil()` y el
+  listener delegado viven en `layout.js`. Al unificar se descubrió que las dos
+  copias **ya habían divergido**: la de `log.php` manejaba `u` nulo y el nombre
+  sin apellido, la de `usuarios.php` no. Se tomó la de `log.php`, que era
+  superset.
+- **La foto de perfil todavía no se muestra en las notas ni en aceptaciones.**
+  El frontend está listo (`avatarUsuario()` es global), pero falta confirmar que
+  la API mande `avatar_url` en esos objetos anidados. `avatar_url` es un accessor
+  sobre `foto_url`: si la relación se serializa con lista de columnas —como
+  `with('user:id,nombre,apellido,email,rol')`— el accessor devuelve null y el
+  avatar **nunca aparece, sin dar error**: cae al fallback de iniciales y parece
+  que el frontend no anda. Verificar antes de tocar nada.
+- **El avatar del super_admin no lo ve nadie más.** `ProfilePhotoController::ver()`
+  autoriza a uno mismo, a la misma empresa o al super_admin — y el super_admin
+  tiene `empresa_id` NULL, así que para franquiciado y empleado su foto siempre
+  cae a iniciales. Es la decisión de V2-H-004 y es correcta, pero limita el valor
+  de mostrar avatares en las notas: los manuales suelen publicarlos super_admins.
 - Los escaneos externos (SSL Labs, securityheaders.com) **no miran nada de la
   aplicación**. Un A+ es compatible con que un `franquiciado` lea manuales de
   otra empresa. La superficie real está en los dos caminos de autenticación (§1)
   y en `ManualAccessService`, y se audita leyendo código.
+- **Las imágenes de los manuales viven en base64 dentro de `contenido_html`.**
+  Medición real: un manual con 4 imágenes daba 1.114.240 caracteres contra ~6.000
+  de los que no tienen ninguna. Eso reventaba el PDF (§11) y hoy está parcheado
+  subiendo `pcre.backtrack_limit`, que corre el techo sin eliminarlo. El arreglo
+  de fondo son dos trabajos: que Mammoth suba las imágenes a `manual_images` al
+  importar en vez de embeberlas, y una migración que extraiga los data URI ya
+  guardados.
+- **`resolverImagenes()` puede devolver null en silencio.** Las funciones `preg_*`
+  no lanzan excepción al pasarse del límite de PCRE: devuelven `null`. Esa función
+  declara `: string`, así que sería un `TypeError`. Hoy no se dispara porque un
+  HTML con base64 no contiene `manuales-imagenes` y corta antes del regex, pero un
+  manual grande que sí use imágenes del endpoint entraría por ahí. Falta un guard.
+- **No existe el usuario `manuales_deploy`.** El §10 lo da por hecho; en producción
+  las migraciones se corrieron con `dbmaster`. Crearlo con permisos acotados.
 
 ---
 
@@ -600,6 +718,49 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
 **Sin el worker de colas los mails no salen nunca, y no hay ningún error
 visible.** Es el fallo más silencioso de la lista.
 
+### Secuencia de un deploy con migración
+
+**El orden importa: la migración va ANTES del `git pull`.** Si el código sube
+primero, cualquier endpoint que use la columna nueva tira 500 hasta que exista.
+
+```bash
+cd /var/www/franchising-manager
+
+# 1. config:clear ANTES de migrar. Con bootstrap/cache/config.php presente,
+#    Laravel no evalúa config/database.php, así que DB_DEPLOY_USERNAME y
+#    DB_DEPLOY_PASSWORD se IGNORAN y la migración corre como manuales_user →
+#    "ALTER command denied". No da ninguna pista de que la causa es la caché.
+sudo -u www-data php artisan config:clear
+
+# 2. Migrar con el usuario de DDL. El espacio inicial mantiene la contraseña
+#    fuera del historial si HISTCONTROL=ignorespace.
+ DB_DEPLOY_USERNAME=... DB_DEPLOY_PASSWORD='...' \
+   sudo -u www-data -E php artisan migrate --database=mysql_deploy
+
+# 3. Recién ahora el código.
+git pull
+
+# 4. sudo -u www-data, NO sudo a secas: con sudo el archivo de caché queda
+#    con dueño root y después www-data no puede reescribirlo.
+sudo -u www-data php artisan config:cache
+
+# 5. El opcache no se limpia solo: sin esto PHP-FPM sirve el código viejo.
+sudo systemctl reload php8.3-fpm
+```
+
+Verificación: `sudo -u www-data php artisan migrate` debe decir
+"Nothing to migrate".
+
+**Si algo falla y hay que hacerlo a mano** (SQL directo contra RDS), no olvidar
+registrar la migración, o el próximo deploy la reintenta y falla porque la
+columna ya existe:
+
+```sql
+INSERT INTO migrations (migration, batch)
+VALUES ('<nombre_sin_.php>', (SELECT * FROM (SELECT MAX(batch) FROM migrations) t));
+```
+
+
 ### Verificación post-deploy
 
 ```bash
@@ -678,6 +839,40 @@ lectura. El `.env` es `640 www-data:www-data`: hace falta `sudo`. Si guardás es
 buffer creás un archivo nuevo y el original queda intacto — el síntoma es que
 nano pregunta "File Name to Write". Después de editar con sudo, verificar que el
 dueño no haya cambiado a `root`.
+
+**500 en producción sin ninguna pista** → `APP_DEBUG=false` reemplaza la pantalla
+de excepción por un "500 SERVER ERROR" genérico, y está bien que así sea. El
+error está en el log, pero con `LOG_CHANNEL=daily` el archivo se llama
+`laravel-AAAA-MM-DD.log`, no `laravel.log`. Si `ls -ld storage/logs` muestra una
+mtime reciente, el log se escribió: estás mirando el nombre equivocado.
+
+**`MpdfException: The HTML code size is larger than pcre.backtrack_limit`** →
+mPDF procesa todo el HTML con expresiones regulares y PHP corta el backtracking
+de PCRE en 1.000.000. No es un problema del entorno: es el tamaño del
+`contenido_html`, inflado por imágenes en base64. Parcheado con
+`ini_set('pcre.backtrack_limit', '10000000')` en `PdfController::generar()`,
+puesto **antes de `resolverImagenes()`** y no solo antes de `WriteHTML()`: esa
+función también corre un `preg_replace_callback` sobre el mismo HTML.
+
+**`--database=mysql_deploy` corre como `manuales_user`** → la config está
+cacheada. Ver §10.
+
+**`layout.js` carga DESPUÉS de los `<script>` de cada página** (`footer.php`).
+Cualquier función que se mueva a `layout.js` no existe todavía para código que
+corra durante el parseo: las páginas tienen que arrancar con
+`document.addEventListener('DOMContentLoaded', ...)`, no con una llamada directa.
+El síntoma es un `ReferenceError` que el `catch` de la página convierte en su
+mensaje de error genérico, así que no parece un problema de orden de carga.
+
+Y **`layout.js` NO se puede mover a `head.php`** para "arreglarlo": `topbar.php`
+tiene un `<script>` inline que documenta que sus funciones deben estar
+disponibles *antes* de que cargue `layout.js`. Invertir el orden rompe el
+sidebar y deja el topbar sin contenido.
+
+**`sudo php artisan ...` deja los archivos con dueño `root`** → después
+PHP-FPM (que corre como `www-data`) no puede reescribir
+`bootstrap/cache/config.php`. Anda hasta que algo necesita escribir, y ahí falla
+en el peor momento. Siempre `sudo -u www-data`.
 
 **`$_ENV` vacío en producción** → depende de `variables_order` en php.ini, que
 por defecto no incluye el entorno. Usar `getenv()`.
@@ -761,9 +956,17 @@ Lo que más ayuda a no romper nada:
    premisas falsas.
 10. **Antes de tocar el código porque un verificador se queja, confirmá que el
     roto no sea el verificador** (§8).
+11. **Un refactor de deduplicación no es neutro por defecto.** Antes de unificar
+    dos copias, compará las dos: en este proyecto ya habían divergido y una era
+    superset de la otra. Unificar en la equivocada rompe una pantalla en silencio.
+12. **Cuando el frontend "no anda", verificá que el dato llegue.** Varios bugs de
+    hoy se veían como fallas de UI y eran de backend o de infraestructura: el MIME
+    de `.mjs`, `avatar_url` que no viaja en relaciones con `select`, el contador
+    inflado. El fallback silencioso a un valor por defecto es el patrón que los
+    disfraza.
 
 ---
 
 *Documento generado en julio de 2026, actualizado el 27/07/2026 (migración a
-AWS, Turnstile, cabeceras de seguridad). Si el sistema cambió, este README
+AWS, Turnstile, cabeceras de seguridad, `estado_previo`, avatares compartidos). Si el sistema cambió, este README
 también debería.*

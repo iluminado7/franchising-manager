@@ -42,7 +42,7 @@ class ActivityLog extends Model
 
     // ── Helper estático para registrar acciones ───────────────────────
     public static function registrar(
-        int $userId,
+        ?int $userId,
         string $accion,
         string $ip,
         ?int $empresaId = null,
