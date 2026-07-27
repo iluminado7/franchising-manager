@@ -531,7 +531,22 @@ class ManualController extends Controller
         // el manual archivado aunque el franquiciante no tuviera acceso.
         $this->authorize('gestionar', $manual);
 
-        $manual->update(['estado' => 'archivado']);
+        // Guardar el estado actual ANTES de pisarlo con 'archivado': es lo unico
+        // que le permite a desarchivar() saber a donde volver.
+        //
+        // El in_array evita guardar 'archivado' sobre si mismo. Si alguien
+        // archivara un manual ya archivado, estado_previo quedaria en 'archivado'
+        // y el manual no podria salir nunca mas. El CHECK chk_estado_previo lo
+        // impide tambien a nivel base, pero mejor no llegar hasta ahi.
+        //
+        // Setter directo en vez de update(): estado_previo se deriva SIEMPRE en
+        // el servidor y no debe poder llegar desde el request, misma politica
+        // que los campos fuera de $fillable (§6 del README).
+        if (in_array($manual->estado, ['borrador', 'publicado'], true)) {
+            $manual->estado_previo = $manual->estado;
+        }
+        $manual->estado = 'archivado';
+        $manual->save();
 
         ActivityLog::registrar(
             userId:      $user->id,
@@ -554,7 +569,24 @@ class ManualController extends Controller
 
         $this->authorize('gestionar', $manual);
 
-        $manual->update(['estado' => 'borrador']);
+        $anterior = $manual->estado;
+
+        // Vuelve al estado que tenia antes de archivarse. El fallback a
+        // 'borrador' cubre los manuales que se archivaron ANTES de esta
+        // migracion: tienen estado_previo en NULL y no hay nada que recuperar.
+        //
+        // NO se crea una version nueva ni se notifica. El documento_hash de la
+        // version activa es lo que certifica cada aceptacion: publicar una
+        // version nueva invalidaria las aceptaciones existentes y obligaria a
+        // todos los socios a volver a aceptar un documento identico. Para el
+        // lector no cambio nada — el manual simplemente volvio a estar.
+        $destino = in_array($manual->estado_previo, ['borrador', 'publicado'], true)
+            ? $manual->estado_previo
+            : 'borrador';
+
+        $manual->estado        = $destino;
+        $manual->estado_previo = null;
+        $manual->save();
 
         ActivityLog::registrar(
             userId:      $user->id,
@@ -562,11 +594,20 @@ class ManualController extends Controller
             ip:          $request->ip(),
             entidadTipo: 'manuals',
             entidadId:   $manual->id,
-            detalle:     ['campo' => 'estado', 'valor_nuevo' => 'borrador'],
+            detalle:     [
+                'campo'          => 'estado',
+                'valor_anterior' => $anterior,
+                'valor_nuevo'    => $destino,
+            ],
             userAgent:   $request->userAgent()
         );
 
-        return response()->json(['message' => 'Manual restaurado a borrador.']);
+        // El estado va aparte del mensaje: el frontend lo necesita para el toast
+        // y no deberia tener que parsear texto para saber que paso.
+        return response()->json([
+            'message' => 'Manual restaurado a ' . $destino . '.',
+            'estado'  => $destino,
+        ]);
     }
 
     // ── HTMLPurifier ──────────────────────────────────────────────────

@@ -631,7 +631,7 @@ let manualEsPdf     = false;
 const LISTADO_POR_ROL = {
   franquiciado:  'mis-manuales.php',
   empleado:      'mis-manuales.php',
-  franquiciante: 'dashboard.php',   // llega en modo "vista previa" desde el dashboard
+  franquiciante: 'manuales-mi-empresa.php',  // su listado; dashboard.php es del super_admin
   super_admin:   'manuales.php',
 };
 

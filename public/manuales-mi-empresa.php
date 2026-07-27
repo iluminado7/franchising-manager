@@ -454,7 +454,7 @@ function renderTabla(lista) {
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           ${m.tipo === 'pdf' ? `
-          <button class="accion-btn" style="color:var(--dorado)" onclick="verArchivoPdf(${m.id})">
+          <button class="accion-btn" style="color:var(--dorado)" onclick="vistaPrevia('${m.public_id || m.id}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Ver PDF
           </button>
@@ -466,6 +466,11 @@ function renderTabla(lista) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
           </button>`}
+          ${version && m.tipo !== 'pdf' ? `
+          <button class="accion-btn" style="color:var(--dorado)" onclick="vistaPrevia('${m.public_id || m.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Vista previa
+          </button>` : ''}
           ${version ? `
           <button class="accion-btn" style="color:var(--gris5)" onclick="verAceptaciones(${m.id}, '${esc(m.titulo)}', ${version.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -732,8 +737,19 @@ async function subirPdfComoVersion(manualId, file) {
   return res.json();
 }
 
-// Abre el PDF de la version activa (endpoint autenticado, no el archivo crudo).
-function verArchivoPdf(id) { window.location.href = `${API}/manuales/${id}/archivo`; }
+// Vista previa: abre el manual en lectura.php tal como lo ve el receptor.
+//
+// Reemplaza a verArchivoPdf(), que iba directo a ${API}/manuales/{id}/archivo
+// y se salteaba lectura.php entero. Eso importa: lectura.php entrega el PDF con
+// manual.archivo_token (enlace opaco, atado al usuario y con vencimiento) y lo
+// abre en el visor pdf.js propio, sin la barra del navegador con sus botones de
+// descargar e imprimir. Por la ruta vieja no pasaba nada de eso.
+//
+// Navega con el identificador PUBLICO (?m=<ulid>), igual que el super_admin.
+// Fallback a m.id: lectura.php acepta ?m= y ?id= indistintamente.
+function vistaPrevia(ref) {
+  window.location.href = `${BASE_PHP}/lectura.php?m=${encodeURIComponent(ref)}`;
+}
 
 // Publica una version nueva de un manual PDF. Se confirma antes porque esto
 // dispara notificaciones y mails a todos los socios asignados.
@@ -892,8 +908,11 @@ async function ejecutarArchivar() {
 }
 async function desarchivarManual(id, titulo) {
   try {
-    await apiFetch('POST', `/manuales/${id}/desarchivar`);
-    mostrarToast(`"${titulo}" restaurado a borrador.`, 'exito');
+    // El backend decide el destino: un manual que estaba publicado vuelve a
+    // publicado, no a borrador. Se lee de la respuesta en vez de asumirlo.
+    const res  = await apiFetch('POST', `/manuales/${id}/desarchivar`);
+    const dest = res?.estado === 'publicado' ? 'publicado' : 'borrador';
+    mostrarToast(`"${titulo}" restaurado a ${dest}.`, 'exito');
     todosLosManuales = await apiFetch('GET', '/manuales');
     aplicarFiltros();
   } catch (e) {

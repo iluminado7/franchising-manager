@@ -558,7 +558,7 @@ function renderTabla(lista) {
               Editar
             </button>`}
             ${version ? `
-            <button class="accion-btn" style="color:var(--dorado)" onclick="vistaPrevia(${m.id})">
+            <button class="accion-btn" style="color:var(--dorado)" onclick="vistaPrevia('${m.public_id || m.id}')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               Vista previa
             </button>
@@ -1011,10 +1011,20 @@ function mostrarNuevoError(msg) {
 function irEditor(id) { window.location.href = `${BASE_PHP}/editor.php?id=${id}`; }
 
 // Vista previa: abre el manual en lectura.php tal como lo verá el receptor.
-// preview=1 marca que se abrió en modo previsualización (mismo render).
-// Pestaña nueva para no perder el listado.
-function vistaPrevia(id) {
-    window.location.href = `${BASE_PHP}/lectura.php?id=${id}&preview=1`;
+//
+// Navega con el identificador PUBLICO (?m=<ulid>), no con el id de la base:
+// es lo que dice el §7 del README y evita que se puedan enumerar manuales
+// probando ids 1, 2, 3. El ULID no es un secreto; lo que protege el contenido
+// sigue siendo el endpoint autenticado.
+//
+// Se saco &preview=1: era un parametro MUERTO. lectura.php no lo lee en ningun
+// lado (grep -c preview lectura.php = 0), asi que aparentaba un modo que no
+// existe.
+//
+// Fallback a m.id por si algun manual viejo no tuviera public_id; lectura.php
+// acepta ?m= y ?id= indistintamente.
+function vistaPrevia(ref) {
+    window.location.href = `${BASE_PHP}/lectura.php?m=${encodeURIComponent(ref)}`;
 }
 
 // ── ARCHIVAR ──────────────────────────────────────────────────
@@ -1070,8 +1080,11 @@ async function ejecutarEliminar() {
 // ── DESARCHIVACIÓN ───────────────────────────────────────────────
 async function desarchivarManual(id, titulo) {
   try {
-    await apiFetch('POST', `/manuales/${id}/desarchivar`);
-    mostrarToast(`"${titulo}" restaurado a borrador.`, 'exito');
+    // El backend decide el destino: un manual que estaba publicado vuelve a
+    // publicado, no a borrador. Se lee de la respuesta en vez de asumirlo.
+    const res  = await apiFetch('POST', `/manuales/${id}/desarchivar`);
+    const dest = res?.estado === 'publicado' ? 'publicado' : 'borrador';
+    mostrarToast(`"${titulo}" restaurado a ${dest}.`, 'exito');
     todosLosManuales = await apiFetch('GET', '/manuales');
     aplicarFiltros();
   } catch (e) {
