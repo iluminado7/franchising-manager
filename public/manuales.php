@@ -240,7 +240,7 @@ include 'layout/head.php';
       <h3>Eliminar manual</h3>
     </div>
     <div class="modal-body">
-      <p style="color:var(--gris4);margin:12px 0 24px">¿Descartar el manual "<span id="modal-eliminar-titulo" style="color:var(--blanco);font-weight:500"></span>"? Esta acción es reversible.</p>
+      <p style="color:var(--gris4);margin:12px 0 24px">¿Descartar el manual "<span id="modal-eliminar-titulo" style="color:var(--blanco);font-weight:500"></span>"? Esta acción es irreversible.</p>
     </div> 
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>

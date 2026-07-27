@@ -1587,7 +1587,7 @@ async function previsualizarDocumento(id) {
 // ── MODAL ELIMINAR DOCUMENTO ──────────────────────────────────
 function abrirModalEliminar(id, titulo) {
   pendingEliminar = id;
-  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los Socios comerciales y empleados. El super_admin podrá restaurarlo si fue un error.`;
+  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los Socios comerciales y empleados.`;
   document.getElementById('eliminar-error').textContent = '';
   document.getElementById('eliminar-error').style.display = 'none';
   document.getElementById('modal-eliminar').classList.add('open');

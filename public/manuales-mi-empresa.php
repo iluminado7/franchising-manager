@@ -904,7 +904,7 @@ async function desarchivarManual(id, titulo) {
 // ── MODAL ELIMINAR MANUAL ─────────────────────────────────────
 function abrirModalEliminar(id, titulo) {
   pendingEliminar = id;
-  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los franquiciados y empleados. El super_admin podrá restaurarlo si fue un error.`;
+  document.getElementById('eliminar-msg').textContent = `¿Eliminar "${titulo}"? Dejará de ser visible para los franquiciados y empleados. Esta acción es irreversible`;
   document.getElementById('eliminar-error').textContent = '';
   document.getElementById('eliminar-error').style.display = 'none';
   document.getElementById('modal-eliminar').classList.add('open');
