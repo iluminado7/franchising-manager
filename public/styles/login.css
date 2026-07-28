@@ -108,7 +108,7 @@ body.tema-claro {
      llena la columna --marca-ancho y el alto sale solo por la proporcion del
      archivo (1080x438), asi que no se deforma. */
   .brand-logo {
-    width: 100%;
+    width: 85%;
     height: auto;
     display: block;
     flex-shrink: 0;
