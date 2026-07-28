@@ -393,6 +393,48 @@ El avatar del **topbar** se pinta aparte, en `iniciarLayout()`, y **sin**
 `u-avatar-click`: vive dentro del botón que va a `perfil.php` y con esa clase un
 clic dispararía las dos cosas.
 
+### Errores del servidor (tabla `error_logs`)
+
+Pantalla `errores.php`, solo para `super_admin`. Existe porque los errores 5xx
+solo quedaban en `storage/logs`: había que entrar por SSH para verlos, y en la
+práctica nadie los miraba.
+
+**No expone el archivo de log.** Un hook `report()` en `bootstrap/app.php`
+escribe en una tabla propia con exactamente lo que se decide guardar. Exponer
+`storage/logs` en una pantalla devolvería por la puerta de atrás lo que
+`APP_DEBUG=false` esconde, y encima detrás de un solo chequeo de rol.
+
+**Una fila por error ÚNICO**, agrupada por `huella` = `sha256(clase|archivo|línea)`,
+con `ocurrencias`, `primera_vez` y `ultima_vez`. Si algo revienta 4.000 veces se
+ve una fila que dice 4.000, no 4.000 filas. Sin eso, un error en bucle llena la
+tabla y tapa todo lo demás justo cuando más se necesita la pantalla.
+
+Lo que **no** se guarda, y es lo que hace segura la idea:
+
+- **Nunca el cuerpo del request.** El POST a `/api/login` lleva la contraseña en
+  texto plano.
+- **La ruta va redactada.** `/manuales/archivo/{token}` usa un token opaco, atado
+  al usuario y válido 60 minutos: es una credencial funcional. Se guarda el
+  literal `{token}`. Ídem los valores de `password` y `turnstile_token` en el
+  query string.
+- **Solo 5xx.** Los 404, 422, 401 y 403 son comportamiento normal; incluirlos
+  ahoga la señal.
+- **El trace, recortado** a los primeros 8 frames.
+
+El guardado va en `try/catch` vacío a propósito: si falla registrar el error **no
+puede lanzar otra excepción**, porque eso es un bucle. `user_id` es nullable —
+los errores también le pasan a gente sin sesión.
+
+`resuelto` lo marca el super_admin desde la pantalla, y una ocurrencia nueva lo
+vuelve a 0: si reapareció, no estaba resuelto.
+
+Guard doble: la ruta está en el grupo `role:super_admin` **y** el controlador
+re-verifica `esSuperAdmin()`. Son stack traces; si un refactor moviera esas rutas
+de grupo, quedarían expuestas en silencio.
+
+A diferencia de `activity_logs`, estos registros **se pueden borrar**: son
+diagnóstico, no cumplimiento.
+
 ### Cabeceras de seguridad (nginx)
 
 Viven en `/etc/nginx/snippets/security-headers.conf`, **incluido en tres lugares**
@@ -544,8 +586,64 @@ Cuando se escriba, tiene que incluir sí o sí:
 Si se pasa a enforce sin eso y con `TURNSTILE_ENABLED=true`, **nadie puede
 entrar**.
 
+### ⚠️ Las fechas las escribe MySQL, no PHP
+
+**Es la deuda más grande abierta.** Todas las tablas tienen
+`DEFAULT CURRENT_TIMESTAMP` y `created_at` NO está en los `$fillable`, así que la
+línea `'created_at' => now()` de `ActivityLog::registrar()` es **código muerto**:
+`create()` la descarta en silencio y la columna la llena la base.
+
+Consecuencia: el huso depende del servidor de base, no de la aplicación.
+
+| | MySQL `NOW()` |
+|---|---|
+| Producción (RDS) | **UTC** |
+| Local (XAMPP) | **Hora de Buenos Aires** |
+
+La misma app guarda valores distintos según dónde corra. En producción las fechas
+se muestran **tres horas adelantadas**; en local se ven bien.
+
+Y hay un segundo problema encima: **`protected $dates` fue eliminado en Laravel
+10+**. Los ~19 modelos que lo declaran creen estar casteando sus fechas y no
+hacen nada. Sin cast, la fecha se serializa como string crudo de MySQL sin zona,
+y JavaScript —ante un string con espacio en vez de `T`— la interpreta como hora
+local.
+
+**Lo que NO funciona, probado:**
+
+- Castear a `datetime` sin arreglar la escritura: arregla producción y **rompe
+  local**, porque ahí el valor guardado ya es hora local y el cast lo etiqueta
+  como UTC.
+- Cambiar `APP_TIMEZONE`: dejaría el histórico en un huso y lo nuevo en otro, con
+  un salto de tres horas en el medio. En una herramienta cuyo valor es probar
+  cuándo pasó cada cosa, es caro.
+
+**El arreglo real:** que PHP escriba las fechas (`created_at` al `$fillable`, o
+setter explícito), y recién entonces castear. PHP está en UTC en los dos
+entornos, así que deja de importar la configuración de cada base. Hay que
+revisar cada modelo con `DEFAULT CURRENT_TIMESTAMP` y decidir qué hacer con lo ya
+guardado en producción.
+
+Prioridad dentro de eso: **`Acceptance.aceptado_at`**, que es el timestamp que
+prueba cuándo un socio aceptó una versión.
+
 ### Otras
 
+- **No hay recuperación de contraseña.** `AuthController` tiene `login`, `logout`,
+  `me`, `updateEmail` y `updatePassword` — y esta última exige la contraseña
+  actual, así que sirve para cambiarla, no para recuperarla. Las tablas
+  `password_reset_*` tampoco existen (la base viene de dump, no de migraciones).
+  **Salida provisoria:** `UserController::update()` acepta un `password` opcional,
+  así que un admin puede resetearla desde `usuarios.php` → Editar. Verificar si
+  esa vía registra en `activity_logs` y si revoca las sesiones del afectado — si
+  no, es un hueco: es la operación que permite tomar el control de una cuenta.
+  Cuando se construya el flujo real: mensaje neutro (no revelar si el email
+  existe), Turnstile en el formulario, token de un solo uso hasheado con
+  vencimiento, rate limit compuesto, y revocación de sesiones al resetear.
+- **`mostrarToast` está duplicada** en al menos cuatro páginas (`aceptaciones.php`,
+  `categorias.php`, `documentos.php`...). Mismo caso que el lightbox de avatares:
+  conviene moverla a `layout.js`, comparando las copias antes de unificar por si
+  divergieron.
 - **HSTS no está puesto.** Es lo único que separa el A (actual) del A+ en SSL
   Labs. La redirección HTTP→HTTPS ya funciona (301), pero queda la primera
   petición interceptable. Se agrega al snippet de headers y **se escala**:
@@ -698,7 +796,8 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
 - [ ] `TrustProxies` configurado (detrás de balanceador)
 - [ ] `FILESYSTEM_DISK=s3` + bucket **privado**
 - [ ] `CACHE_STORE=database` (el rate limiter necesita contador compartido)
-- [ ] Worker de colas corriendo: `php artisan queue:work` supervisado
+- [ ] Worker de colas corriendo — lo administra **supervisor**, no systemd:
+      `sudo supervisorctl status businesspartner-worker`
 - [ ] `upload_max_filesize` y `post_max_size` ≥ 50M
 - [ ] `mkdir storage/app/mpdf-tmp`
 - [ ] `public/js/pdfjs/` desplegado (1,75 MB, no debe estar en `.gitignore`)
@@ -717,6 +816,24 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
 
 **Sin el worker de colas los mails no salen nunca, y no hay ningún error
 visible.** Es el fallo más silencioso de la lista.
+
+### El worker lo administra supervisor, NO systemd
+
+Programa `businesspartner-worker`, configuración en `/etc/supervisor/conf.d/`.
+
+```bash
+sudo supervisorctl status
+sudo supervisorctl restart businesspartner-worker
+```
+
+Buscarlo con `systemctl status laravel-worker` **no lo encuentra**, y eso lleva a
+concluir que no está supervisado y a crear una unidad de systemd duplicada. Ya
+pasó. Para verificarlo de verdad: `supervisorctl status`, o mirar el PPID del
+proceso — si el padre es el PID de `supervisord`, está cubierto.
+
+El `--max-time=3600` hace que el worker se cierre solo cada hora, lo cual es
+correcto (evita fugas de memoria) **porque supervisor lo relanza**. Si algún día
+se administrara a mano, esa opción se vuelve una bomba de tiempo.
 
 ### Secuencia de un deploy con migración
 
@@ -834,6 +951,31 @@ memoria sigue con la config vieja y el sitio sigue en pie— pero el error del
 reload es mucho menos claro que el del `-t`, y te manda a buscar al lugar
 equivocado. El `-t` te dice archivo y línea.
 
+**Un pedido sin autenticar a `/api/*` devolvía 500, no 401** → Laravel intenta
+redirigir a la ruta llamada `login`, que en un backend headless no existe, y eso
+revienta como `RouteNotFoundException`. Resuelto con un `render()` en
+`bootstrap/app.php` que lo convierte en 401. **Este bug llevaba tiempo invisible
+y lo encontró la tabla `error_logs` antes de tener pantalla**: sin ella, cada
+sesión vencida generaba un 500 que nadie veía.
+
+**Una columna nullable en la base no alcanza si la firma del método declara el
+tipo estricto** → `activity_logs.user_id` pasó a nullable, pero
+`ActivityLog::registrar()` seguía declarando `int $userId`. Pasarle `null` daba
+`TypeError`, que el `try/catch` de `logLoginFallido()` se comía en silencio: la
+columna ya aceptaba NULL y seguía sin registrarse nada. Si algo "no guarda" y no
+hay error visible, **forzalo desde `tinker`** — ahí sí se ve.
+
+**`throw` dentro de tinker NO dispara el hook de errores** → tinker atrapa la
+excepción en su propio bucle y no pasa por el manejador de Laravel. Para probar
+el registro hay que usar `report(new \RuntimeException('...'))`.
+
+**`mostrarToast` y los estilos de modal NO son globales** → cada página define los
+suyos en su propio `<style>` y su propio `<script>`. `panel.css` tiene las
+tarjetas, la tabla y el layout; pero `.modal-overlay`, `.accion-pill`,
+`.accion-btn`, los tabs y `mostrarToast` viven duplicados por página. Asumir que
+son globales produce una pantalla a medio estilar y botones que no refrescan la
+vista (la función revienta antes del `await`).
+
 **`nano archivo` abre un buffer vacío en vez del archivo** → no tenés permiso de
 lectura. El `.env` es `640 www-data:www-data`: hace falta `sudo`. Si guardás ese
 buffer creás un archivo nuevo y el original queda intacto — el síntoma es que
@@ -903,6 +1045,7 @@ app/
 │   ├── DocumentController.php       documentos y sus versiones
 │   ├── AcceptanceController.php     aceptación digital
 │   ├── NotificationController.php   listado + resolución de deep-links
+│   ├── ErrorLogController.php       errores 5xx (solo super_admin)
 │   └── ...
 ├── Models/                          Manual, ManualVersion, User, Empresa...
 ├── Observers/NotificationObserver.php   dispara los emails
@@ -959,7 +1102,11 @@ Lo que más ayuda a no romper nada:
 11. **Un refactor de deduplicación no es neutro por defecto.** Antes de unificar
     dos copias, compará las dos: en este proyecto ya habían divergido y una era
     superset de la otra. Unificar en la equivocada rompe una pantalla en silencio.
-12. **Cuando el frontend "no anda", verificá que el dato llegue.** Varios bugs de
+12. **En este proyecto casi nada es global.** `mostrarToast`, los estilos de
+    modal, los botones de acción y las píldoras están duplicados por página.
+    Antes de usar una clase o una función "que ya existe", confirmá dónde está
+    definida: `panel.css` y `layout.js` tienen menos de lo que parece.
+13. **Cuando el frontend "no anda", verificá que el dato llegue.** Varios bugs de
     hoy se veían como fallas de UI y eran de backend o de infraestructura: el MIME
     de `.mjs`, `avatar_url` que no viaja en relaciones con `select`, el contador
     inflado. El fallback silencioso a un valor por defecto es el patrón que los
@@ -967,6 +1114,7 @@ Lo que más ayuda a no romper nada:
 
 ---
 
-*Documento generado en julio de 2026, actualizado el 27/07/2026 (migración a
-AWS, Turnstile, cabeceras de seguridad, `estado_previo`, avatares compartidos). Si el sistema cambió, este README
+*Documento generado en julio de 2026, actualizado el 28/07/2026
+(migración a AWS, Turnstile, cabeceras de seguridad, `estado_previo`, avatares
+compartidos, registro de errores en base). Si el sistema cambió, este README
 también debería.*
