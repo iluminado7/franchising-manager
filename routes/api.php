@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ErrorLogController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\ManualController;
@@ -89,6 +90,16 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
     // ── SOLO SUPER ADMIN ──────────────────────────────────────────────
     Route::middleware('role:super_admin')->group(function () {
+
+        // Errores 5xx del servidor. Los escribe el hook report() de
+        // bootstrap/app.php, agrupados por huella (clase+archivo+linea).
+        //
+        // El controlador re-verifica esSuperAdmin() ademas de este grupo: son
+        // stack traces, y si un refactor moviera estas rutas de grupo quedarian
+        // expuestas sin que nadie lo note.
+        Route::get('/errores',                 [ErrorLogController::class, 'index']);
+        Route::post('/errores/{id}/resolver',  [ErrorLogController::class, 'resolver']);
+        Route::delete('/errores/{id}',         [ErrorLogController::class, 'destroy']);
 
         // Empresas
         Route::get('/empresas',                   [EmpresaController::class, 'index']);
