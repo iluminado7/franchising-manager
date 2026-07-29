@@ -31,6 +31,10 @@ class User extends Authenticatable
     //   - password_hash  → cambio de contraseña sin verificación
     //   - deleted_by     → soft-delete de otros usuarios
     //   - deleted_at     → auto-eliminación o eliminación de otros
+    //   - anonimizado_at → marca la purga de datos personales. Es
+    //                      irreversible: quien pudiera setearla desde un
+    //                      request podria dejar una cuenta inutilizable.
+    //   - anonimizado_por
     //
     // Defensa en profundidad: aunque los controllers actuales ya validan cada
     // campo con $request->validate(), esta protección a nivel modelo evita que
@@ -40,7 +44,9 @@ class User extends Authenticatable
         'email',
         'nombre',
         'apellido',
-        'dni',
+        // Una sola columna para CUIT y CUIL: mismo formato, mismo digito
+        // verificador. Para el rol empleado la UI lo llama CUIL.
+        'cuit',
         'celular',
     ];
 
@@ -49,8 +55,9 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'activo'     => 'boolean',
-        'deleted_at' => 'datetime',
+        'activo'         => 'boolean',
+        'deleted_at'     => 'datetime',
+        'anonimizado_at' => 'datetime',
     ];
 
     // avatar_url (URL publica de la foto en S3) disponible en las respuestas JSON.
@@ -72,12 +79,41 @@ class User extends Authenticatable
         return $this->belongsTo(User::class, 'deleted_by');
     }
 
+    // super_admin que ejecuto la purga de datos personales
+    public function anonimizadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'anonimizado_por');
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────
 
     // Excluir usuarios eliminados (deleted_at NOT NULL)
     public function scopeNoEliminados($query)
     {
         return $query->whereNull('deleted_at');
+    }
+
+    // Usuario cuyos datos personales fueron purgados.
+    //
+    // La fila sigue existiendo y siempre va a seguir existiendo: es el
+    // sujeto al que apuntan acceptances y activity_logs, y las dos FK son
+    // ON DELETE RESTRICT. Lo que se destruyo son los datos de la persona.
+    //
+    // Un usuario anonimizado NO se puede restaurar: no le queda email con
+    // el cual entrar ni contrasena conocida.
+    public function estaAnonimizado(): bool
+    {
+        return $this->anonimizado_at !== null;
+    }
+
+    // Excluir usuarios purgados (anonimizado_at NOT NULL).
+    //
+    // Complementa a noEliminados(), pero no es lo mismo: un eliminado se
+    // puede restaurar y por eso el super_admin lo ve con include_deleted=1.
+    // Un purgado no: ya no queda nada de la persona.
+    public function scopeNoPurgados($query)
+    {
+        return $query->whereNull('anonimizado_at');
     }
 
     // ── Relaciones de perfil (1 a 1) ────────────────────────────────

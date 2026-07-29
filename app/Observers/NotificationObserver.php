@@ -36,6 +36,9 @@ class NotificationObserver
         // fuera del visor. Va por mail porque el destinatario (franquiciante /
         // super_admin) no vive mirando el panel.
         'acceso_anomalo_pdf',
+        // Nota de un socio comercial. Va por mail porque el franquiciante no
+        // vive mirando el panel, y una sugerencia sin leer no sirve de nada.
+        'nota_manual',
     ];
 
     public function created(Notification $notificacion): void
@@ -74,9 +77,14 @@ class NotificationObserver
         $base = rtrim((string) (config('app.frontend_url') ?: config('app.url')), '/');
         // Las alertas de acceso llevan al registro de actividad, no al panel:
         // lo que el destinatario quiere ver es QUIEN accedio y cuando.
-        $url  = $notificacion->tipo === 'acceso_anomalo_pdf'
-            ? $base . '/log.php'
-            : $base . '/dashboard.php';
+        // Cada tipo al lugar donde se resuelve, no al panel generico:
+        //   acceso_anomalo_pdf -> el registro dice QUIEN accedio y cuando
+        //   nota_manual        -> el listado, donde se abre el hilo de notas
+        $url = match ($notificacion->tipo) {
+            'acceso_anomalo_pdf' => $base . '/log.php',
+            'nota_manual'        => $base . '/manuales-mi-empresa.php',
+            default              => $base . '/dashboard.php',
+        };
 
         try {
             Mail::to($user->email)->queue(

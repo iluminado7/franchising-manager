@@ -297,8 +297,16 @@ class FranchiseCategoryController extends Controller
      * según la relación y el frontend (categorias.php) dejaría de encontrar
      * manuales_asignados_count y documentos_asignados_count.
      *
-     * El conteo de usuarios queda sin filtrar: "cuántos usuarios pertenecen a
-     * la categoría" es otra pregunta, y no fue reportado como incorrecto.
+     * Los usuarios eliminados tampoco se cuentan. La fila de user_categories
+     * SOBREVIVE al soft-delete a proposito —si el usuario se restaura,
+     * recupera sus categorias— pero para la pantalla ese usuario ya no esta,
+     * y el numero decia lo contrario.
+     *
+     * Alcanza con deleted_at: un usuario purgado siempre esta eliminado
+     * primero (purgar() exige deleted_at no nulo), asi que queda cubierto.
+     *
+     * Los inactivos SI se cuentan: una cuenta bloqueada sigue perteneciendo a
+     * la categoria y puede volver a habilitarse. Es distinto de eliminada.
      *
      * NO usar esto en destroy(): ahí el conteo es una barrera de integridad y
      * necesita ver TODO lo asignado. Está explicado en ese método.
@@ -306,7 +314,10 @@ class FranchiseCategoryController extends Controller
     private static function conteosVisibles(): array
     {
         return [
-            'usuarios',
+            // La columna va calificada ('users.deleted_at') y no pelada: la
+            // query trae users unido al pivote, y sin el prefijo la condicion
+            // seria ambigua si user_categories tuviera su propia deleted_at.
+            'usuarios' => fn ($q) => $q->whereNull('users.deleted_at'),
 
             'manualesAsignados as manuales_asignados_count' => fn ($q) =>
                 $q->where('manuals.estado', 'publicado')

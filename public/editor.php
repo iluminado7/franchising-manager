@@ -2640,6 +2640,23 @@ function usuariosDeCategoria(catId) {
 }
 
 // HTML de la sublista de usuarios de una categoria.
+// Etiqueta con la sucursal del usuario, para el arbol de visibilidad.
+//
+// En una red con varias sucursales hay homonimos, y sin este dato se asigna a
+// ciegas. El dato ya viaja en GET /usuarios; no hace falta tocar el backend.
+//
+// Devuelve string VACIO cuando no corresponde: un socio comercial puede no
+// tener sucursal (un distribuidor, por ejemplo) y el franquiciante y el
+// super_admin no tienen franchise_staff. Poner "Sin sucursal" seria ruido y
+// sugeriria que falta cargar algo.
+//
+// Usa escNota() y no esc(): es la funcion de escape de este archivo.
+function sucursalDeUsuarioEditor(u) {
+  const nombre = u?.franchise_staff?.franquicia?.nombre;
+  if (!nombre) return '';
+  return `<span style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">· ${escNota(nombre)}</span>`;
+}
+
 function sublistaUsuariosHTMLEditor(catId) {
   const us = usuariosDeCategoria(catId);
   if (!us.length) {
@@ -2653,7 +2670,7 @@ function sublistaUsuariosHTMLEditor(catId) {
   const items = us.map(u => `
     <label style="display:flex;align-items:center;gap:8px;padding:3px 2px;cursor:pointer">
       <input type="checkbox" data-user-cat="${catId}" data-user-id="${u.id}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleUsuarioEditor(${u.id})">
-      <span style="font-size:12px;color:var(--blanco)">${escNota((u.nombre || '') + ' ' + (u.apellido || ''))}</span>
+      <span style="font-size:12px;color:var(--blanco)">${escNota((u.nombre || '') + ' ' + (u.apellido || ''))}</span>${sucursalDeUsuarioEditor(u)}
     </label>`).join('');
   return todos + items;
 }

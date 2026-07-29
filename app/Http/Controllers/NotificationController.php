@@ -84,6 +84,22 @@ class NotificationController extends Controller
             return ['log.php', true];
         }
 
+        // ── NOTA DE UN SOCIO COMERCIAL ──
+        // Tambien va ANTES de la rama de manuales, y por el mismo motivo que
+        // la alerta de arriba: cuelga de manual_id, asi que caeria ahi y
+        // terminaria en lectura.php — que no es donde se leen las notas.
+        //
+        // Y peor: esa rama exige estado 'publicado'. Si despues archivan el
+        // manual, la notificacion resolveria [null, false] y la nota quedaria
+        // muerta. El feedback ya fue escrito: sigue valiendo aunque el manual
+        // se archive, y el franquiciante ve los archivados en su listado.
+        if ($n->tipo === 'nota_manual') {
+            return [
+                $user->esFranquiciante() ? 'manuales-mi-empresa.php' : 'manuales.php',
+                true,
+            ];
+        }
+
         // ── MANUALES ──
         // El manual puede venir directo (manual_id) o colgando de la version
         // (modificacion_manual, manual_asignado -> manual_version_id).

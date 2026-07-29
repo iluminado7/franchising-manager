@@ -34,6 +34,26 @@ class AppServiceProvider extends ServiceProvider
         //     cuenta única. Rotar IPs no ayuda si el email queda bloqueado.
         //
         // Si CUALQUIERA de los dos se supera, el login se bloquea.
+        // Recuperacion de contrasena. Mismo patron compuesto que 'login', pero
+        // con el limite por email en HORAS.
+        //
+        // Este endpoint manda MAILS A TERCEROS, asi que el abuso no es solo
+        // fuerza bruta: alguien puede usarlo para bombardear la casilla de un
+        // franquiciado, o para barrer direcciones y ver cuales existen.
+        //
+        //   - Por IP: 5/minuto. Corta el barrido desde un origen.
+        //   - Por email: 3/HORA. Nadie legitimo necesita tres enlaces en una
+        //     hora, y es lo unico que frena a quien rota IPs para hostigar a
+        //     una persona puntual.
+        RateLimiter::for('password-reset', function (Request $request) {
+            $email = strtolower((string) $request->input('email', ''));
+
+            return [
+                Limit::perMinute(5)->by('pwreset_ip:' . $request->ip()),
+                Limit::perHour(3)->by('pwreset_email:' . $email),
+            ];
+        });
+
         RateLimiter::for('login', function (Request $request) {
             $email = strtolower((string) $request->input('email', ''));
 

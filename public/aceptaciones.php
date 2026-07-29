@@ -16,7 +16,7 @@ include 'layout/head.php';
       <div class="page-header">
         <div>
           <div class="page-title">Aceptaciones</div>
-          <div class="page-sub">Compliance de manuales — aceptaciones digitales y firmas físicas</div>
+          <div class="page-sub">Estado de manuales — lecturas y firmas físicas</div>
         </div>
         <button class="btn btn-primary" id="btn-subir" style="display:none" onclick="abrirModalSubir()" disabled>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -74,7 +74,7 @@ include 'layout/head.php';
                 <th>Manual</th>
                 <th>Versión</th>
                 <th>Estado</th>
-                <th>Aceptación digital</th>
+                <th>Leído</th>
                 <th>Firma física</th>
                 <th style="text-align:right">Acciones</th>
               </tr>
@@ -83,6 +83,10 @@ include 'layout/head.php';
               <tr><td colspan="8"><div class="empty-state">Cargando...</div></td></tr>
             </tbody>
           </table>
+
+          <!-- Lo dibuja renderPaginacion() de layout.js. Si hay una sola
+               pagina, la barra entera queda oculta. -->
+          <div id="paginacion"></div>
         </div>
       </div>
 
@@ -539,7 +543,7 @@ async function cargarFilas() {
 
   document.getElementById('tabla-titulo').textContent = 'Cargando...';
   document.getElementById('tabla-body').innerHTML =
-    '<tr><td colspan="8"><div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando aceptaciones...</div></td></tr>';
+    '<tr><td colspan="8"><div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando registros...</div></td></tr>';
 
   try {
     const res = await apiFetch('GET', `/firmas-fisicas?${params.toString()}`);
@@ -566,22 +570,39 @@ function aplicarFiltroTexto() {
     });
   }
 
+  // Al filtrar hay que volver a la 1: si se estaba en la pagina 5 y el
+  // resultado tiene 2, el slice apuntaria a un rango inexistente y la tabla
+  // saldria VACIA sin ninguna explicacion.
+  paginaActual = 1;
   renderTabla(lista);
 }
+
+// 10 por pagina: esta es una pantalla de gestion, se mira fila por fila.
+// (log.php usa 50 porque es de consulta y conviene ver mucho de una.)
+const POR_PAGINA = 10;
+let paginaActual = 1;
 
 function renderTabla(filas) {
   const body = document.getElementById('tabla-body');
   const titulo = document.getElementById('tabla-titulo');
 
   if (!filas.length) {
-    body.innerHTML = '<tr><td colspan="8"><div class="empty-state">No hay aceptaciones para mostrar con estos filtros.</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="8"><div class="empty-state">No hay registros para mostrar con estos filtros.</div></td></tr>';
     titulo.textContent = '0 registros';
+    // Sin esto quedaria visible la paginacion del filtro anterior.
+    renderPaginacion({ total: 0, pagina: 1, porPagina: POR_PAGINA, onCambio: () => {} });
     return;
   }
 
   titulo.textContent = `${filas.length} registro(s)`;
 
-  body.innerHTML = filas.map(f => {
+  // El titulo sigue mostrando el TOTAL, no lo de la pagina: es el dato que
+  // importa. El "Mostrando X-Y de Z" del pie cubre el detalle.
+  const total  = filas.length;
+  const inicio = (paginaActual - 1) * POR_PAGINA;
+  const fin    = Math.min(inicio + POR_PAGINA, total);
+
+  body.innerHTML = filas.slice(inicio, fin).map(f => {
     const nombreCompleto = `${f.socio.nombre || ''} ${f.socio.apellido || ''}`.trim() || '—';
     const sucursal = f.franquicia
       ? esc(f.franquicia.nombre)
@@ -591,12 +612,20 @@ function renderTabla(filas) {
     const hasDigital = !!f.aceptacion_digital;
     const hasFisica  = !!f.firma_fisica;
     let estadoPill;
+    // Los nombres de clase quedan como estan: son internos, igual que
+    // `franquiciado` en la base mientras la UI dice "Socio comercial".
+    //
+    // El texto SI cambia de significado, no solo de palabra. Antes
+    // "Solo digital" era cumplimiento parcial. Ahora que el cumplimiento
+    // es la firma fisica, esa misma fila significa cumplimiento CERO: la
+    // persona abrio el manual y no firmo nada. "Falta firma" lo dice; un
+    // nombre que suene a "casi listo" hace que nadie salga a buscarla.
     if (hasDigital && hasFisica) {
-      estadoPill = '<span class="estado-pill estado-completo">Completo</span>';
+      estadoPill = '<span class="estado-pill estado-completo">Firmado</span>';
     } else if (hasDigital) {
-      estadoPill = '<span class="estado-pill estado-solo-digital">Solo digital</span>';
+      estadoPill = '<span class="estado-pill estado-solo-digital">Falta firma</span>';
     } else if (hasFisica) {
-      estadoPill = '<span class="estado-pill estado-solo-fisico">Solo físico</span>';
+      estadoPill = '<span class="estado-pill estado-solo-fisico">Firmado sin lectura</span>';
     } else {
       estadoPill = '<span class="estado-pill estado-pendiente">Pendiente</span>';
     }
@@ -638,6 +667,13 @@ function renderTabla(filas) {
       <td class="acciones-cell">${btnAccion}</td>
     </tr>`;
   }).join('');
+
+  renderPaginacion({
+    total,
+    pagina:    paginaActual,
+    porPagina: POR_PAGINA,
+    onCambio:  p => { paginaActual = p; renderTabla(filas); },
+  });
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -584,3 +584,382 @@ document.addEventListener('click', (e) => {
   e.stopPropagation();
   abrirFotoPerfil(av.dataset.uid, av.dataset.nom || '');
 });
+
+
+// ── PAGINACION CON NUMEROS ────────────────────────────────────────────
+//
+// Compartida por todas las pantallas con tabla. Antes cada una tenia su copia:
+// seis copias de la misma logica es como divergio el lightbox de avatares.
+//
+// La pantalla solo necesita:
+//   1. <div id="paginacion"></div> en el markup, debajo de la tabla
+//   2. cortar su lista con slice(inicio, fin)
+//   3. llamar a renderPaginacion({...}) al terminar de renderizar
+//
+// Ejemplo:
+//   const total  = lista.length;
+//   const inicio = (paginaActual - 1) * POR_PAGINA;
+//   const fin    = Math.min(inicio + POR_PAGINA, total);
+//   tbody.innerHTML = lista.slice(inicio, fin).map(...).join('');
+//
+//   renderPaginacion({
+//     total, pagina: paginaActual, porPagina: POR_PAGINA,
+//     onCambio: p => { paginaActual = p; renderTabla(); },
+//   });
+function renderPaginacion({
+  total,
+  pagina,
+  porPagina,
+  onCambio,
+  contenedor = 'paginacion',
+  ventana    = 4,
+}) {
+  const cont = document.getElementById(contenedor);
+  if (!cont) return;
+
+  const totalPaginas = Math.ceil(total / porPagina);
+
+  // Con una sola pagina la barra entera desaparece: mostrarla con todo
+  // deshabilitado seria ruido.
+  if (totalPaginas <= 1) {
+    cont.style.display = 'none';
+    cont.innerHTML = '';
+    return;
+  }
+  cont.style.display = 'flex';
+
+  const inicio = (pagina - 1) * porPagina;
+  const fin    = Math.min(inicio + porPagina, total);
+
+  // Ventana de N numeros alrededor de la pagina actual. Listar TODAS seria
+  // inmanejable: con miles de registros serian decenas de botones.
+  let desde = Math.max(1, pagina - Math.floor((ventana - 1) / 2));
+  let hasta = Math.min(totalPaginas, desde + ventana - 1);
+  // Si la ventana toca el final, se corre hacia atras para no mostrar menos.
+  desde = Math.max(1, hasta - ventana + 1);
+
+  cont.innerHTML = '';
+
+  const info = document.createElement('span');
+  info.className   = 'pag-info';
+  info.textContent = `Mostrando ${inicio + 1}–${fin} de ${total.toLocaleString('es-AR')}`;
+  cont.appendChild(info);
+
+  const caja = document.createElement('div');
+  caja.className = 'pag-botones';
+
+  // Sin onclick inline: el callback cambia por pantalla, y la CSP pendiente
+  // (§9) no puede pasar a enforce con handlers inline.
+  const boton = (label, destino, activa) => {
+    const b = document.createElement('button');
+    b.className   = 'pag-btn' + (activa ? ' pag-activa' : '');
+    b.textContent = label;
+    if (destino === null) {
+      b.disabled = true;
+    } else {
+      b.addEventListener('click', () => onCambio(destino));
+    }
+    caja.appendChild(b);
+  };
+
+  const puntos = () => {
+    const s = document.createElement('span');
+    s.className   = 'pag-dots';
+    s.textContent = '...';
+    caja.appendChild(s);
+  };
+
+  boton('← Ant', pagina > 1 ? pagina - 1 : null);
+
+  // Los "..." son SOLO un indicador de que hay mas paginas de ese lado. No son
+  // clickeables a proposito: uno que salta a una pagina impredecible confunde
+  // mas de lo que ayuda.
+  if (desde > 1) puntos();
+
+  for (let p = desde; p <= hasta; p++) {
+    boton(String(p), p === pagina ? null : p, p === pagina);
+  }
+
+  if (hasta < totalPaginas) puntos();
+
+  boton('Sig →', pagina < totalPaginas ? pagina + 1 : null);
+
+  cont.appendChild(caja);
+}
+
+
+// ── VERSIONADO DE MANUALES PDF ────────────────────────────────
+//
+// Las dos preguntas que editor.php ya le hace a un manual editable, para los
+// PDF, que no tienen editor.
+//
+// NOMBRES: llevan sufijo Pdf porque editor.php ya define elegirTipoCambio,
+// abrirModalVersionInicial, previewVersionInicial y companhia — y editor.php
+// carga este archivo por footer.php, DESPUES de su propio <script>. Un
+// homonimo aca le pisaria la publicacion al editor sin ningun error que
+// mencione la colision.
+//
+// API: las dos devuelven una promesa que resuelve con el valor elegido, o con
+// null si el usuario cancela. Nada de estado global ni callbacks.
+
+/**
+ * Calcula las etiquetas de version a partir de la lista de versiones.
+ * Devuelve { actual, menor, mayor } como strings tipo "v1.2", o null si no
+ * hay ninguna version publicada todavia.
+ *
+ * OJO con el minor: se toma el MAXIMO entre las versiones que comparten el
+ * version_number, no activa.version_minor + 1. Si un documento tiene v1.0,
+ * v1.1 y v1.2 y la activa volvio a ser la v1.0, activa.minor + 1 propondria
+ * v1.1 — que ya existe. Este es el motivo por el que el calculo vive en un
+ * solo lugar y no copiado en cada pantalla.
+ */
+function calcularEtiquetasVersion(versiones) {
+  // version_number 0 esta reservado para el borrador: nunca es una publicada.
+  const publicadas = (versiones || []).filter(v => (v.version_number ?? 0) > 0);
+  if (!publicadas.length) return null;
+
+  const activa = publicadas.find(v => v.es_activa) || publicadas[0];
+  const baseNumber = activa.version_number;
+
+  const maxMinorBase = publicadas
+    .filter(v => v.version_number === baseNumber)
+    .reduce((max, v) => Math.max(max, v.version_minor ?? 0), 0);
+  const maxNumber = publicadas
+    .reduce((max, v) => Math.max(max, v.version_number), 0);
+
+  return {
+    actual: `v${baseNumber}.${activa.version_minor ?? 0}`,
+    menor:  `v${baseNumber}.${maxMinorBase + 1}`,
+    mayor:  `v${maxNumber + 1}.0`,
+  };
+}
+
+// Inyecta el markup una sola vez por pagina y lo devuelve.
+function _vpdfModal(id, armar) {
+  let el = document.getElementById(id);
+  if (el) return el;
+  el = document.createElement('div');
+  el.className = 'modal-overlay';
+  el.id = id;
+  el.innerHTML = armar();
+  document.body.appendChild(el);
+  return el;
+}
+
+/**
+ * Pregunta si la version nueva es un cambio mayor o menor.
+ * Devuelve 'mayor' | 'menor' | null (cancelado).
+ */
+async function pedirTipoCambioPdf(manualId) {
+  // Las etiquetas se calculan con TODAS las versiones, no solo con la activa.
+  //
+  // activa.version_minor + 1 esta mal: si un manual tiene v1.0, v1.1 y v1.2 y
+  // la activa volvio a ser la v1.0, propondria v1.1 — que ya existe. Hay que
+  // tomar el maximo minor entre las versiones que comparten el number.
+  let versiones = [];
+  try {
+    versiones = await apiFetch('GET', `/manuales/${manualId}/versiones`);
+  } catch (e) {
+    // Sin la lista no se pueden mostrar numeros reales. Se avisa y se corta:
+    // mostrar "v?.?" invita a elegir a ciegas en algo que no se puede deshacer.
+    alert('No se pudieron leer las versiones del manual. Probá de nuevo.');
+    return null;
+  }
+
+  // El calculo vive en calcularEtiquetasVersion(): lo comparte con el selector
+  // de documentos.php y es lo bastante sutil como para no tenerlo por
+  // duplicado. null = todavia no hay ninguna version publicada.
+  const et = calcularEtiquetasVersion(versiones) || { actual: '—', menor: 'v1.0', mayor: 'v1.0' };
+
+  const el = _vpdfModal('modal-vpdf-tipo', () => `
+    <div class="modal-box" style="max-width:480px">
+      <div class="modal-header">
+        <h3>¿Qué tipo de cambio es?</h3>
+        <button class="modal-close" data-vpdf-cancel>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13.5px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:16px">
+          Elegí cómo numerar esta publicación según la magnitud de los cambios respecto de la versión actual (<span data-vpdf-actual style="color:var(--blanco);font-weight:600">—</span>).
+        </p>
+        <div class="vpdf-opciones">
+          <button class="vpdf-opcion" data-vpdf-tipo="menor">
+            <div class="vpdf-opcion-num" data-vpdf-menor>v0.0</div>
+            <div class="vpdf-opcion-titulo">Cambio menor</div>
+            <div class="vpdf-opcion-desc">Correcciones, ajustes de redacción o cambios que no alteran el fondo del manual.</div>
+          </button>
+          <button class="vpdf-opcion" data-vpdf-tipo="mayor">
+            <div class="vpdf-opcion-num" data-vpdf-mayor>v0.0</div>
+            <div class="vpdf-opcion-titulo">Cambio mayor</div>
+            <div class="vpdf-opcion-desc">Modificaciones sustanciales de contenido, cláusulas o estructura del manual.</div>
+          </button>
+        </div>
+      </div>
+    </div>`);
+
+  el.querySelector('[data-vpdf-actual]').textContent = et.actual;
+  el.querySelector('[data-vpdf-menor]').textContent = et.menor;
+  el.querySelector('[data-vpdf-mayor]').textContent = et.mayor;
+
+  return new Promise(resolve => {
+    const cerrar = valor => {
+      el.classList.remove('open');
+      el.onclick = null;
+      resolve(valor);
+    };
+    el.onclick = ev => {
+      const op = ev.target.closest('[data-vpdf-tipo]');
+      if (op) return cerrar(op.getAttribute('data-vpdf-tipo'));
+      if (ev.target.closest('[data-vpdf-cancel]')) return cerrar(null);
+      // No cierra al clic afuera: politica de modales del proyecto.
+    };
+    el.classList.add('open');
+  });
+}
+
+/**
+ * Pregunta con que version arranca un manual nuevo.
+ * Devuelve {number, minor} | null (cancelado).
+ */
+async function pedirVersionInicialPdf() {
+  const el = _vpdfModal('modal-vpdf-inicial', () => `
+    <div class="modal-box" style="max-width:480px">
+      <div class="modal-header">
+        <h3>¿Con qué versión arranca este manual?</h3>
+        <button class="modal-close" data-vpdf-cancel>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13.5px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:12px">
+          Si este manual ya venía usándose fuera del sistema con su propia numeración
+          (por ejemplo <strong style="color:var(--blanco)">v6.2</strong>), declarala acá.
+          Así el número que ve el socio comercial coincide con el que dice el documento por dentro.
+        </p>
+        <p style="font-size:13px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:18px">
+          <strong style="color:var(--dorado)">Se elige una sola vez.</strong>
+          A partir de la próxima publicación el sistema numera solo.
+        </p>
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <div class="form-group" style="flex:1;margin-bottom:0">
+            <label>Versión</label>
+            <input data-vpdf-number type="number" class="vpdf-num" min="1" max="999" step="1" value="1">
+          </div>
+          <div style="font-size:22px;font-weight:700;color:var(--gris4);padding-bottom:10px">.</div>
+          <div class="form-group" style="flex:1;margin-bottom:0">
+            <label>Revisión</label>
+            <input data-vpdf-minor type="number" class="vpdf-num" min="0" max="999" step="1" value="0">
+          </div>
+        </div>
+        <div class="vpdf-preview-caja">
+          <div class="vpdf-preview-lbl">Se publicará como</div>
+          <div class="vpdf-preview-val" data-vpdf-preview>v1.0</div>
+        </div>
+        <div class="form-error" data-vpdf-error style="display:none;margin-top:12px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-vpdf-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-vpdf-ok>Continuar</button>
+      </div>
+    </div>`);
+
+  const inpN = el.querySelector('[data-vpdf-number]');
+  const inpM = el.querySelector('[data-vpdf-minor]');
+  const prev = el.querySelector('[data-vpdf-preview]');
+  const err = el.querySelector('[data-vpdf-error]');
+
+  inpN.value = 1;
+  inpM.value = 0;
+  err.style.display = 'none';
+
+  const leer = () => [parseInt(inpN.value, 10), parseInt(inpM.value, 10)];
+  const valido = (n, m) =>
+    Number.isInteger(n) && n >= 1 && n <= 999 &&
+    Number.isInteger(m) && m >= 0 && m <= 999;
+
+  const repintar = () => {
+    const [n, m] = leer();
+    prev.textContent = valido(n, m) ? `v${n}.${m}` : '—';
+  };
+  inpN.oninput = repintar;
+  inpM.oninput = repintar;
+  repintar();
+
+  return new Promise(resolve => {
+    const cerrar = valor => {
+      el.classList.remove('open');
+      el.onclick = null;
+      resolve(valor);
+    };
+    el.onclick = ev => {
+      if (ev.target.closest('[data-vpdf-cancel]')) return cerrar(null);
+      if (!ev.target.closest('[data-vpdf-ok]')) return;
+      const [n, m] = leer();
+      // version_number 0 esta reservado para el borrador -> minimo 1.
+      if (!valido(n, m)) {
+        err.textContent = 'La versión debe ser entre 1 y 999, y la revisión entre 0 y 999.';
+        err.style.display = 'block';
+        return;
+      }
+      cerrar({ number: n, minor: m });
+    };
+    el.classList.add('open');
+  });
+}
+
+
+// ── ORDEN POR DEFECTO DE LOS MANUALES ─────────────────────────
+//
+// Del mas reciente al mas viejo. La clave es la misma que muestra la columna
+// "Ultima actualizacion" en las tres pantallas: la fecha de publicacion de la
+// version activa, y la de creacion del manual si todavia no publico ninguna.
+// Ordenar por otro campo dejaria esa columna viendose desordenada.
+
+function _fechaManual(m) {
+  const v = m.version_activa?.[0];
+  const raw = (v && v.publicado_at) || m.created_at;
+  if (!raw) return 0;
+
+  // MySQL devuelve "2026-07-29 14:12:00" (con espacio). Date.parse de ese
+  // formato es dependiente del motor; con la 'T' es ISO y se parsea igual en
+  // todos lados. Para ORDENAR no importa que huso asuma —lo aplica a todos
+  // los valores por igual— pero si importa que no devuelva NaN en algunos.
+  const t = Date.parse(String(raw).replace(' ', 'T'));
+  return Number.isNaN(t) ? 0 : t;
+}
+
+// Devuelve una copia ordenada. No muta la lista que recibe: las pantallas
+// guardan todosLosManuales como fuente de verdad y reordenarla in situ
+// esconderia efectos raros en los filtros.
+function ordenarManualesRecientes(lista) {
+  return [...(lista || [])].sort((a, b) => {
+    const fa = _fechaManual(a);
+    const fb = _fechaManual(b);
+    if (fb !== fa) return fb - fa;
+    // Empate de fecha: el id mas alto es el mas nuevo. Sin este desempate el
+    // orden entre manuales publicados el mismo dia queda a merced del sort,
+    // y la tabla se reacomoda sola entre recargas.
+    return (b.id || 0) - (a.id || 0);
+  });
+}
+
+
+// ── NUMERO DE VERSION PARA MOSTRAR ────────────────────────────
+//
+// Devuelve "1.1" — SIN la 'v' adelante, porque los call sites ya la escriben
+// como `v${numeroVersion(x)}`.
+//
+// Prefiere version_label (lo calcula el modelo) y compone number.minor solo
+// como respaldo, para versiones anteriores a que ese accessor existiera.
+//
+// NO sirve como condicion: para un documento sin version publicada devuelve
+// '' pero para el borrador devuelve '0.0', que es truthy. Donde haga falta
+// decidir si mostrar algo, chequear version_number aparte.
+function numeroVersion(v) {
+  if (!v) return '';
+  if (v.version_label) return String(v.version_label);
+  const n = v.version_number ?? 0;
+  const m = v.version_minor ?? 0;
+  return `${n}.${m}`;
+}

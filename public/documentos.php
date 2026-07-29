@@ -88,6 +88,10 @@ include 'layout/head.php';
               <tr><td colspan="6"><div class="empty-state">Cargando documentos...</div></td></tr>
             </tbody>
           </table>
+
+          <!-- Lo dibuja renderPaginacion() de layout.js. Con una sola pagina,
+               la barra entera queda oculta. -->
+          <div id="paginacion"></div>
         </div>
       </div>
 
@@ -208,7 +212,7 @@ include 'layout/head.php';
 
       <!-- Empresa — solo super_admin -->
       <div class="form-group">
-          <label>Franquicia destino</label>
+          <label>Destinatario</label>
           <select id="doc-franquicia" class="form-select">
             <option value="">Toda la empresa (global)</option>
           </select>
@@ -349,6 +353,27 @@ include 'layout/head.php';
         </div>
       </div>
 
+      <!-- Tipo de cambio. Arranca en "mayor" porque es lo que el backend
+           ya hacia cuando no le llegaba tipo_cambio: quien ignore este
+           control obtiene exactamente el comportamiento de antes.
+           Si no se pudieron leer las versiones, el bloque queda oculto y
+           se publica como mayor, igual que siempre. -->
+      <div class="form-group" id="grupo-tipo-cambio" style="display:none">
+        <label class="form-label">Tipo de cambio</label>
+        <div class="vpdf-opciones">
+          <button type="button" class="vpdf-opcion" data-tipo="menor" onclick="elegirTipoCambioDoc('menor')">
+            <div class="vpdf-opcion-num" id="doc-ver-menor">—</div>
+            <div class="vpdf-opcion-titulo">Cambio menor</div>
+            <div class="vpdf-opcion-desc">Correcciones o ajustes que no alteran el fondo del documento.</div>
+          </button>
+          <button type="button" class="vpdf-opcion sel" data-tipo="mayor" onclick="elegirTipoCambioDoc('mayor')">
+            <div class="vpdf-opcion-num" id="doc-ver-mayor">—</div>
+            <div class="vpdf-opcion-titulo">Cambio mayor</div>
+            <div class="vpdf-opcion-desc">Modificaciones sustanciales de contenido o estructura.</div>
+          </button>
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Nota (opcional)</label>
         <textarea id="version-nota" maxlength="500" rows="3" class="form-input" placeholder="Describí qué cambió en esta versión (opcional)..." style="resize:vertical;font-family:'Roboto',sans-serif"></textarea>
@@ -403,7 +428,7 @@ include 'layout/head.php';
       </div>
 
       <div class="form-group">
-        <label>Franquicia destino</label>
+        <label>Destinatario</label>
         <select id="edit-doc-franquicia" class="form-select">
           <option value="">Toda la empresa (global)</option>
         </select>
@@ -885,11 +910,25 @@ function sublistaUsuariosDocHTML(prefix, catId) {
       <input type="checkbox" data-todos="${catId}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodosDoc('${prefix}', ${catId})">
       <span style="font-size:12px;color:var(--dorado);font-weight:600">Seleccionar todos</span>
     </label>`;
-  const items = us.map(u => `
+  // La sucursal al lado del nombre. El dato ya venia en la respuesta de
+  // /usuarios (index() carga franchiseStaff.franquicia): solo no se pintaba.
+  //
+  // "Sin sucursal asignada" no es un caso raro: un socio comercial puede ser
+  // distribuidor o dropshipper sin sucursal, y es justo el que hay que poder
+  // distinguir al elegir a quien va dirigido un documento.
+  const items = us.map(u => {
+    const suc = u.franchise_staff?.franquicia?.nombre;
+    const sucHtml = suc
+      ? `<span style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">· ${esc(suc)}</span>`
+      : `<span style="font-size:11px;color:var(--gris3);font-style:italic;font-family:'Roboto',sans-serif">· Sin sucursal asignada</span>`;
+
+    return `
     <label style="display:flex;align-items:center;gap:8px;padding:3px 2px;cursor:pointer">
       <input type="checkbox" data-user-cat="${catId}" data-user-id="${u.id}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleUsuarioDoc('${prefix}', ${u.id})">
       <span style="font-size:12px;color:var(--blanco)">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</span>
-    </label>`).join('');
+      ${sucHtml}
+    </label>`;
+  }).join('');
   return todos + items;
 }
 
@@ -1135,7 +1174,13 @@ function aplicarFiltros() {
   else if (franquicia) lista = lista.filter(d => String(d.franquicia_id) === franquicia);
   if (texto)     lista = lista.filter(d => d.titulo.toLowerCase().includes(texto));
 
+  // Al filtrar hay que volver a la 1: si se estaba en la pagina 5 y el
+  // resultado tiene 2, el slice apuntaria a un rango inexistente y la tabla
+  // saldria VACIA sin ninguna explicacion.
+  paginaActual = 1;
   renderTabla(lista);
+  // El titulo muestra el TOTAL, no lo de la pagina: es el dato que importa.
+  // El "Mostrando X-Y de Z" del pie cubre el detalle.
   document.getElementById('tabla-titulo').textContent = `${lista.length} documento(s)`;
 }
 
@@ -1180,10 +1225,13 @@ async function poblarFiltroCategorias(empresaId) {
 
 // ── RENDER ────────────────────────────────────────────────────
 function renderThead() {
+  // "Destinatario" y no "Franquicia": la celda muestra la sucursal cuando
+  // el documento esta acotado a una, y "Global" cuando aplica a toda la
+  // empresa. El encabezado viejo solo describia uno de los dos casos.
   const cols = rolUsuario === 'super_admin'
-    ? ['Empresa', 'Título', 'Tipo', 'Franquicia', 'Visibilidad', 'Fecha', 'Acciones']
+    ? ['Empresa', 'Título', 'Tipo', 'Destinatario', 'Visibilidad', 'Fecha', 'Acciones']
     : rolUsuario === 'franquiciante'
-    ? ['Título', 'Tipo', 'Franquicia', 'Visibilidad', 'Fecha', 'Acciones']
+    ? ['Título', 'Tipo', 'Destinatario', 'Visibilidad', 'Fecha', 'Acciones']
     : ['Título', 'Tipo', 'Fecha', 'Acciones'];  // franquiciado: vista simplificada
   document.getElementById('tabla-head').innerHTML =
     `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
@@ -1191,14 +1239,25 @@ function renderThead() {
 
 
 
+// 10 por pagina: es una pantalla de gestion, se mira fila por fila.
+// (log.php usa 50 porque es de consulta y conviene ver mucho de una.)
+const POR_PAGINA = 10;
+let paginaActual = 1;
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   const cols = rolUsuario === 'super_admin' ? 7 : rolUsuario === 'franquiciante' ? 6 : 4;
 
   if (!lista.length) {
     tbody.innerHTML = `<tr><td colspan="${cols}"><div class="empty-state">No hay documentos disponibles.</div></td></tr>`;
+    // Sin esto quedaria visible la paginacion del filtro anterior.
+    renderPaginacion({ total: 0, pagina: 1, porPagina: POR_PAGINA, onCambio: () => {} });
     return;
   }
+
+  const total  = lista.length;
+  const inicio = (paginaActual - 1) * POR_PAGINA;
+  const fin    = Math.min(inicio + POR_PAGINA, total);
 
   const tipoBadge = (tipo) => {
     const map = {
@@ -1221,13 +1280,18 @@ function renderTabla(lista) {
     return `${(bytes/1048576).toFixed(1)} MB`;
   };
 
-  tbody.innerHTML = lista.map(d => {
+  tbody.innerHTML = lista.slice(inicio, fin).map(d => {
     // versionActiva viene del backend como HasMany → array.
     // Tomamos la primera (debería haber sólo una con es_activa=1).
     const va = Array.isArray(d.version_activa) ? d.version_activa[0] : d.version_activa;
     const mime  = va?.mime_type     || '';
     const bytes = va?.tamano_bytes  || 0;
+    // vNum se conserva para la CONDICION de mas abajo: version_number 0 es
+    // el borrador y es falsy, asi que un documento sin publicar no muestra
+    // etiqueta. vLbl es solo para mostrar — '0.0' seria truthy y romperia
+    // ese guard.
     const vNum  = va?.version_number;
+    const vLbl  = numeroVersion(va);
 
     const empresaCol = rolUsuario === 'super_admin'
       ? `<td style="font-size:12px;color:var(--gris4)">${esc(d.empresa?.nombre || '—')}</td>` : '';
@@ -1258,7 +1322,7 @@ function renderTabla(lista) {
       <div style="color:var(--blanco);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px"
            onclick="verDocumento(${d.id})" title="Ver versiones del documento">
         ${esc(d.titulo)}
-        ${vNum ? `<span style="font-size:10px;color:var(--gris4);font-weight:400">v${vNum}</span>` : ''}
+        ${vNum ? `<span style="font-size:10px;color:var(--gris4);font-weight:400">v${vLbl}</span>` : ''}
       </div>${badgeEliminado}
       <div style="font-size:11px;color:var(--gris4);margin-top:2px">${esc(mime)}${bytes ? ' · ' + tamano(bytes) : ''}</div>`;
 
@@ -1328,6 +1392,13 @@ function renderTabla(lista) {
       </td>
     </tr>`;
   }).join('');
+
+  renderPaginacion({
+    total,
+    pagina:    paginaActual,
+    porPagina: POR_PAGINA,
+    onCambio:  p => { paginaActual = p; renderTabla(lista); },
+  });
 }
 
 // ── MODAL SUBIR ───────────────────────────────────────────────
@@ -1777,7 +1848,8 @@ async function verDocumento(id) {
 
   // Renderizar header del documento
   const va     = Array.isArray(doc.version_activa) ? doc.version_activa[0] : doc.version_activa;
-  const vNum   = va?.version_number;
+  const vNum   = va?.version_number;   // condicion, ver comentario en renderTabla
+  const vLbl   = numeroVersion(va);    // texto a mostrar
   const tipo   = doc.tipo ? doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1) : '—';
   const empOj  = doc.empresa?.nombre ? `<span>${esc(doc.empresa.nombre)}</span><span class="sep">·</span>` : '';
   const franq  = doc.franquicia?.nombre
@@ -1793,7 +1865,7 @@ async function verDocumento(id) {
     ${empOj}
     ${franq}<span class="sep">·</span>
     ${visib}
-    ${vNum ? `<span class="sep">·</span><span>Vigente: v${vNum}</span>` : ''}
+    ${vNum ? `<span class="sep">·</span><span>Vigente: v${vLbl}</span>` : ''}
   `;
 
   // Mostrar botón "Subir nueva versión" para super_admin / franquiciante,
@@ -1923,7 +1995,7 @@ function renderVersiones(versiones) {
       const autorBorrado = nombreAutor(v.deleted_by);
       return `<div class="version-card eliminada">
         <div class="version-numero">
-          <div class="num">v${v.version_number}</div>
+          <div class="num">v${numeroVersion(v)}</div>
           <div class="version-eliminada-pill">Eliminada</div>
         </div>
         <div>
@@ -1939,7 +2011,7 @@ function renderVersiones(versiones) {
         </div>
         <div class="version-acciones">
           ${puedeAdministrar ? `
-          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}')" class="accion-btn" style="color:var(--dorado)">
+          <a href="#" onclick="event.preventDefault(); restaurarVersion(${documentoActivo.id}, ${v.id}, 'v${numeroVersion(v)}')" class="accion-btn" style="color:var(--dorado)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Restaurar
           </a>` : ''}
@@ -1967,7 +2039,7 @@ function renderVersiones(versiones) {
 
     return `<div class="version-card">
       <div class="version-numero">
-        <div class="num">v${v.version_number}</div>
+        <div class="num">v${numeroVersion(v)}</div>
         ${vigente ? `<div class="version-vigente-pill">Vigente</div>` : ''}
       </div>
       <div>
@@ -1992,7 +2064,7 @@ function renderVersiones(versiones) {
           Descargar
         </a>
         ${puedeEliminar ? `
-        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${v.version_number}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
+        <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${numeroVersion(v)}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
@@ -2160,13 +2232,50 @@ function cancelarEditarNota(versionId) {
 //   MODAL SUBIR NUEVA VERSIÓN
 // ══════════════════════════════════════════════════
 
+// Tipo de cambio elegido para la version que se esta por subir.
+// 'mayor' es el default: es lo que hacia el backend sin este campo.
+let tipoCambioDoc = 'mayor';
+
+function elegirTipoCambioDoc(tipo) {
+  tipoCambioDoc = tipo;
+  document.querySelectorAll('#grupo-tipo-cambio .vpdf-opcion').forEach(b => {
+    b.classList.toggle('sel', b.getAttribute('data-tipo') === tipo);
+  });
+}
+
 function abrirModalSubirVersion() {
   if (!documentoActivo) return;
   resetDropZoneVersion();
   document.getElementById('version-nota').value = '';
   document.getElementById('version-error').textContent = '';
   document.getElementById('version-error').style.display = 'none';
+
+  // Vuelve al default en cada apertura: si quedara la eleccion anterior,
+  // subir dos versiones seguidas repetiria un 'menor' que nadie pidio.
+  elegirTipoCambioDoc('mayor');
+  document.getElementById('grupo-tipo-cambio').style.display = 'none';
+
   document.getElementById('modal-subir-version').classList.add('open');
+
+  // Las etiquetas necesitan la lista de versiones, que este modal no tiene
+  // cargada. Se piden aparte y sin bloquear la apertura: si fallan, el
+  // selector no aparece y se publica como mayor, que es el comportamiento
+  // de siempre. Mostrar 'v?.?' invitaria a elegir a ciegas.
+  cargarEtiquetasTipoCambio(documentoActivo.id);
+}
+
+async function cargarEtiquetasTipoCambio(docId) {
+  try {
+    const versiones = await apiFetch('GET', `/documentos/${docId}/versiones`);
+    const et = calcularEtiquetasVersion(versiones);
+    if (!et) return;   // sin versiones publicadas no hay nada que comparar
+
+    document.getElementById('doc-ver-menor').textContent = et.menor;
+    document.getElementById('doc-ver-mayor').textContent = et.mayor;
+    document.getElementById('grupo-tipo-cambio').style.display = '';
+  } catch (e) {
+    console.warn('No se pudieron leer las versiones del documento:', e);
+  }
 }
 
 function cerrarModalSubirVersion() {
@@ -2207,6 +2316,7 @@ async function subirNuevaVersion() {
   fd.append('archivo', archivoVersion);
   const nota = document.getElementById('version-nota').value.trim();
   if (nota) fd.append('nota', nota);
+  fd.append('tipo_cambio', tipoCambioDoc);
 
   try {
     const res = await fetch(API + `/documentos/${documentoActivo.id}/version`, {

@@ -56,33 +56,6 @@ include 'layout/head.php';
 </div>
 
 <!-- ══════════════════════════════════════════
-     MODAL CONFIRMAR ACEPTACIÓN (solo franquiciado)
-══════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-confirmar-acept" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="modal-box" style="max-width:400px">
-    <div class="modal-header">
-      <h3>Confirmar aceptación</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-confirmar-acept').classList.remove('open')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif">
-        Al confirmar, estás aceptando digitalmente el contenido de este manual. Esta acción queda registrada con la fecha y hora exacta.
-      </p>
-      <div class="form-error" id="acept-error"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="document.getElementById('modal-confirmar-acept').classList.remove('open')">Cancelar</button>
-      <button class="btn btn-primary" id="btn-confirmar-acept" onclick="ejecutarAceptacion()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Confirmar aceptación
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
      MODAL NOTAS (solo franquiciado)
 ══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-notas" onclick="if(event.target===this)cerrarModalNotas()">
@@ -172,9 +145,8 @@ const BASE_PHP = '<?= BASE_URL_PHP ?>';
 
 let todosLosManuales  = [];
 let rolUsuario        = '';
-// versionActivaId se usa para registrar la aceptación; se setea desde renderTabla al hacer clic en "Leer y aceptar"
-let versionActivaId   = null;
-let manualPendienteId = null; // id del manual cuya aceptación está pendiente de confirmar
+// versionActivaId y manualPendienteId se fueron con el flujo de aceptacion
+// inline: el registro ahora lo hace lectura.php al abrir el manual.
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
@@ -189,7 +161,7 @@ async function init() {
         <th>Categoría</th>
         <th>Última actualización</th>
         <th>Versión</th>
-        ${rolUsuario === 'franquiciado' ? '<th>Mi aceptación</th>' : ''}
+        ${rolUsuario === 'franquiciado' ? '<th>Leído</th>' : ''}
         <th>Acción</th>
       </tr>`;
 
@@ -214,6 +186,10 @@ function aplicarFiltros() {
   if (texto) lista = lista.filter(m =>
     m.titulo.toLowerCase().includes(texto) || (m.categoria || '').toLowerCase().includes(texto));
 
+  // Orden por defecto: del mas reciente al mas viejo, igual que en las
+  // pantallas de gestion. Esta no pagina, asi que alcanza con ordenar acá.
+  lista = ordenarManualesRecientes(lista);
+
   renderTabla(lista);
   document.getElementById('tabla-titulo').textContent = `${lista.length} manual(es)`;
 }
@@ -234,23 +210,27 @@ function renderTabla(lista) {
     const fecha    = version ? formatFecha(version.publicado_at) : formatFecha(m.created_at);
     const aceptado = m.mi_aceptacion || false;
 
-    // Columna aceptación: solo franquiciado
+    // Columna "Leído": solo socio comercial. El nombre de la clase
+    // (badge-aceptado) queda: es interno, solo cambia lo que se ve.
     const colAceptacion = rolUsuario === 'franquiciado' ? `
       <td>
         ${aceptado
-          ? `<span class="badge-aceptado"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Aceptado</span>`
+          ? `<span class="badge-aceptado"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Leído</span>`
           : `<span class="estado-pill estado-pendiente">Pendiente</span>`
         }
       </td>` : '';
 
-    // Botón de acción: empleado siempre "Ver manual"; franquiciado "Leer y aceptar" o "Ver manual"
-    const btnLabel   = rolUsuario === 'empleado' || aceptado ? 'Ver manual' : 'Leer y aceptar';
+    // Un solo boton para todos: "Ver manual". Ya no hay dos caminos —
+    // abrirParaAceptar() mandaba a lectura.php con ?aceptar=1 para que
+    // mostrara el boton de aceptar, y ese boton ya no existe.
+    //
+    // Se conserva el destacado en los pendientes: sigue siendo lo que el
+    // socio tiene que hacer, aunque ahora alcance con abrirlo.
+    const btnLabel   = 'Ver manual';
     const btnStyle   = (!aceptado && rolUsuario === 'franquiciado')
       ? 'class="btn btn-primary" style="padding:5px 12px;font-size:12px"'
       : 'class="btn btn-ghost" style="padding:5px 12px;font-size:12px"';
-    const btnOnclick = (!aceptado && rolUsuario === 'franquiciado' && version)
-      ? `onclick="abrirParaAceptar('${m.public_id}', ${version.id})"`
-      : `onclick="abrirManual('${m.public_id}')"`;
+    const btnOnclick = `onclick="abrirManual('${m.public_id}')"`;
 
     return `<tr>
       <td>
@@ -275,45 +255,6 @@ function renderTabla(lista) {
 // Abre lectura.php en modo solo lectura
 function abrirManual(manualId) {
   window.location.href = `${BASE_PHP}/lectura.php?m=${manualId}`;
-}
-
-// Abre lectura.php en modo aceptación (franquiciado con manual pendiente)
-function abrirParaAceptar(manualId, versiónId) {
-  versionActivaId   = versiónId;
-  manualPendienteId = manualId;
-  // Pasamos ?aceptar=1 para que lectura.php muestre el botón de aceptación
-  window.location.href = `${BASE_PHP}/lectura.php?m=${manualId}&aceptar=1`;
-}
-
-// ── ACEPTACIÓN DIGITAL ────────────────────────────────────────
-// Esta función se llama si la aceptación se maneja inline (sin redirigir a lectura.php).
-// Mantenerla por si en el futuro el modal vuelve a estar en esta página.
-function confirmarAceptacion(versiónId) {
-  versionActivaId = versiónId;
-  document.getElementById('acept-error').style.display = 'none';
-  document.getElementById('modal-confirmar-acept').classList.add('open');
-}
-
-async function ejecutarAceptacion() {
-  if (!versionActivaId) return;
-  const btn = document.getElementById('btn-confirmar-acept');
-  btn.disabled = true;
-  btn.textContent = 'Registrando...';
-
-  try {
-    await apiFetch('POST', `/versiones/${versionActivaId}/aceptar`);
-    mostrarToast('¡Manual aceptado correctamente! El registro quedó guardado.', 'exito');
-    document.getElementById('modal-confirmar-acept').classList.remove('open');
-    versionActivaId   = null;
-    manualPendienteId = null;
-    await cargarManuales();
-  } catch (e) {
-    const msg = e.data?.message || 'Error al registrar la aceptación.';
-    document.getElementById('acept-error').textContent   = msg;
-    document.getElementById('acept-error').style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar aceptación`;
-  }
 }
 
 // ── NOTAS / SUGERENCIAS (solo franquiciado) ───────────────────
@@ -436,7 +377,7 @@ function mostrarToast(msg, tipo = 'exito') {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { document.getElementById('modal-confirmar-acept').classList.remove('open'); cerrarModalNotas(); }
+  if (e.key === 'Escape') { cerrarModalNotas(); }
 });
 
 document.addEventListener('DOMContentLoaded', () => init());

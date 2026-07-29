@@ -116,7 +116,7 @@ body.tema-claro {
   }
 
   .brand-name {
-    font-size: 30px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: .02em;
     color: var(--blanco);
@@ -125,7 +125,7 @@ body.tema-claro {
 
   .brand-name span {
     display: block;
-    font-size: 19px;
+    font-size: 15px;
     font-weight: 400;
     color: var(--gris4);
     letter-spacing: .06em;
@@ -621,7 +621,18 @@ body.tema-claro {
     font-family: 'Roboto', sans-serif;
     font-size: 14px;
   }
-
+.cf-turnstile {
+  transform: scale(.62);
+  /* top LEFT, no center: con center el widget queda corrido hacia adentro
+     porque el scale lo encoge desde el medio. */
+  transform-origin: top left;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 16px;
+  /* El scale no reduce el espacio que ocupa en el layout: el margen negativo
+     recupera los ~12px que quedarian en blanco abajo. */
+  margin-bottom: -12px;
+}
   /* Responsive */
   @media (max-width: 768px) {
     /* Orden en celular:  marca -> formulario -> copy -> features

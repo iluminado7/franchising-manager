@@ -172,12 +172,9 @@ include 'layout/head.php';
         </table>
 
         <!-- Paginación -->
-        <div id="paginacion" style="display:none;padding:14px 20px;border-top:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between">
-          <span id="pag-info" style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif"></span>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost" id="btn-prev" onclick="cambiarPagina(-1)" style="padding:5px 12px;font-size:12px">← Anterior</button>
-            <button class="btn btn-ghost" id="btn-next" onclick="cambiarPagina(1)"  style="padding:5px 12px;font-size:12px">Siguiente →</button>
-          </div>
+        <!-- Los botones los dibuja renderPaginacion(): la cantidad de numeros
+             depende de cuantas paginas haya. -->
+        <div id="paginacion"></div>
         </div>
       </div>
 
@@ -202,6 +199,40 @@ include 'layout/head.php';
 </div>
 
 <style>
+/* Botones de paginacion. Propios y no .btn btn-ghost: son cuadrados, chicos y
+   necesitan un estado "activo" que los btn del sistema no tienen. */
+.pag-btn {
+  min-width: 34px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: 'Archivo', sans-serif;
+  background: transparent;
+  border: 1px solid var(--gris2);
+  border-radius: 7px;
+  color: var(--gris5);
+  cursor: pointer;
+  transition: all .15s;
+}
+.pag-btn:hover:not(:disabled) { border-color: var(--gris3); color: var(--blanco); }
+.pag-btn:disabled { opacity: .35; cursor: default; }
+
+/* La pagina actual. Va con el dorado del sistema para que se lea de un vistazo
+   sin tener que comparar los numeros. */
+.pag-activa {
+  background: var(--dorado);
+  border-color: var(--dorado);
+  color: var(--negro);
+  font-weight: 600;
+}
+.pag-activa:disabled { opacity: 1; }
+
+/* Indicador de que hay mas paginas. No es un boton. */
+.pag-dots {
+  padding: 0 4px;
+  color: var(--gris4);
+  font-size: 12px;
+  user-select: none;
+}
 .filtro-select, .filtro-date {
   background: var(--gris2); border: 1px solid var(--gris2);
   border-radius: 7px; color: var(--gris5);
@@ -573,12 +604,12 @@ function renderTabla() {
         <td style="font-family:'Roboto',sans-serif;font-size:12px;color:var(--gris4)">${esc(l.ip_address)}</td>
       </tr>`;
     }).join('');
-    const pagF = document.getElementById('paginacion');
-    pagF.style.display = total > POR_PAGINA ? 'flex' : 'none';
-    document.getElementById('pag-info').textContent =
-      `Mostrando ${inicio + 1}–${fin} de ${total.toLocaleString('es-AR')}`;
-    document.getElementById('btn-prev').disabled = paginaActual === 1;
-    document.getElementById('btn-next').disabled = fin >= total;
+    renderPaginacion({
+      total,
+      pagina:    paginaActual,
+      porPagina: POR_PAGINA,
+      onCambio:  p => { paginaActual = p; renderTabla(); },
+    });
     return;
   }
 
@@ -622,18 +653,78 @@ function renderTabla() {
   }).join('');
 
   // Paginación
-  const pag = document.getElementById('paginacion');
-  pag.style.display = total > POR_PAGINA ? 'flex' : 'none';
+  renderPaginacion({
+      total,
+      pagina:    paginaActual,
+      porPagina: POR_PAGINA,
+      onCambio:  p => { paginaActual = p; renderTabla(); },
+    });
+}
+
+// Dibuja la paginacion completa: el "Mostrando X-Y de Z" y los botones.
+//
+// Reemplaza las cuatro lineas que estaban duplicadas en los dos caminos de
+// render (normal y agrupado por empresa). Cuando estaban duplicadas, tocar uno
+// solo dejaba los dos distintos.
+function renderPaginacion(total, inicio, fin) {
+  const cont = document.getElementById('paginacion');
+  const caja = document.getElementById('pag-botones');
+  if (!cont || !caja) return;
+
+  const totalPaginas = Math.ceil(total / POR_PAGINA);
+
+  // Con una sola pagina no se muestra nada: los botones no aportarian.
+  cont.style.display = totalPaginas > 1 ? 'flex' : 'none';
+  if (totalPaginas <= 1) return;
+
   document.getElementById('pag-info').textContent =
     `Mostrando ${inicio + 1}–${fin} de ${total.toLocaleString('es-AR')}`;
-  document.getElementById('btn-prev').disabled = paginaActual === 1;
-  document.getElementById('btn-next').disabled = fin >= total;
+
+  // Ventana de 4 numeros alrededor de la pagina actual. Listar TODAS seria
+  // inmanejable: con 50 por pagina y miles de registros serian decenas de
+  // botones que no entran y no sirven.
+  const VENTANA = 4;
+  let desde = Math.max(1, paginaActual - Math.floor((VENTANA - 1) / 2));
+  let hasta = Math.min(totalPaginas, desde + VENTANA - 1);
+  // Si la ventana toca el final, se corre hacia atras para mantener los 4.
+  desde = Math.max(1, hasta - VENTANA + 1);
+
+  const btn = (label, pagina, extra) =>
+    `<button class="pag-btn${extra || ''}" ${pagina ? `onclick="irPagina(${pagina})"` : 'disabled'}>${label}</button>`;
+
+  let html = btn('← Ant', paginaActual > 1 ? paginaActual - 1 : null);
+
+  // Los "..." son SOLO un indicador de que hay mas paginas de ese lado.
+  // No son clickeables a proposito: un "..." que salta a una pagina
+  // impredecible confunde mas de lo que ayuda.
+  if (desde > 1) html += `<span class="pag-dots">...</span>`;
+
+  for (let p = desde; p <= hasta; p++) {
+    html += btn(p, p === paginaActual ? null : p, p === paginaActual ? ' pag-activa' : '');
+  }
+
+  if (hasta < totalPaginas) html += `<span class="pag-dots">...</span>`;
+
+  html += btn('Sig →', paginaActual < totalPaginas ? paginaActual + 1 : null);
+
+  caja.innerHTML = html;
+}
+
+// Salto directo a una pagina. cambiarPagina(±1) sigue existiendo por si algo
+// mas la usa, pero los botones ahora pasan por aca.
+function irPagina(p) {
+  paginaActual = p;
+  renderTabla();
+  document.querySelector('.tabla-wrap')?.scrollIntoView({ block: 'start' });
 }
 
 function cambiarPagina(dir) {
   paginaActual += dir;
   renderTabla();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Salto INSTANTANEO y al inicio de la tabla, no de la pagina entera.
+  // El scroll animado (behavior:'smooth') hacia arriba de todo hacia parecer
+  // que la tabla se desplazaba en vez de cambiar de pagina.
+  document.querySelector('.tabla-wrap')?.scrollIntoView({ block: 'start' });
 }
 
 // ── DETALLE ───────────────────────────────────────────────────

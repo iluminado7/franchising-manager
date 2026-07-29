@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Partner — Recuperar contraseña</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/style.css">
+<link rel="stylesheet" href="styles/login.css?v=2">
+<link rel="preconnect" href="https://challenges.cloudflare.com">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="js/config.js"></script>
+</head>
+<body>
+
+<div id="screen-login">
+
+  <div class="login-izq">
+    <div class="brand">
+      <img src="img/logo-goharv.jpg" alt="GoHarv" class="brand-logo">
+      <div class="brand-name">
+        Business Partner
+        <span>by GoHarv.</span>
+      </div>
+    </div>
+
+    <div class="login-izq-copy">
+      <h1>Gestión de<br>manuales <em>operativos</em></h1>
+      <p>Plataforma centralizada para la redacción, edición, notificación, capacitación y trazabilidad legal de manuales de franquicias conforme a la normativa vigente.</p>
+    </div>
+
+    <div class="login-features">
+      <div class="feature-item"><div class="feature-dot"></div>Gestión en tiempo real y desde cualquier lugar</div>
+      <div class="feature-item"><div class="feature-dot"></div>Doble validación digital y física</div>
+      <div class="feature-item"><div class="feature-dot"></div>Notificaciones automáticas de cambios</div>
+    </div>
+  </div>
+
+  <div class="login-der">
+    <div class="login-card">
+      <h2>Recuperar contraseña</h2>
+      <p class="sub">Te enviamos un enlace para crear una nueva</p>
+
+      <div class="login-error" id="login-error"></div>
+
+      <!-- Mensaje de exito. Reemplaza al formulario una vez enviado: dejarlo
+           visible invitaria a reintentar, y el limite es de 3 por hora. -->
+      <div id="zona-ok" style="display:none">
+        <div style="background:rgba(92,184,122,.1);border:1px solid rgba(92,184,122,.3);border-radius:8px;padding:16px;margin-bottom:20px">
+          <p style="color:var(--exito);font-size:14px;line-height:1.6;margin:0">
+            Si el email está registrado, vas a recibir las instrucciones en unos minutos.
+          </p>
+        </div>
+        <p style="color:var(--gris4);font-size:12.5px;line-height:1.6;margin-bottom:20px">
+          Revisá también la carpeta de spam. El enlace vence en 60 minutos y sirve una sola vez.
+        </p>
+        <a href="login.html" class="btn-login" style="display:block;text-align:center;text-decoration:none">
+          Volver al inicio
+        </a>
+      </div>
+
+      <div id="zona-form">
+        <div class="form-group">
+          <label for="inp-email">Email</label>
+          <input type="email" id="inp-email" placeholder="tu@email.com" autocomplete="email">
+        </div>
+
+
+        <button class="btn-login" id="btn-enviar" onclick="solicitar()">
+          <div class="spinner" id="spinner"></div>
+          <span id="btn-text">Enviar enlace</span>
+        </button>
+        <div class="form-group">
+          <div class="cf-turnstile"
+               data-sitekey="0x4AAAAAAD_Hd3rrFQFfudGj"
+               data-callback="onTurnstileOk"
+               data-expired-callback="onTurnstileExpired"
+               data-error-callback="onTurnstileError"
+               data-theme="dark"
+               data-language="es"></div>
+        </div>
+        <p style="text-align:center;margin-top:18px">
+          <a href="login.html" style="color:var(--gris4);font-size:13px;text-decoration:none">
+            Volver al inicio de sesión
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// El token de Turnstile dura 300s y es de UN SOLO USO: hay que resetear el
+// widget en cada error, no solo cuando falla el captcha. Sin eso, el segundo
+// intento falla siempre aunque el email sea correcto.
+let tsToken = null;
+
+function onTurnstileOk(token) { tsToken = token; mostrarError(''); }
+function onTurnstileExpired() { tsToken = null; }
+function onTurnstileError()   { tsToken = null; }
+
+function resetTurnstile() {
+  tsToken = null;
+  if (window.turnstile) { try { turnstile.reset(); } catch (_) {} }
+}
+
+async function solicitar() {
+  const email   = document.getElementById('inp-email').value.trim();
+  const btn     = document.getElementById('btn-enviar');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+
+  mostrarError('');
+
+  if (!email) { mostrarError('Ingresá tu email.'); return; }
+  if (!tsToken) { mostrarError('Completá la verificación de seguridad.'); return; }
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  btnText.textContent = 'Enviando...';
+
+  try {
+    const res = await fetch(API + '/password/solicitar', {
+      method:      'POST',
+      headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      credentials: 'include',
+      body:        JSON.stringify({ email, turnstile_token: tsToken }),
+    });
+
+    // 429 = se paso del limite. Es el UNICO caso en que la respuesta difiere,
+    // y no filtra nada: dice cuantas veces pidio ESTE cliente, no si el email
+    // existe.
+    if (res.status === 429) {
+      resetTurnstile();
+      mostrarError('Demasiados intentos. Esperá unos minutos antes de volver a probar.');
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      resetTurnstile();
+      mostrarError(data?.errors?.email?.[0] || data?.message || 'No se pudo procesar el pedido.');
+      return;
+    }
+
+    // Exito. El backend responde SIEMPRE lo mismo, exista el email o no: si
+    // dijera "ese email no esta registrado", cualquiera podria averiguar quien
+    // esta en el sistema escribiendo direcciones. Ver RECUPERACION-PASSWORD.md.
+    document.getElementById('zona-form').style.display = 'none';
+    document.getElementById('zona-ok').style.display   = 'block';
+
+  } catch (err) {
+    resetTurnstile();
+    mostrarError('Error de conexión. Verificá que el servidor esté activo.');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = 'Enviar enlace';
+  }
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent   = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+document.getElementById('inp-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') solicitar();
+});
+</script>
+
+</body>
+</html>

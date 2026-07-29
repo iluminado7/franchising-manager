@@ -49,8 +49,10 @@ include 'layout/head.php';
                 <span class="dato-valor" id="dato-email">—</span>
               </div>
               <div class="dato-item">
-                <span class="dato-label">DNI</span>
-                <span class="dato-valor" id="dato-dni">—</span>
+                <!-- La etiqueta la completa el JS segun el rol: CUIL para
+                     empleado, CUIT para el resto. El dato es el mismo. -->
+                <span class="dato-label" id="label-cuit">CUIT</span>
+                <span class="dato-valor" id="dato-cuit">—</span>
               </div>
               <div class="dato-item" id="dato-empresa-wrap" style="display:none">
                 <span class="dato-label">Empresa</span>
@@ -449,7 +451,33 @@ function renderPerfil(u) {
   document.getElementById('perfil-nombre').textContent    = nombre;
   aplicarAvatar(u, !!u.avatar_url);
   document.getElementById('dato-email').textContent       = u.email;
-  document.getElementById('dato-dni').textContent         = u.dni || '—';
+
+  // CUIT o CUIL segun el rol. Es solo la etiqueta: mismo formato y mismo
+  // digito verificador. CUIT para quien factura (franquiciante, socio
+  // comercial), CUIL para el empleado en relacion de dependencia.
+  document.getElementById('label-cuit').textContent = u.rol === 'empleado' ? 'CUIL' : 'CUIT';
+
+  // El socio comercial y el empleado no administran su propio email: es su
+  // identificacion legal en la red y lo cambia el administrador.
+  //
+  // Ocultar la tarjeta NO es la proteccion — el guard esta en
+  // AuthController::updateEmail(). Esto es para no ofrecer una opcion que
+  // igual va a fallar.
+  if (u.rol === 'franquiciado' || u.rol === 'empleado') {
+    const card = document.getElementById('card-email');
+    if (card) {
+      card.innerHTML =
+        '<div class="card-perfil-titulo">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>' +
+          'Email' +
+        '</div>' +
+        '<p style="font-size:13px;color:var(--gris4);line-height:1.6;margin:0">' +
+          'Tu email es tu identificación en la red y no se modifica desde acá. ' +
+          'Si necesitás cambiarlo, pedíselo al administrador.' +
+        '</p>';
+    }
+  }
+  document.getElementById('dato-cuit').textContent  = u.cuit || '—';
 
   // Badge de rol
   const labels = { super_admin: 'Super Admin', franquiciante: 'Franquiciante', franquiciado: 'Socio Comercial', empleado: 'Empleado' };

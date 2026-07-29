@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\Cuit;
 use App\Models\SuperAdmin;
 use App\Models\SystemAdmin;
 use App\Models\FranchiseStaff;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -31,6 +34,20 @@ class UserController extends Controller
         if (!$includeDeleted) {
             $query->noEliminados();
         }
+
+        // Los purgados no aparecen NUNCA, ni siquiera con include_deleted=1.
+        //
+        // La fila sigue existiendo unicamente porque acceptances y
+        // activity_logs la referencian con ON DELETE RESTRICT. Como persona
+        // ya no es nadie: nombre, email, CUIT y foto fueron destruidos.
+        // Listarla seria ofrecer un usuario que no existe, sin ninguna
+        // accion posible sobre el.
+        //
+        // El rastro de la purga NO se pierde: queda 'usuario_purgado' en
+        // activity_logs con el actor y la fecha, consultable desde log.php.
+        // Si algun dia hace falta verlos en pantalla, la salida es un flag
+        // include_purgados=1 aparte, no sacar este filtro.
+        $query->noPurgados();
 
         // Franquiciante solo ve usuarios de su empresa
         if ($user->esFranquiciante()) {
@@ -103,7 +120,7 @@ class UserController extends Controller
             'rol'           => ['required', Rule::in($rolesPermitidos)],
             'nombre'        => 'required|string|max:100',
             'apellido'      => 'required|string|max:100',
-            'dni'           => 'nullable|string|max:15',
+            'cuit'          => ['nullable', 'string', 'max:15', new Cuit],
             'celular'       => 'nullable|string|max:30',
             'empresa_id'    => 'sometimes|integer|exists:empresas,id',
             'franquicia_id' => [
@@ -149,7 +166,7 @@ class UserController extends Controller
             'email'    => $data['email'],
             'nombre'   => $data['nombre'],
             'apellido' => $data['apellido'],
-            'dni'      => $data['dni']     ?? null,
+            'cuit'     => $data['cuit']    ?? null,
             'celular'  => $data['celular'] ?? null,
         ]);
         // Campos privilegiados (setter directo — protegidos de mass assignment).
@@ -217,7 +234,7 @@ class UserController extends Controller
             'apellido'      => 'sometimes|string|max:100',
             'email'         => "sometimes|email|unique:users,email,{$id}",
             'password'      => 'nullable|string|min:8',
-            'dni'           => 'nullable|string|max:15',
+            'cuit'          => ['nullable', 'string', 'max:15', new Cuit],
             'celular'       => 'nullable|string|max:30',
             'franquicia_id' => [
                 'nullable', 'integer',
@@ -237,7 +254,7 @@ class UserController extends Controller
         $updateUser = array_filter([
             'nombre'   => $data['nombre']   ?? null,
             'apellido' => $data['apellido'] ?? null,
-            'dni'      => $data['dni']      ?? null,
+            'cuit'     => $data['cuit']     ?? null,
             'celular'  => $data['celular']  ?? null,
             'email'    => $data['email']    ?? null,
         ], fn($v) => $v !== null);
@@ -251,6 +268,40 @@ class UserController extends Controller
         if (!empty($data['password'])) {
             $user->password_hash = Hash::make($data['password']);
             $user->save();
+
+            // Un admin fijandole la contrasena a otro es la operacion que
+            // permite tomar el control de una cuenta ajena. Tiene que quedar
+            // registrada: sin esto no se puede distinguir "el socio acepto el
+            // manual" de "alguien entro con su cuenta".
+            //
+            // user_id es el ACTOR (quien lo hizo); el afectado va en el detalle.
+            // Solo claves permitidas por chk_detalle_schema y maximo 5.
+            try {
+                ActivityLog::registrar(
+                    userId:      $actor->id,
+                    accion:      'password_reseteada_admin',
+                    ip:          $request->ip(),
+                    empresaId:   $user->empresa_id,
+                    entidadTipo: 'users',
+                    entidadId:   $user->id,
+                    detalle:     [
+                        'campo'      => 'password_hash',
+                        'user_email' => $user->email,
+                    ],
+                    userAgent:   $request->userAgent()
+                );
+            } catch (\Throwable $e) { /* best-effort */ }
+
+            // Revocar TODAS las sesiones del usuario afectado.
+            //
+            // A diferencia de updatePassword() (H-012), aca no hay ninguna
+            // sesion que preservar: la actual es la del admin, no la del
+            // usuario tocado. Y si le resetean la clave PORQUE le robaron la
+            // cuenta, dejarle las sesiones vivas al atacante vaciaria de
+            // sentido el cambio.
+            try {
+                $user->tokens()->delete();
+            } catch (\Throwable $e) { /* best-effort */ }
         }
 
         // franquicia_id sigue viviendo en franchise_staff
@@ -382,6 +433,16 @@ class UserController extends Controller
             return response()->json(['error' => 'El usuario no está eliminado.'], 409);
         }
 
+        // Un usuario purgado no se puede restaurar: no le quedan datos con
+        // los cuales hacerlo. El email es un placeholder y la contrasena es
+        // un hash al azar que nadie conoce. Restaurarlo devolveria una
+        // cuenta muerta que ocupa lugar en el listado.
+        if ($user->anonimizado_at !== null) {
+            return response()->json([
+                'error' => 'El usuario fue borrado: ya no tiene datos con los cuales restaurarlo.',
+            ], 409);
+        }
+
         // H-015: deleted_by/deleted_at están fuera del $fillable, se setean con
         // setter directo.
         $user->deleted_by = null;
@@ -399,6 +460,141 @@ class UserController extends Controller
         );
 
         return response()->json(['message' => 'Usuario restaurado correctamente.']);
+    }
+
+    /**
+     * POST /api/usuarios/{id}/purgar   (solo super_admin)
+     *
+     * Purga de datos personales. En la UI se llama "borrar definitivamente",
+     * pero NO borra la fila: destruye los datos de la persona y deja el id.
+     *
+     * La fila no se puede borrar aunque se quisiera. acceptances.user_id y
+     * activity_logs.user_id son ON DELETE RESTRICT, asi que un DELETE fisico
+     * falla en la base. Y esta bien que falle: esa fila es el SUJETO de la
+     * cadena de cumplimiento. Sin ella, una aceptacion dice "alguien acepto
+     * la version 2.1", que no prueba nada.
+     *
+     * LO QUE ESTA PURGA NO ALCANZA — es deuda conocida, no un olvido:
+     *
+     *   - acceptances.pdf_sellado_url: el PDF sellado lleva el nombre
+     *     impreso. Es el certificado de aceptacion; uno anonimo no prueba
+     *     nada. No se toca.
+     *   - physical_signatures: la firma manuscrita escaneada. Mismo caso.
+     *   - acceptances.ip_address: es dato personal y es parte de la
+     *     evidencia.
+     *   - activity_logs.detalle puede tener user_email en registros viejos
+     *     (chk_detalle_schema lo permite y password_reseteada_admin lo
+     *     escribe). Se decidio NO redactarlo: activity_logs es inmutable
+     *     por diseno en este proyecto.
+     *
+     * Si la purga sale de un pedido legal de supresion, eso es una supresion
+     * incompleta y hay que decirlo, no asumir que alcanza.
+     */
+    public function purgar(Request $request, int $id): JsonResponse
+    {
+        $actor = $request->user();
+
+        // Guard doble, igual que ErrorLogController: la ruta ya vive en el
+        // grupo role:super_admin, pero esto destruye datos sin vuelta atras.
+        // Si un refactor moviera la ruta de grupo, esto la sigue cubriendo.
+        if (!$actor->esSuperAdmin()) {
+            return response()->json(['error' => 'Sin permisos.'], 403);
+        }
+
+        $user = User::findOrFail($id);
+
+        if ($user->id === $actor->id) {
+            return response()->json(['error' => 'No podés purgarte a vos mismo.'], 403);
+        }
+
+        // Solo se purga lo ya eliminado. Obliga a pasar primero por destroy(),
+        // que SI es reversible. Son dos decisiones separadas a proposito.
+        if ($user->deleted_at === null) {
+            return response()->json([
+                'error' => 'Primero hay que eliminar al usuario. La purga solo aplica a usuarios ya eliminados.',
+            ], 409);
+        }
+
+        if ($user->anonimizado_at !== null) {
+            return response()->json(['error' => 'El usuario ya fue purgado.'], 409);
+        }
+
+        // El email exacto tiene que viajar en el body. Es la unica barrera
+        // contra un clic equivocado en una operacion irreversible.
+        $data = $request->validate([
+            'confirmacion_email' => 'required|string',
+        ]);
+
+        if (!hash_equals($user->email, $data['confirmacion_email'])) {
+            return response()->json(['error' => 'El email de confirmación no coincide.'], 422);
+        }
+
+        // Se guarda antes del scrub: despues la columna queda en NULL.
+        $fotoKey = $user->foto_url;
+
+        DB::transaction(function () use ($user, $actor, $request) {
+            // email es NOT NULL UNIQUE. El id garantiza unicidad, y el TLD
+            // .invalid esta reservado por RFC 2606: no resuelve nunca.
+            $user->email = "eliminado+{$user->id}@usuario.invalid";
+
+            // nombre y apellido son NOT NULL: no pueden ir a NULL.
+            $user->nombre   = 'Usuario';
+            $user->apellido = 'eliminado';
+
+            $user->cuit       = null;
+            $user->dni_legacy = null;
+            $user->celular    = null;
+            $user->foto_url   = null;
+
+            // password_hash es NOT NULL. Un hash de 64 caracteres al azar es
+            // mas seguro que un valor conocido o vacio: nadie puede volver a
+            // entrar con esta cuenta, ni siquiera por accidente.
+            $user->password_hash = Hash::make(Str::random(64));
+            $user->activo        = 0;
+
+            // rol y empresa_id SE CONSERVAN. No son datos personales, y sin
+            // ellos los registros viejos de activity_logs dejan de tener
+            // contexto de tenant.
+
+            $user->anonimizado_at  = now();
+            $user->anonimizado_por = $actor->id;
+            $user->save();
+
+            // destroy() ya los mato, pero pudo haber corrido hace meses.
+            $user->tokens()->delete();
+
+            // El log va DENTRO de la transaccion y SIN try/catch, al reves
+            // que el resto de este controller. Si registrar falla — por
+            // ejemplo si 'usuario_purgado' no pasa alguna constraint de
+            // activity_logs — la purga entera se revierte y el admin ve el
+            // error. Una destruccion irreversible sin registro es peor que
+            // una destruccion que no ocurre.
+            //
+            // SIN user_email en el detalle, a proposito: escribir el email en
+            // un registro nuevo justo cuando se lo esta borrando contradice
+            // la operacion. Queda el id, que es lo que sobrevive.
+            ActivityLog::registrar(
+                userId:      $actor->id,
+                accion:      'usuario_borrado_definitivamente',
+                ip:          $request->ip(),
+                empresaId:   $user->empresa_id,
+                entidadTipo: 'users',
+                entidadId:   $user->id,
+                userAgent:   $request->userAgent()
+            );
+        });
+
+        // El archivo va DESPUES del commit. Si el borrado en S3 falla, la
+        // purga de la base ya esta hecha y no se revierte por un archivo
+        // huerfano. Al reves seria peor: commitear la fila y quedarse con la
+        // foto de una persona que pidio que la borren.
+        if (!empty($fotoKey)) {
+            try {
+                Storage::delete($fotoKey);
+            } catch (\Throwable $e) { /* best-effort */ }
+        }
+
+        return response()->json(['message' => 'Datos del usuario eliminados correctamente.']);
     }
 
     // ── Categorías del usuario (v2.3) ───────────────────────────────────

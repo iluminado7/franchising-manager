@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ErrorLogController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\CspReportController;
@@ -35,6 +36,25 @@ Route::post('/login', [AuthController::class, 'login'])
 
 Route::post('/csp-report', [CspReportController::class, 'receive'])
     ->middleware('throttle:60,1');
+
+
+// Recuperacion de contrasena. PUBLICAS a proposito: quien se olvido la
+// contrasena no tiene sesion, asi que dentro de auth:sanctum solo podrian
+// recuperarla los que ya estan adentro.
+//
+// solicitar() dispara MAILS A TERCEROS: sin rate limit, cualquiera puede
+// bombardear la casilla de un franquiciado o barrer emails. Por eso lleva el
+// limiter compuesto 'password-reset' (ver AppServiceProvider).
+Route::post('/password/solicitar', [PasswordResetController::class, 'solicitar'])
+    ->middleware('throttle:password-reset');
+
+// Estas dos ya exigen un token valido de 64 caracteres aleatorios, asi que el
+// riesgo real es nulo; el limite es contra el ruido, no contra un ataque.
+Route::get('/password/validar/{token}', [PasswordResetController::class, 'validar'])
+    ->middleware('throttle:30,1');
+
+Route::post('/password/restablecer', [PasswordResetController::class, 'restablecer'])
+    ->middleware('throttle:10,1');
 
 
 // ── Rutas protegidas ──────────────────────────────────────────────────
@@ -100,6 +120,13 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::get('/errores',                 [ErrorLogController::class, 'index']);
         Route::post('/errores/{id}/resolver',  [ErrorLogController::class, 'resolver']);
         Route::delete('/errores/{id}',         [ErrorLogController::class, 'destroy']);
+
+        // Purga de datos personales de un usuario ("borrar definitivamente").
+        // Vive ACA y no con el resto de /usuarios, que estan en el grupo
+        // super_admin+franquiciante: es irreversible y destruye datos, asi
+        // que no la puede disparar un franquiciante sobre su propia gente.
+        // El controlador re-verifica esSuperAdmin() igual, como /errores.
+        Route::post('/usuarios/{id}/purgar',   [UserController::class, 'purgar']);
 
         // Empresas
         Route::get('/empresas',                   [EmpresaController::class, 'index']);

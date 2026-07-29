@@ -782,3 +782,110 @@ body.tema-claro {
   align-items: center;
   gap: 8px;
 }
+
+
+/* ── PAGINACION ───────────────────────────────────────────────────────
+   La dibuja renderPaginacion() de layout.js. La pantalla solo pone el
+   contenedor vacio:  <div id="paginacion"></div>
+   ------------------------------------------------------------------- */
+#paginacion {
+  display: none;              /* lo enciende el JS cuando hay mas de una pagina */
+  padding: 14px 20px;
+  border-top: 1px solid var(--gris2);
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pag-info {
+  font-size: 12px;
+  color: var(--gris4);
+  font-family: 'Roboto', sans-serif;
+}
+
+.pag-botones { display: flex; gap: 5px; align-items: center; }
+
+/* Botones propios y no .btn btn-ghost: son cuadrados, chicos, y necesitan un
+   estado "activo" que los del sistema no tienen. */
+.pag-btn {
+  min-width: 34px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: 'Archivo', sans-serif;
+  background: transparent;
+  border: 1px solid var(--gris2);
+  border-radius: 7px;
+  color: var(--gris5);
+  cursor: pointer;
+  transition: all .15s;
+}
+.pag-btn:hover:not(:disabled) { border-color: var(--gris3); color: var(--blanco); }
+.pag-btn:disabled { opacity: .35; cursor: default; }
+
+/* La pagina actual, en el dorado del sistema: se lee de un vistazo sin tener
+   que comparar los numeros. Va disabled, asi que se le devuelve la opacidad. */
+.pag-activa {
+  background: var(--dorado);
+  border-color: var(--dorado);
+  color: var(--negro);
+  font-weight: 600;
+}
+.pag-activa:disabled { opacity: 1; }
+
+/* Indicador de que hay mas paginas. NO es un boton. */
+.pag-dots {
+  padding: 0 4px;
+  color: var(--gris4);
+  font-size: 12px;
+  user-select: none;
+}
+
+/* ── Modales de version para manuales PDF ────────────────────────────
+   Prefijo .vpdf- a proposito: editor.php define .ver-opcion* en su propio
+   <style> y no queremos que las dos definiciones se pisen segun quien
+   cargue ultimo. Son pantallas distintas con estilos independientes. */
+.vpdf-opciones { display: flex; flex-direction: column; gap: 10px; }
+.vpdf-opcion {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--gris2);
+  border-radius: 10px;
+  background: var(--negro);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.vpdf-opcion:hover { border-color: var(--dorado); background: rgba(201,168,76,.06); }
+
+/* Estado seleccionado: lo usa el selector inline de documentos.php, donde
+   la eleccion no cierra un modal sino que queda marcada hasta subir. */
+.vpdf-opcion.sel { border-color: var(--dorado); background: rgba(201,168,76,.10); }
+.vpdf-opcion.sel .vpdf-opcion-titulo { color: var(--dorado); }
+.vpdf-opcion-num    { font-size: 18px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; margin-bottom: 2px; }
+.vpdf-opcion-titulo { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 4px; }
+.vpdf-opcion-desc   { font-size: 12.5px; color: var(--gris4); line-height: 1.5; font-family: 'Roboto', sans-serif; }
+
+/* Los campos de version son type=number: el selector de las paginas es
+   .form-group input[type=text] y NO los alcanza. Se estilan aca. */
+.vpdf-num {
+  width: 100%;
+  background: var(--negro);
+  border: 1px solid var(--gris2);
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: 'Archivo', sans-serif;
+  color: var(--blanco);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .2s;
+}
+.vpdf-num:focus { border-color: var(--dorado); }
+.vpdf-preview-caja {
+  margin-top: 16px; padding: 12px;
+  border: 1px solid var(--gris2); border-radius: 6px;
+  background: rgba(201,168,76,.04);
+}
+.vpdf-preview-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--gris4); font-weight: 600; margin-bottom: 4px; }
+.vpdf-preview-val { font-size: 20px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; }

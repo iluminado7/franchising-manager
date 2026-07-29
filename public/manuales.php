@@ -71,6 +71,10 @@ include 'layout/head.php';
             </td></tr>
           </tbody>
         </table>
+
+        <!-- Lo dibuja renderPaginacion() de layout.js. Con una sola pagina,
+             la barra entera queda oculta. -->
+        <div id="paginacion"></div>
       </div>
 
     </main>
@@ -491,21 +495,50 @@ function aplicarFiltros() {
   if (filtroActual !== 'todos') lista = lista.filter(m => m.estado === filtroActual);
   if (empresaFiltroId) lista = lista.filter(m => String(m.empresa_id) === String(empresaFiltroId));
 
+  // Orden por defecto: del mas reciente al mas viejo. Va DESPUES de
+  // filtrar y ANTES de paginar — si se ordenara despues del slice, se
+  // ordenarian solo los 10 de la pagina y el resto quedaria al azar.
+  lista = ordenarManualesRecientes(lista);
+
+  // Al filtrar hay que volver a la 1: si se estaba en la pagina 5 y el
+  // resultado tiene 2, el slice apuntaria a un rango inexistente y la tabla
+  // saldria VACIA sin ninguna explicacion.
+  paginaActual = 1;
   renderTabla(lista);
+  // El titulo muestra el TOTAL; el "Mostrando X-Y de Z" del pie, el detalle.
   document.getElementById('tabla-titulo').textContent = `${lista.length} manual(es)`;
 }
 
 // ── RENDER TABLA (agrupado por empresa) ───────────────────────
+// 10 por pagina: es una pantalla de gestion, se mira fila por fila.
+const POR_PAGINA = 10;
+let paginaActual = 1;
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
 
   if (!lista.length) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">Sin manuales que mostrar.</div></td></tr>`;
+    // Sin esto quedaria visible la paginacion del filtro anterior.
+    renderPaginacion({ total: 0, pagina: 1, porPagina: POR_PAGINA, onCambio: () => {} });
     return;
   }
 
+  // El corte va ANTES de agrupar. Si se cortara al final, se recorrerian todos
+  // los manuales para armar todas las filas y recien despues se tirarian las
+  // que sobran; ademas `filas` incluye los encabezados de grupo, asi que "10
+  // filas" no serian 10 manuales.
+  //
+  // Efecto asumido: los manuales de una empresa pueden quedar partidos entre
+  // dos paginas, con el encabezado del grupo repetido. Es lo normal en una
+  // tabla agrupada con paginacion, y es preferible a paginas irregulares.
+  const total  = lista.length;
+  const inicio = (paginaActual - 1) * POR_PAGINA;
+  const fin    = Math.min(inicio + POR_PAGINA, total);
+  const pagina = lista.slice(inicio, fin);
+
   const grupos = {};
-  lista.forEach(m => {
+  pagina.forEach(m => {
     const empId     = m.empresa_id || 0;
     const empNombre = m.empresa?.nombre
       || todasLasEmpresas.find(e => e.id === empId)?.nombre
@@ -596,6 +629,13 @@ function renderTabla(lista) {
   });
 
   tbody.innerHTML = filas.join('');
+
+  renderPaginacion({
+    total,
+    pagina:    paginaActual,
+    porPagina: POR_PAGINA,
+    onCambio:  p => { paginaActual = p; renderTabla(lista); },
+  });
 }
 
 
@@ -865,6 +905,24 @@ function usuariosDeCategoria(catId) {
 }
 
 // HTML de la sublista de usuarios de una categoria.
+// Etiqueta con la sucursal del usuario, para el arbol de asignacion.
+//
+// En una red con varias sucursales hay homonimos, y sin este dato se asigna a
+// ciegas: no hay forma de saber a que local pertenece cada socio.
+//
+// El dato ya viaja en GET /usuarios (es el mismo que usa usuarios.php); no hace
+// falta tocar el backend.
+//
+// Devuelve string VACIO cuando no corresponde:
+//   - franquiciante y super_admin no tienen franchise_staff
+//   - un socio puede existir sin sucursal asignada (ej. un distribuidor)
+// Poner "Sin sucursal" en esos casos seria ruido en la mayoria de las filas.
+function sucursalDeUsuario(u) {
+  const nombre = u?.franchise_staff?.franquicia?.nombre;
+  if (!nombre) return '';
+  return `<span style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">· ${esc(nombre)}</span>`;
+}
+
 function sublistaUsuariosHTML(catId) {
   const us = usuariosDeCategoria(catId);
   if (!us.length) {
@@ -878,7 +936,7 @@ function sublistaUsuariosHTML(catId) {
   const items = us.map(u => `
     <label style="display:flex;align-items:center;gap:8px;padding:3px 2px;cursor:pointer">
       <input type="checkbox" data-user-cat="${catId}" data-user-id="${u.id}" style="margin:0;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleUsuario(${u.id})">
-      <span style="font-size:12px;color:var(--blanco)">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</span>
+      <span style="font-size:12px;color:var(--blanco)">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</span>${sucursalDeUsuario(u)}
     </label>`).join('');
   return todos + items;
 }
@@ -977,9 +1035,15 @@ function onElegirPdf(file) {
 
 // Sube un PDF como version del manual. fetch crudo (no apiFetch) porque hay
 // que mandar multipart, igual que subirImagen() en editor.php.
-async function subirPdfComoVersion(manualId, file) {
+// `extra` viaja como campos del FormData: tipo_cambio para una version
+// nueva, version_inicial_number/minor para la primera. publicarArchivo()
+// los valida desde siempre — lo que faltaba era mandarlos.
+async function subirPdfComoVersion(manualId, file, extra = {}) {
   const fd = new FormData();
   fd.append('archivo', file, file.name || 'manual.pdf');
+  Object.entries(extra).forEach(([k, v]) => {
+    if (v !== null && v !== undefined) fd.append(k, v);
+  });
   const res = await fetch(`${API}/manuales/${manualId}/archivo`, {
     method: 'POST',
     credentials: 'include',
@@ -1008,9 +1072,16 @@ function subirNuevaVersionPdf(id, titulo) {
   input.onchange = async () => {
     const file = input.files && input.files[0];
     if (!file) return;
+
+    // La misma pregunta que editor.php le hace a un manual editable. Va
+    // ANTES del confirm: elegir el numero de version es la decision, y el
+    // confirm solo avisa que esto dispara mails.
+    const tipo = await pedirTipoCambioPdf(id);
+    if (!tipo) return;
+
     if (!confirm(`¿Publicar "${file.name}" como nueva versión de "${titulo}"?\n\nSe notificará por mail a todos los socios asignados.`)) return;
     try {
-      await subirPdfComoVersion(id, file);
+      await subirPdfComoVersion(id, file, { tipo_cambio: tipo });
       await cargarManuales();
     } catch (e) {
       alert(e.message || 'No se pudo subir el PDF.');
@@ -1072,6 +1143,11 @@ async function procesarDocx(file) {
 }
 
 // ── CREAR MANUAL ──────────────────────────────────────────────
+// Se guarda entre la pregunta y la subida. Vive fuera de crearManual()
+// porque el bloque del PDF corre bastante mas abajo, despues de crear el
+// manual y de sincronizar categorias.
+let versionInicialPdf = null;
+
 async function crearManual() {
   const titulo    = document.getElementById('nuevo-titulo').value.trim();
   const categoria = document.getElementById('nuevo-categoria').value.trim();
@@ -1082,6 +1158,15 @@ async function crearManual() {
   if (!empresaId) { mostrarNuevoError('Seleccioná una empresa para asociar el manual.'); return; }
   if (modoImport === 'import' && !htmlImportado) { mostrarNuevoError('Importá un archivo .docx antes de continuar.'); return; }
   if (modoImport === 'pdf' && !archivoPdfSeleccionado) { mostrarNuevoError('Elegí el archivo PDF antes de continuar.'); return; }
+
+  // Version inicial ANTES de crear nada. Si se preguntara despues de crear
+  // el manual, cancelar acá dejaria un manual en borrador sin version que
+  // nadie pidio. Cancelar ahora no deja rastro.
+  versionInicialPdf = null;
+  if (modoImport === 'pdf') {
+    versionInicialPdf = await pedirVersionInicialPdf();
+    if (!versionInicialPdf) return;
+  }
 
   btn.disabled = true; btn.textContent = 'Creando...';
   try {
@@ -1124,7 +1209,10 @@ async function crearManual() {
     // creado en borrador y se puede reintentar con "Nueva version".
     if (modoImport === 'pdf') {
       btn.textContent = 'Subiendo PDF...';
-      await subirPdfComoVersion(manual.id, archivoPdfSeleccionado);
+      await subirPdfComoVersion(manual.id, archivoPdfSeleccionado, {
+        version_inicial_number: versionInicialPdf?.number,
+        version_inicial_minor:  versionInicialPdf?.minor,
+      });
       cerrarModalNuevo();
       await cargarManuales();
       return;

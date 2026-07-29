@@ -103,6 +103,41 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL ELIMINAR CATEGORÍA (borrado físico)
+
+     No cierra al clic afuera: el borrado es físico y no hay deshacer.
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-eliminar-cat">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h3>Eliminar categoría</h3>
+      <button class="modal-close" onclick="cerrarModalEliminarCat()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="elim-cat-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
+
+      <!-- Se llena solo cuando el backend rechaza con 409. -->
+      <div id="elim-cat-bloqueo" style="display:none;margin-top:14px;padding:12px;border:1px solid var(--gris2);border-radius:8px;background:var(--negro)">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-weight:600;margin-bottom:8px;font-family:'Archivo',sans-serif">Asignaciones que lo impiden</div>
+        <div id="elim-cat-detalle" style="font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;line-height:1.8"></div>
+        <div style="font-size:11.5px;color:var(--gris4);margin-top:10px;line-height:1.6;font-family:'Roboto',sans-serif">
+          Este conteo incluye lo eliminado y lo archivado, que la tabla no muestra.
+          Por eso puede no coincidir con los números de la fila.
+        </div>
+      </div>
+
+      <div class="form-error" id="elim-cat-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalEliminarCat()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-elim-cat" onclick="confirmarEliminarCat()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── TOAST ─────────────────────────────────────────────────── -->
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
@@ -501,6 +536,10 @@ function renderVistaCategorias() {
                       ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Desactivar`
                       : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Activar`}
                   </button>
+                  <button class="accion-btn" style="color:var(--error)" onclick="abrirModalEliminarCat(${c.id})">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    Eliminar
+                  </button>
                 </div>
               </td>
             </tr>
@@ -636,6 +675,81 @@ async function confirmarToggle() {
     document.getElementById('toggle-error').style.display = 'block';
     btn.disabled = false;
     btn.textContent = labelOriginal;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ELIMINAR CATEGORÍA (borrado físico)
+// ══════════════════════════════════════════════════════════════
+//
+// A diferencia de desactivar, esto borra la fila. El backend solo lo
+// permite si la categoría está vacía; si no, devuelve 409 con el detalle
+// de qué la está reteniendo.
+let pendingElimCat = null;
+
+function abrirModalEliminarCat(id) {
+  const c = categorias.find(x => x.id === id);
+  if (!c) return;
+  pendingElimCat = id;
+
+  document.getElementById('elim-cat-msg').textContent =
+    `¿Eliminar "${c.name}"? Se borra definitivamente y no se puede deshacer. ` +
+    `Si solo querés que deje de usarse, desactivala: así conservás el historial.`;
+
+  document.getElementById('elim-cat-bloqueo').style.display = 'none';
+  document.getElementById('elim-cat-detalle').innerHTML     = '';
+
+  const err = document.getElementById('elim-cat-error');
+  err.textContent = ''; err.style.display = 'none';
+
+  const btn = document.getElementById('btn-elim-cat');
+  btn.disabled = false; btn.textContent = 'Eliminar';
+
+  document.getElementById('modal-eliminar-cat').classList.add('open');
+}
+
+function cerrarModalEliminarCat() {
+  document.getElementById('modal-eliminar-cat').classList.remove('open');
+  // Rehabilitar SIEMPRE al cerrar: si quedara deshabilitado, reabrir el
+  // modal daría un botón muerto sin ninguna pista de por qué.
+  const btn = document.getElementById('btn-elim-cat');
+  btn.disabled = false; btn.textContent = 'Eliminar';
+  pendingElimCat = null;
+}
+
+async function confirmarEliminarCat() {
+  if (!pendingElimCat) return;
+  const btn = document.getElementById('btn-elim-cat');
+  btn.disabled = true; btn.textContent = 'Eliminando...';
+
+  try {
+    await apiFetch('DELETE', `/categorias/${pendingElimCat}`);
+    mostrarToast('Categoría eliminada.', 'exito');
+    cerrarModalEliminarCat();
+    await recargarCategorias();
+  } catch (e) {
+    const d = e.data?.detalle;
+
+    // El 409 trae el desglose de qué retiene la categoría. Mostrarlo es la
+    // diferencia entre "no se pudo" y "no se pudo POR ESTO".
+    if (d) {
+      const filas = [
+        ['usuario',   'usuarios',   d.usuarios],
+        ['manual',    'manuales',   d.manuales],
+        ['documento', 'documentos', d.documentos],
+      ]
+        .filter(([, , n]) => (n || 0) > 0)
+        .map(([sing, plur, n]) => `• ${n} ${n === 1 ? sing : plur}`)
+        .join('<br>');
+
+      document.getElementById('elim-cat-detalle').innerHTML     = filas;
+      document.getElementById('elim-cat-bloqueo').style.display = 'block';
+    }
+
+    const err = document.getElementById('elim-cat-error');
+    err.textContent   = e.data?.error || e.data?.message || 'Error al eliminar.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Eliminar';
   }
 }
 

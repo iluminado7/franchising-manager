@@ -188,7 +188,17 @@ body.lectura-pdf .doc-page {
 
 .pdfjs-toolbar {
   position: sticky;
-  top: 0;
+
+  /* Ya era sticky. El problema era top: 0, que la pega al borde del
+     viewport: o sea DEBAJO de .app-topbar (56px) y de .doc-topbar, que es
+     sticky a top: 56px. Quedaba fija y tapada, que se ve igual que no
+     funcionar.
+
+     El alto de .doc-topbar no es fijo — hace flex-wrap en pantallas
+     angostas — asi que lo mide ajustarTopBarraPdf() y lo escribe en
+     --doc-topbar-h. El 52px del fallback es el caso comun en desktop, por
+     si el JS todavia no corrio. */
+  top: calc(56px + var(--doc-topbar-h, 52px));
   z-index: 5;
   display: flex;
   align-items: center;
@@ -204,6 +214,44 @@ body.lectura-pdf .doc-page {
   font-size: 14px;
   color: #444;
 }
+
+/* Boton flotante: ir al final del documento.
+   Sirve para los dos tipos de manual — el visor de PDF tambien es scroll
+   continuo, no una pagina por vez. */
+.btn-ir-final {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #D8D4CC;
+  background: #FFFFFF;
+  color: #555;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  z-index: 120;
+  transition: opacity .18s, visibility .18s, color .15s, border-color .15s;
+}
+.btn-ir-final:hover { color: #1A1A1A; border-color: #B9B4A8; }
+.btn-ir-final:active { transform: scale(.95); }
+
+/* Oculto cuando ya estas abajo. visibility ademas lo saca del foco por
+   teclado: con opacity: 0 solo, el boton sigue siendo tabulable y se
+   puede activar sin verlo. */
+.btn-ir-final.oculto {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media print {
+  .btn-ir-final { display: none !important; }
+}
+
 .pdfjs-btn {
   min-width: 40px;
   height: 36px;
@@ -244,21 +292,16 @@ body.lectura-pdf .doc-page {
   padding: 40px 0;
 }
 
-.btn-aceptar-doc {
-  width: 100%; padding: 16px; background: var(--dorado);
-  color: #1A1A1A; border: none; border-radius: 10px;
-  font-size: 14px; font-weight: 700; font-family: 'Archivo', sans-serif;
-  cursor: pointer; transition: opacity .2s, transform .1s;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+/* Reintento del registro de lectura. Solo aparece si el POST fallo: sin
+   una salida visible, la cola de auth.php devuelve al socio a este mismo
+   manual en cada page load y queda en loop sin ninguna pista. */
+.btn-reintentar-lectura {
+  margin-left: 10px; padding: 4px 12px;
+  border: 1px solid currentColor; border-radius: 6px;
+  background: transparent; color: inherit; cursor: pointer;
+  font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 600;
 }
-.btn-aceptar-doc:hover    { opacity: .88; }
-.btn-aceptar-doc:active   { transform: scale(.99); }
-.btn-aceptar-doc:disabled { opacity: .4; cursor: not-allowed; }
-
-.nota-legal {
-  font-size: 11px; color: #999; text-align: center;
-  font-family: 'Roboto', sans-serif; line-height: 1.5; padding: 0 8px;
-}
+.btn-reintentar-lectura:hover { opacity: .75; }
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
@@ -333,7 +376,7 @@ body.lectura-pdf .doc-page {
   /* Ocultar TODO lo que no sea el documento. Se oculta por clase Y con un
      enfoque de "apagar la app": el topbar real usa .topbar (no .app-topbar). */
   .topbar, .app-topbar, .app-sidebar, .doc-topbar, .doc-footer,
-  .find-bar, #estado-aceptacion-wrap, #btn-aceptar-wrap,
+  .find-bar, #estado-aceptacion-wrap,
   .btn-logout, .notif-bell, .app-body > *:not(.lectura-layout) {
     display: none !important;
   }
@@ -552,11 +595,9 @@ body.lectura-pdf .doc-page {
     </div>
 
     <div class="doc-footer" id="doc-footer" style="display:none">
+      <!-- Unico contenido del pie: el estado de lectura. Ya no hay boton
+           de aceptar ni nota legal — el registro es automatico al abrir. -->
       <div id="estado-aceptacion-wrap"></div>
-      <div id="btn-aceptar-wrap"></div>
-      <div class="nota-legal" id="nota-legal" style="display:none">
-        Al aceptar, confirmás haber leído y comprendido el contenido de este manual.
-      </div>
     </div>
 
     <!-- Notas / Sugerencias (solo franquiciado) -->
@@ -573,38 +614,14 @@ body.lectura-pdf .doc-page {
       <div class="notas-list" id="notas-list" style="margin-top:16px"></div>
     </div>
 
-  </div>
-</div>
+    <!-- Ir al final del documento. Arranca oculto: iniciarBotonIrFinal()
+         decide si mostrarlo segun si el documento entra o no en pantalla. -->
+    <button class="btn-ir-final oculto" id="btn-ir-final" type="button"
+            onclick="irAlFinal()" title="Ir al final del documento"
+            aria-label="Ir al final del documento">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+    </button>
 
-<!-- MODAL CONFIRMACIÓN -->
-<div class="modal-overlay" id="modal-confirmar">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3>Confirmar aceptación digital</h3>
-      <button class="modal-close" onclick="cerrarModal()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:14px;color:#444;line-height:1.7;font-family:'Montserrat',sans-serif;margin-bottom:12px">
-        Estás a punto de aceptar digitalmente el manual:
-      </p>
-      <div style="background:#F7F5F0;border-radius:8px;padding:12px 16px;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:600;color:#1A1A1A" id="modal-manual-nombre"></div>
-        <div style="font-size:12px;color:#888;margin-top:3px;font-family:'Roboto',sans-serif" id="modal-manual-version"></div>
-      </div>
-      <p style="font-size:14px;color:#666;line-height:1.6;font-family:'Montserrat',sans-serif">
-        Esta acción es <strong style="color:#1A1A1A">queda registrada</strong> una vez aceptes que leiste el manual.</strong>.
-      </p>
-      <div id="modal-error" style="display:none;margin-top:12px;background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:#E25C5C"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn-modal-confirm" id="btn-confirmar" onclick="ejecutarAceptacion()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Confirmar aceptación
-      </button>
-    </div>
   </div>
 </div>
 
@@ -766,43 +783,31 @@ async function init() {
 
     document.getElementById('doc-footer').style.display = 'flex';
 
-    // Solo el franquiciado acepta; el resto ve solo lectura, sin aceptación ni nota legal
+    // El registro de lectura es SOLO del socio comercial.
+    //
+    // El endpoint no filtra por rol: si esto disparara para todos, un
+    // franquiciante entrando en vista previa o un super_admin revisando el
+    // manual se registrarian a si mismos y ensuciarian el listado con gente
+    // que nunca fue destinataria del manual.
     if (rolUsuario !== 'franquiciado') {
       document.getElementById('doc-footer').style.display         = 'none';
       document.getElementById('estado-aceptacion-wrap').innerHTML = '';
-      document.getElementById('btn-aceptar-wrap').innerHTML       = '';
-      document.getElementById('nota-legal').style.display         = 'none';
       return;
     }
 
-    // Franquiciado: muestra estado de aceptación
-    const estadoWrap = document.getElementById('estado-aceptacion-wrap');
+    // Registro de lectura: se dispara al ABRIR el manual, sin boton.
+    //
+    // Lo que queda registrado es que esta persona abrio esta version, este
+    // dia, desde esta IP. No es un consentimiento y la pantalla no dice que
+    // lo sea: el cumplimiento formal pasa a ser la firma fisica en PDF,
+    // que se carga desde aceptaciones.php.
     if (yaAceptado) {
-      estadoWrap.innerHTML = `
-        <div class="estado-aceptacion aceptado">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Ya aceptaste este manual digitalmente.
-        </div>`;
+      pintarEstadoLectura('leido');
     } else {
-      estadoWrap.innerHTML = `
-        <div class="estado-aceptacion pendiente">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Todavía no aceptaste este manual. Leelo y aceptá al finalizar.
-        </div>`;
-
-      document.getElementById('btn-aceptar-wrap').innerHTML = `
-        <button class="btn-aceptar-doc" onclick="abrirModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Aceptar manual
-        </button>`;
-
-      document.getElementById('nota-legal').style.display = 'block';
-
-      document.getElementById('modal-manual-nombre').textContent  = manual.titulo;
-      document.getElementById('modal-manual-version').textContent =
-        `Versión ${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))} · Publicado el ${formatFecha(version.publicado_at)}`;
+      registrarLectura();
     }
 
+    cargarNotas();
     if (rolUsuario === 'franquiciado') cargarNotas();
 
   } catch (e) {
@@ -811,37 +816,76 @@ async function init() {
   }
 }
 
-function abrirModal() {
-  document.getElementById('modal-error').style.display = 'none';
-  document.getElementById('modal-confirmar').classList.add('open');
+// ── REGISTRO DE LECTURA ───────────────────────────────────────
+//
+// Reemplaza al boton "Aceptar manual" y a su modal de confirmacion.
+//
+// Escribe en la misma tabla de siempre, por el mismo endpoint de siempre.
+// Lo unico que cambio es CUANDO se dispara y QUE dice la pantalla.
+//
+// Si algun dia se reactiva la aceptacion formal desde la UI, hay que agregar
+// ANTES una columna que distinga los dos tipos de fila: mezclados en la
+// misma tabla son indistinguibles, y despues no hay forma de separarlos.
+function pintarEstadoLectura(estado) {
+  const wrap = document.getElementById('estado-aceptacion-wrap');
+  if (!wrap) return;
+
+  if (estado === 'leido') {
+    wrap.innerHTML = `
+      <div class="estado-aceptacion aceptado">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Leído
+      </div>`;
+    return;
+  }
+
+  if (estado === 'error') {
+    // No puede quedar mudo: la cola de auth.php lo devuelve a este mismo
+    // manual en cada page load hasta que el registro entre. Sin este aviso
+    // el socio queda en un loop sin ninguna explicacion.
+    wrap.innerHTML = `
+      <div class="estado-aceptacion pendiente">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        No se pudo registrar la lectura.
+        <button type="button" class="btn-reintentar-lectura" onclick="registrarLectura()">Reintentar</button>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="estado-aceptacion pendiente">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Registrando lectura...
+    </div>`;
 }
 
-function cerrarModal() {
-  document.getElementById('modal-confirmar').classList.remove('open');
-}
+async function registrarLectura() {
+  if (!versionActivaId) return;
 
-async function ejecutarAceptacion() {
-  const btn = document.getElementById('btn-confirmar');
-  btn.disabled  = true;
-  btn.innerHTML = `<div style="width:14px;height:14px;border:2px solid rgba(26,26,26,.3);border-top-color:#1A1A1A;border-radius:50%;animation:spin .6s linear infinite"></div> Registrando...`;
+  pintarEstadoLectura('registrando');
 
   try {
     await apiFetch('POST', `/versiones/${versionActivaId}/aceptar`);
-    cerrarModal();
-    mostrarToast('¡Manual aceptado correctamente!', 'exito');
-    document.getElementById('estado-aceptacion-wrap').innerHTML = `
-      <div class="estado-aceptacion aceptado">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        ¡Aceptaste este manual digitalmente!
-      </div>`;
-    document.getElementById('btn-aceptar-wrap').innerHTML   = '';
-    document.getElementById('nota-legal').style.display     = 'none';
+    yaAceptado = true;
+    pintarEstadoLectura('leido');
   } catch (e) {
-    const msg = e.data?.message || 'Error al registrar la aceptación.';
-    document.getElementById('modal-error').textContent   = msg;
-    document.getElementById('modal-error').style.display = 'block';
-    btn.disabled  = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar aceptación`;
+    // 409 = ya estaba registrada. Para el socio es lo mismo que haber
+    // entrado bien, y la cola de auth.php lo va a dejar pasar igual.
+    //
+    // Se chequean las dos formas porque no esta garantizado que apiFetch
+    // exponga el status: si solo mirara e.status y el helper no lo trae,
+    // un caso normal se mostraria como error.
+    const yaEstaba = e?.status === 409
+      || /ya aceptaste/i.test(e?.data?.message || '');
+
+    if (yaEstaba) {
+      yaAceptado = true;
+      pintarEstadoLectura('leido');
+      return;
+    }
+
+    console.warn('No se pudo registrar la lectura:', e);
+    pintarEstadoLectura('error');
   }
 }
 
@@ -1038,7 +1082,9 @@ function activarBloqueosLectura() {
     }
   });
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+// El modal de confirmacion ya no existe, asi que este handler quedaria
+// llamando a una funcion borrada y tirando ReferenceError en cada Escape.
+// El buscador tiene su propio manejo de Escape, aparte de este.
 // ── BUSCADOR EN EL DOCUMENTO ─────────────────────
 // Resalta con la CSS Custom Highlight API (sin tocar el DOM). El contenido
 // de lectura no se edita, y el scroll es el de la ventana.
@@ -1386,6 +1432,70 @@ function actualizarFindCount() {
   const el = document.getElementById('find-count');
   el.textContent = findMatches.length ? (findIndex + 1) + '/' + findMatches.length : '0/0';
 }
+
+// ── BARRA DE PAGINAS FIJA (visor PDF) ─────────────────────────
+//
+// .pdfjs-toolbar es sticky por CSS, pero su offset depende del alto real de
+// .doc-topbar, que cambia con el flex-wrap. Se mide y se publica como
+// custom property; el CSS tiene un fallback por si esto no llego a correr.
+function ajustarTopBarraPdf() {
+  const tb = document.querySelector('.doc-topbar');
+  if (!tb) return;
+  document.documentElement.style.setProperty(
+    '--doc-topbar-h', `${Math.round(tb.getBoundingClientRect().height)}px`);
+}
+
+// ── IR AL FINAL DEL DOCUMENTO ─────────────────────────────────
+//
+// Sirve para los dos tipos de manual. El visor de PDF tambien es scroll
+// continuo — armarPaginasPdf() deja los marcadores de todas las paginas en
+// el DOM y un IntersectionObserver las dibuja — asi que no hay que 'saltar
+// de pagina' en el sentido del visor.
+//
+// En PDF igual se pasa por pdfIrPagina() para que el contador 'Pagina N de
+// M' quede en la ultima. Un scroll crudo lo dejaria desfasado hasta que el
+// observer alcance a corregirlo.
+function irAlFinal() {
+  if (pdfDoc) {
+    pdfIrPagina(pdfDoc.numPages);
+    return;
+  }
+  window.scrollTo({
+    top: document.documentElement.scrollHeight,
+    behavior: 'smooth',
+  });
+}
+
+// Se esconde cuando ya no queda nada abajo: un boton que no hace nada es
+// peor que no tenerlo. El margen de 120px evita que titile al final.
+function actualizarBotonIrFinal() {
+  const btn = document.getElementById('btn-ir-final');
+  if (!btn) return;
+  const restante = document.documentElement.scrollHeight
+                 - window.scrollY - window.innerHeight;
+  btn.classList.toggle('oculto', restante < 120);
+}
+
+function iniciarBotonIrFinal() {
+  ajustarTopBarraPdf();
+  actualizarBotonIrFinal();
+  window.addEventListener('scroll', actualizarBotonIrFinal, { passive: true });
+  window.addEventListener('resize', () => {
+    ajustarTopBarraPdf();
+    actualizarBotonIrFinal();
+  });
+  // El contenido del manual y las paginas del PDF entran despues del load,
+  // asi que scrollHeight cambia sin que haya scroll ni resize. Sin esto el
+  // boton se queda oculto en un documento largo.
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      ajustarTopBarraPdf();
+      actualizarBotonIrFinal();
+    }).observe(document.body);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', iniciarBotonIrFinal);
 
 // El scroll de la vista de lectura es el de la ventana.
 function scrollARange(range) {

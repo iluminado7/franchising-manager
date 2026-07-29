@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Partner — Nueva contraseña</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/style.css">
+<link rel="stylesheet" href="styles/login.css?v=2">
+<script src="js/config.js"></script>
+</head>
+<body>
+
+<div id="screen-login">
+
+  <div class="login-izq">
+    <div class="brand">
+      <img src="img/logo-goharv.jpg" alt="GoHarv" class="brand-logo">
+      <div class="brand-name">
+        Business Partner
+        <span>by GoHarv.</span>
+      </div>
+    </div>
+
+    <div class="login-izq-copy">
+      <h1>Gestión de<br>manuales <em>operativos</em></h1>
+      <p>Plataforma centralizada para la redacción, edición, notificación, capacitación y trazabilidad legal de manuales de franquicias conforme a la normativa vigente.</p>
+    </div>
+
+    <div class="login-features">
+      <div class="feature-item"><div class="feature-dot"></div>Gestión en tiempo real y desde cualquier lugar</div>
+      <div class="feature-item"><div class="feature-dot"></div>Doble validación digital y física</div>
+      <div class="feature-item"><div class="feature-dot"></div>Notificaciones automáticas de cambios</div>
+    </div>
+  </div>
+
+  <div class="login-der">
+    <div class="login-card">
+      <h2>Nueva contraseña</h2>
+      <p class="sub" id="sub">Verificando el enlace...</p>
+
+      <div class="login-error" id="login-error"></div>
+
+      <!-- Enlace invalido, vencido o ya usado. No se muestra el formulario:
+           dejarlo visible haria que el usuario escriba una contrasena para
+           nada. -->
+      <div id="zona-invalido" style="display:none">
+        <div style="background:rgba(201,76,76,.1);border:1px solid rgba(201,76,76,.3);border-radius:8px;padding:16px;margin-bottom:20px">
+          <p style="color:#D46A6A;font-size:14px;line-height:1.6;margin:0" id="msg-invalido">
+            El enlace no es válido, ya se usó o venció.
+          </p>
+        </div>
+        <a href="recuperar.html" class="btn-login" style="display:block;text-align:center;text-decoration:none">
+          Pedir un enlace nuevo
+        </a>
+      </div>
+
+      <!-- Exito -->
+      <div id="zona-ok" style="display:none">
+        <div style="background:rgba(92,184,122,.1);border:1px solid rgba(92,184,122,.3);border-radius:8px;padding:16px;margin-bottom:20px">
+          <p style="color:var(--exito);font-size:14px;line-height:1.6;margin:0">
+            Contraseña actualizada. Ya podés iniciar sesión.
+          </p>
+        </div>
+        <p style="color:var(--gris4);font-size:12.5px;line-height:1.6;margin-bottom:20px">
+          Por seguridad se cerraron todas tus sesiones abiertas en otros dispositivos.
+        </p>
+        <a href="login.html" class="btn-login" style="display:block;text-align:center;text-decoration:none">
+          Iniciar sesión
+        </a>
+      </div>
+
+      <!-- Formulario. Oculto hasta que el backend confirme que el token sirve. -->
+      <div id="zona-form" style="display:none">
+        <div class="form-group">
+          <label for="inp-pass">Nueva contraseña</label>
+          <div style="position:relative">
+            <input type="password" id="inp-pass" placeholder="Mínimo 8 caracteres"
+                   autocomplete="new-password" style="padding-right:44px">
+            <button type="button" onclick="togglePass('inp-pass', this)"
+              style="position:absolute;right:0;top:0;height:100%;width:44px;background:transparent;border:none;cursor:pointer;color:var(--gris4);display:flex;align-items:center;justify-content:center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inp-pass2">Repetir contraseña</label>
+          <input type="password" id="inp-pass2" placeholder="••••••••" autocomplete="new-password">
+        </div>
+
+        <p style="color:var(--gris4);font-size:12px;line-height:1.55;margin-bottom:18px">
+          Al cambiarla se van a cerrar todas tus sesiones abiertas, incluida la de
+          otros dispositivos.
+        </p>
+
+        <button class="btn-login" id="btn-guardar" onclick="restablecer()">
+          <div class="spinner" id="spinner"></div>
+          <span id="btn-text">Guardar contraseña</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// El token viaja en la URL. No se guarda en localStorage a proposito: es una
+// credencial de un solo uso y no tiene por que sobrevivir a la pestana.
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+
+// Se valida ANTES de mostrar el formulario. Si el enlace vencio o ya se uso, no
+// tiene sentido que el usuario escriba una contrasena para que despues falle.
+(async () => {
+  if (!TOKEN) { invalido('El enlace está incompleto. Pedí uno nuevo.'); return; }
+
+  try {
+    const res = await fetch(API + '/password/validar/' + encodeURIComponent(TOKEN), {
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      invalido(data?.error || 'El enlace no es válido, ya se usó o venció.');
+      return;
+    }
+
+    document.getElementById('sub').textContent = 'Elegí una contraseña nueva para tu cuenta';
+    document.getElementById('zona-form').style.display = 'block';
+    document.getElementById('inp-pass').focus();
+
+  } catch (err) {
+    invalido('No se pudo verificar el enlace. Revisá tu conexión e intentá de nuevo.');
+  }
+})();
+
+function invalido(msg) {
+  document.getElementById('sub').textContent = 'Enlace no válido';
+  document.getElementById('msg-invalido').textContent = msg;
+  document.getElementById('zona-invalido').style.display = 'block';
+}
+
+async function restablecer() {
+  const pass  = document.getElementById('inp-pass').value;
+  const pass2 = document.getElementById('inp-pass2').value;
+  const btn   = document.getElementById('btn-guardar');
+  const spin  = document.getElementById('spinner');
+  const txt   = document.getElementById('btn-text');
+
+  mostrarError('');
+
+  // Se valida en el cliente para dar respuesta inmediata, pero el backend
+  // valida igual (min:8 + confirmed): esto es comodidad, no seguridad.
+  if (pass.length < 8)  { mostrarError('La contraseña debe tener al menos 8 caracteres.'); return; }
+  if (pass !== pass2)   { mostrarError('Las contraseñas no coinciden.'); return; }
+
+  btn.disabled = true;
+  spin.style.display = 'block';
+  txt.textContent = 'Guardando...';
+
+  try {
+    const res = await fetch(API + '/password/restablecer', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body:    JSON.stringify({
+        token: TOKEN,
+        password: pass,
+        password_confirmation: pass2,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      // 422 con el token quemado: el formulario ya no sirve, se reemplaza por
+      // el aviso de enlace invalido en vez de dejar reintentar en vano.
+      if (res.status === 422 && data?.error) {
+        document.getElementById('zona-form').style.display = 'none';
+        invalido(data.error);
+        return;
+      }
+      const errs = data?.errors ? Object.values(data.errors).flat().join(' ') : null;
+      mostrarError(errs || data?.error || data?.message || 'No se pudo actualizar la contraseña.');
+      return;
+    }
+
+    document.getElementById('zona-form').style.display = 'none';
+    document.getElementById('sub').textContent = 'Listo';
+    document.getElementById('zona-ok').style.display = 'block';
+
+  } catch (err) {
+    mostrarError('Error de conexión. Verificá que el servidor esté activo.');
+  } finally {
+    btn.disabled = false;
+    spin.style.display = 'none';
+    txt.textContent = 'Guardar contraseña';
+  }
+}
+
+function togglePass(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.style.color = el.type === 'text' ? 'var(--blanco)' : 'var(--gris4)';
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent   = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+document.getElementById('inp-pass2').addEventListener('keydown', e => {
+  if (e.key === 'Enter') restablecer();
+});
+</script>
+
+</body>
+</html>

@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ManualNote;
 use App\Models\ManualVersion;
+use App\Models\Manual;
+use App\Models\Notification;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use App\Models\ActivityLog;
 use App\Services\ManualAccessService;
 use Illuminate\Http\Request;
@@ -122,6 +126,26 @@ class ManualNoteController extends Controller
             'estado'            => 'pendiente',
         ]);
 
+        // Avisarle al franquiciante que tiene feedback nuevo.
+        //
+        // Solo cuando la nota la escribe un SOCIO COMERCIAL: este metodo lo
+        // usa tambien el franquiciante, y notificarse a si mismo no aporta.
+        //
+        // Va en try/catch a proposito: la nota ya esta guardada, que es lo
+        // que el socio pidio. Hacer fallar la operacion por un aviso seria
+        // perder lo importante para no perder lo accesorio.
+        if ($user->esFranquiciado()) {
+            try {
+                $this->notificarNotaAlFranquiciante($manualId, $user, $nota);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo notificar la nota al franquiciante', [
+                    'manual_id' => $manualId,
+                    'nota_id'   => $nota->id ?? null,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+        }
+
         ActivityLog::registrar(
             userId:      $user->id,
             accion:      'nota_manual_enviada',
@@ -133,6 +157,78 @@ class ManualNoteController extends Controller
         );
 
         return response()->json($nota->load(self::RELACIONES), 201);
+    }
+
+    /**
+     * Notifica a los franquiciantes de la empresa que hay una nota nueva.
+     *
+     * Pueden ser varios: se le avisa a todos los activos. Si la empresa no
+     * tiene ninguno cargado, no se notifica a nadie — NO se cae al
+     * super_admin. El feedback de una red es del franquiciante, y desviarlo
+     * en silencio a la plataforma seria una sorpresa desagradable.
+     *
+     * El tipo 'nota_manual' vive en la rama de chk_notif_fk que exige
+     * manual_id y prohibe el resto de las FKs (ver la migracion
+     * add_nota_manual_to_chk_notif_fk). Mandar manual_version_id aca haria
+     * fallar el INSERT.
+     */
+    private function notificarNotaAlFranquiciante(int $manualId, User $autor, ManualNote $nota): void
+    {
+        if (empty($autor->empresa_id)) {
+            return;
+        }
+
+        $destinatarios = User::where('empresa_id', $autor->empresa_id)
+                             ->where('rol', 'franquiciante')
+                             ->where('activo', 1)
+                             ->whereNull('deleted_at')
+                             ->get();
+
+        if ($destinatarios->isEmpty()) {
+            return;
+        }
+
+        $titulo = Manual::whereKey($manualId)->value('titulo') ?: 'un manual';
+        $quien  = trim("{$autor->nombre} {$autor->apellido}") ?: 'Un socio comercial';
+
+        // El texto se recorta: contenido admite 5000 caracteres y esto entra
+        // en el cuerpo del mail. El hilo completo se lee en la pantalla.
+        $extracto = mb_substr(trim($nota->contenido), 0, 400);
+        if (mb_strlen(trim($nota->contenido)) > 400) {
+            $extracto .= '…';
+        }
+
+        // El titulo nombra a quien escribio: es lo primero que se lee en el
+        // badge y es el asunto del mail, y "alguien dejo una nota" obliga a
+        // abrir para saber de quien.
+        //
+        // notifications.titulo es varchar(200) y se recorta el TITULO DEL
+        // MANUAL, no la cadena entera: si se cortara al final, un nombre
+        // largo dejaria "Juan Sebastián Ferná…" sin decir nunca en que
+        // manual. De los dos datos, el prescindible es el manual.
+        $prefijo = "{$quien} dejó una nota en: ";
+        $espacio = 200 - mb_strlen($prefijo);
+        $tituloNotif = $espacio > 0
+            ? $prefijo . mb_substr($titulo, 0, $espacio)
+            : $prefijo;
+
+        // Red final: si el nombre solo pasara los 200, la columna rechazaria
+        // el INSERT y la nota se quedaria sin avisar a nadie.
+        $tituloNotif = mb_substr($tituloNotif, 0, 200);
+
+        foreach ($destinatarios as $destinatario) {
+            $n = new Notification([
+                'tipo'      => 'nota_manual',
+                'manual_id' => $manualId,
+                'titulo'    => $tituloNotif,
+                // El cuerpo ya no repite el nombre: lo dice el titulo.
+                'mensaje'   => "«{$extracto}»",
+                'leida'     => 0,
+            ]);
+            // V2-H-020: user_id esta fuera de $fillable, setter directo.
+            $n->user_id = $destinatario->id;
+            $n->save();
+        }
     }
 
     // PUT /api/notas/{id}/estado — super_admin o franquiciante de la empresa

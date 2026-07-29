@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Concerns\VerificaTurnstile;
 use App\Models\User;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
@@ -14,6 +15,12 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    // verificarTurnstile() vivia aca como metodo privado. Se movio al trait
+    // cuando aparecio el segundo endpoint publico que lo necesita
+    // (recuperacion de contrasena): dos copias de una politica de seguridad
+    // con fail-open pueden divergir sin que nadie lo note.
+    use VerificaTurnstile;
+
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -186,7 +193,7 @@ class AuthController extends Controller
             'rol'                       => $user->rol,
             'nombre'                    => $user->nombre,
             'apellido'                  => $user->apellido,
-            'dni'                       => $user->dni,
+            'cuit'                       => $user->cuit,
             'celular'                   => $user->celular,
             'avatar_url'                => $user->avatar_url,
             'empresa_id'                => $user->empresa_id,
@@ -198,6 +205,27 @@ class AuthController extends Controller
 
     public function updateEmail(Request $request)
     {
+        // El email del socio comercial es su identificacion legal en la red: es
+        // la direccion a la que llegan las notificaciones y la que queda
+        // asociada a cada aceptacion. Si el propio usuario puede cambiarla, se
+        // corta la cadena entre "esta persona acepto la version 2.1" y "esta
+        // persona es quien decimos que es".
+        //
+        // Pasa a ser administrado: lo cambia un super_admin o el franquiciante
+        // desde usuarios.php, y esa operacion queda registrada.
+        //
+        // El empleado entra en la misma regla: su cuenta la crea y administra
+        // la franquicia, no el.
+        //
+        // Esto es la restriccion REAL. perfil.php ademas oculta la tarjeta,
+        // pero eso es cosmetico: sin este guard, el endpoint sigue abierto
+        // desde la consola. email_no_autoadministrable
+        if (in_array($request->user()->rol, ['franquiciado', 'empleado'], true)) {
+            return response()->json([
+                'error' => 'Tu email no se puede modificar desde acá. Pedíselo al administrador de tu red.',
+            ], 403);
+        }
+
         $request->validate([
             'email'    => 'required|email|max:200|unique:users,email,' . $request->user()->id,
             'password' => 'required|string',
@@ -302,121 +330,6 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Contraseña actualizada correctamente.']);
     }
-
-    /**
-     * Verifica el token de Cloudflare Turnstile contra la API Siteverify.
-     *
-     * El widget del lado del cliente NO protege nada por si solo: cualquiera
-     * puede postear un string arbitrario a /api/login. La unica verificacion
-     * real es esta.
-     *
-     * POLITICA DE FALLO — leer antes de cambiar algo aca:
-     *
-     *   RECHAZA solo cuando la culpa es del cliente: token ausente, forjado,
-     *   vencido o ya usado. El usuario ve un 422 y reintenta.
-     *
-     *   DEJA PASAR (fail-open) cuando el problema es nuestro o de Cloudflare:
-     *   secret vacio o mal pegado, timeout de red, 5xx de siteverify. La
-     *   alternativa seria dejar a toda la empresa sin poder entrar por una
-     *   variable de entorno mal copiada o por una caida de un tercero.
-     *   El rate limiter compuesto ('throttle:login' en api.php) corre como
-     *   middleware de ruta, o sea ANTES de este metodo, y sigue activo en
-     *   todos esos casos: la fuerza bruta continua cubierta.
-     *
-     *   Todo fail-open queda en el log. Si aparece seguido en produccion es
-     *   un problema de configuracion, no ruido.
-     *
-     * El token dura 300s y es de un solo uso; uno repetido vuelve con
-     * 'timeout-or-duplicate'. Por eso login.html resetea el widget en cada
-     * error — sin ese reset, el segundo intento fallaria siempre aunque la
-     * contrasena fuera correcta.
-     *
-     * No se registra en activity_logs porque user_id es NOT NULL y en este
-     * punto todavia no hay usuario resuelto. Misma limitacion que los
-     * intentos contra emails inexistentes.
-     */
-    private function verificarTurnstile(Request $request): void
-    {
-        if (!config('services.turnstile.enabled')) {
-            return;
-        }
-
-        $secret = trim((string) config('services.turnstile.secret', ''));
-
-        if ($secret === '') {
-            Log::error('Turnstile habilitado pero sin TURNSTILE_SECRET_KEY. Login sin verificacion anti-bot.');
-            return;
-        }
-
-        $token = trim((string) $request->input('turnstile_token', ''));
-
-        if ($token === '') {
-            throw ValidationException::withMessages([
-                'email' => ['Completá la verificación de seguridad.'],
-            ]);
-        }
-
-        try {
-            $respuesta = Http::timeout((int) config('services.turnstile.timeout', 4))
-                ->asForm()
-                ->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                    'secret'   => $secret,
-                    'response' => $token,
-                ]);
-        } catch (\Throwable $e) {
-            Log::warning('Turnstile: siteverify inalcanzable, se deja pasar el login.', [
-                'error' => $e->getMessage(),
-                'ip'    => $request->ip(),
-            ]);
-            return;
-        }
-
-        if (!$respuesta->successful()) {
-            Log::warning('Turnstile: siteverify respondio HTTP no-2xx, se deja pasar el login.', [
-                'status' => $respuesta->status(),
-                'ip'     => $request->ip(),
-            ]);
-            return;
-        }
-
-        $datos = (array) $respuesta->json();
-
-        if (($datos['success'] ?? false) === true) {
-            return;
-        }
-
-        $codigos = (array) ($datos['error-codes'] ?? []);
-
-        // Configuracion nuestra rota o caida de Cloudflare: no se le puede
-        // cobrar al visitante. Fail-open ruidoso.
-        $codigosInfra = [
-            'missing-input-secret',
-            'invalid-input-secret',
-            'internal-error',
-            'bad-request',
-        ];
-
-        if (array_intersect($codigos, $codigosInfra)) {
-            Log::error('Turnstile: error de configuracion, se deja pasar el login.', [
-                'error-codes' => $codigos,
-            ]);
-            return;
-        }
-
-        Log::warning('Turnstile: token rechazado.', [
-            'error-codes' => $codigos,
-            'ip'          => $request->ip(),
-        ]);
-
-        $mensaje = in_array('timeout-or-duplicate', $codigos, true)
-            ? 'La verificación de seguridad expiró. Volvé a marcar la casilla e intentá de nuevo.'
-            : 'La verificación de seguridad falló. Volvé a intentar.';
-
-        throw ValidationException::withMessages([
-            'email' => [$mensaje],
-        ]);
-    }
-
     /**
      * H-014 fix: registra un intento fallido de login para trazabilidad y
      * detección de brute-force. Se llama antes de devolver 401/403.

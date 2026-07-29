@@ -435,6 +435,83 @@ de grupo, quedarían expuestas en silencio.
 A diferencia de `activity_logs`, estos registros **se pueden borrar**: son
 diagnóstico, no cumplimiento.
 
+### CUIT / CUIL
+
+`users.dni` pasó a `users.cuit`. **Una sola columna para los dos**: CUIT y CUIL
+tienen formato idéntico y el mismo dígito verificador; lo que cambia es la
+semántica —CUIT para quien factura, CUIL para el empleado en relación de
+dependencia— y eso se resuelve con la etiqueta de la UI según el rol.
+
+Se valida con `App\Rules\Cuit`: **módulo 11 sobre el dígito verificador**, sin
+consultar ARCA. Eso descarta los errores de tipeo, que son la mayoría. Verificar
+que el CUIT *exista* y a nombre de quién es otra cosa y necesita credenciales y
+homologación — sigue pendiente.
+
+⚠️ **`users.dni_legacy` es temporal.** Un DNI no es un CUIT: los 8 dígitos de
+`20068467` no se convierten sin prefijo ni verificador. La migración movió ahí
+los valores que no pasaban la validación y dejó `cuit` en NULL, para que no
+quedara un dato inválido haciéndose pasar por CUIT. **Cuando todos tengan su
+CUIT cargado, esa columna se borra.**
+
+Nullable por ahora: hay usuarios reales sin CUIT y un `NOT NULL` haría fallar la
+migración. El camino es obligatorio en el formulario para altas nuevas, y
+`NOT NULL` recién cuando los existentes estén completos.
+
+### Nombre y apellido
+
+Son **dos columnas** en la base, pero **un solo campo** en el formulario de
+usuarios. Al guardar se parten por el primer espacio.
+
+No se unificaron en la base a propósito: sería irreversible —"María del Carmen
+Fernández López" no se puede volver a partir—, rompería las iniciales del avatar
+y obligaría a tocar unos 15 archivos. Y para validar contra ARCA no hace falta:
+`User::nombreCompleto()` ya concatena.
+
+La heurística se equivoca con nombres compuestos ("Ana María López" → nombre
+"Ana"), pero el dato completo nunca se pierde y se corrige editando.
+
+### El email no es autoadministrable para socios y empleados
+
+`AuthController::updateEmail()` devuelve 403 para `franquiciado` y `empleado`.
+El email del socio comercial es su identificación legal en la red: es a donde
+llegan las notificaciones y lo que queda asociado a cada aceptación. Si el
+propio usuario puede cambiarlo, se corta la cadena entre "esta persona aceptó la
+versión 2.1" y "esta persona es quien decimos que es".
+
+Lo cambia un super_admin o el franquiciante desde `usuarios.php`, y esa
+operación queda registrada (`password_reseteada_admin` tiene su equivalente para
+la contraseña).
+
+`perfil.php` además oculta la tarjeta, pero **eso es cosmético**: el guard del
+backend es la restricción real. El CUIT no necesitó nada porque nunca tuvo
+endpoint de autoservicio.
+
+### Paginación
+
+`renderPaginacion()` vive en **`layout.js`** y su CSS en **`panel.css`**. La
+pantalla solo necesita `<div id="paginacion"></div>`, cortar con `slice` y
+llamarla:
+
+```js
+renderPaginacion({
+  total, pagina: paginaActual, porPagina: POR_PAGINA,
+  onCambio: p => { paginaActual = p; renderTabla(); },
+});
+```
+
+10 por página en las pantallas de gestión; **`log.php` usa 50 y su propia copia**
+porque es de consulta y conviene ver mucho de una.
+
+⚠️ **Al filtrar hay que volver a `paginaActual = 1`.** Si se estaba en la página
+5 y el resultado tiene 2, el `slice` apunta a un rango inexistente y la tabla
+sale **vacía sin ninguna explicación**. Es el bug clásico de agregar paginación
+a una pantalla que no la tenía.
+
+`manuales.php` corta **antes** de agrupar por empresa: si cortara después, se
+armarían todas las filas para descartarlas, y `filas` incluye los encabezados de
+grupo, así que "10 filas" no serían 10 manuales. Efecto asumido: una empresa
+puede quedar partida entre dos páginas con el encabezado repetido.
+
 ### Cabeceras de seguridad (nginx)
 
 Viven en `/etc/nginx/snippets/security-headers.conf`, **incluido en tres lugares**
@@ -640,6 +717,17 @@ prueba cuándo un socio aceptó una versión.
   Cuando se construya el flujo real: mensaje neutro (no revelar si el email
   existe), Turnstile en el formulario, token de un solo uso hasheado con
   vencimiento, rate limit compuesto, y revocación de sesiones al resetear.
+- **El árbol de asignación de visibilidad está TRIPLICADO**: `manuales.php`,
+  `manuales-mi-empresa.php` y `editor.php` tienen cada uno su copia, con
+  variaciones (`sublistaUsuariosHTML` vs `sublistaUsuariosHTMLEditor`, `esc` vs
+  `escNota`). Agregar la sucursal al lado del nombre requirió **tres patches
+  para un cambio de una línea**. Cuando se unifique, comparar las tres antes:
+  como con el lightbox, alguna puede manejar un caso que las otras no.
+- **`users.dni_legacy` hay que borrarla** cuando todos los usuarios tengan su
+  CUIT cargado. Es una migración de una línea.
+- **La validación contra ARCA (CUIT) y ANSES (CUIL) no está.** Hoy solo se
+  valida el dígito verificador localmente. La consulta real necesita
+  credenciales, certificado y homologación.
 - **`mostrarToast` está duplicada** en al menos cuatro páginas (`aceptaciones.php`,
   `categorias.php`, `documentos.php`...). Mismo caso que el lightbox de avatares:
   conviene moverla a `layout.js`, comparando las copias antes de unificar por si
@@ -999,6 +1087,20 @@ función también corre un `preg_replace_callback` sobre el mismo HTML.
 **`--database=mysql_deploy` corre como `manuales_user`** → la config está
 cacheada. Ver §10.
 
+**Una función nueva en `layout.js` puede PISAR una local del mismo nombre.**
+Como `layout.js` carga al final, su declaración gana. Si las firmas difieren, la
+página revienta con un error que no menciona la colisión: pasó al agregar
+`renderPaginacion()` compartida, que pisó la de `log.php` —misma nombre, otra
+firma— y dejó el log con "Error al cargar" sin más pistas. **Antes de agregar
+algo a `layout.js`, buscar ese nombre en todo `public/`.**
+
+**Un campo que no se envía no se puede borrar.** En `usuarios.php` había
+`if (franqId) body.franquicia_id = franqId;`: al elegir "sin sucursal" el campo
+no viajaba, el backend no lo veía en el request y no lo tocaba. Se podía cambiar
+de sucursal pero nunca quitarla. Mismo caso que las asignaciones de usuarios en
+el modal de manuales: **si un campo puede quedar vacío, hay que mandarlo igual**,
+como `null` o como lista vacía.
+
 **`layout.js` carga DESPUÉS de los `<script>` de cada página** (`footer.php`).
 Cualquier función que se mueva a `layout.js` no existe todavía para código que
 corra durante el parseo: las páginas tienen que arrancar con
@@ -1046,6 +1148,10 @@ app/
 │   ├── AcceptanceController.php     aceptación digital
 │   ├── NotificationController.php   listado + resolución de deep-links
 │   ├── ErrorLogController.php       errores 5xx (solo super_admin)
+│   ├── PasswordResetController.php  recuperación de contraseña
+├── Rules/Cuit.php                   validación de CUIT/CUIL (módulo 11)
+├── Jobs/EnviarRecuperacionPassword.php
+├── Http/Concerns/VerificaTurnstile.php  compartido login + recuperación
 │   └── ...
 ├── Models/                          Manual, ManualVersion, User, Empresa...
 ├── Observers/NotificationObserver.php   dispara los emails
@@ -1114,7 +1220,7 @@ Lo que más ayuda a no romper nada:
 
 ---
 
-*Documento generado en julio de 2026, actualizado el 28/07/2026
+*Documento generado en julio de 2026, actualizado el 29/07/2026
 (migración a AWS, Turnstile, cabeceras de seguridad, `estado_previo`, avatares
 compartidos, registro de errores en base). Si el sistema cambió, este README
 también debería.*

@@ -61,6 +61,15 @@ include 'layout/head.php';
           </div>
         </div>
 
+        <!-- Categoría — super_admin y franquiciante.
+             Un <select> y no un combobox: las categorías de una empresa son
+             pocas. Mismo patrón que el filtro de documentos.php. -->
+        <div id="grupo-categoria-filtro" style="display:none">
+          <select id="sel-categoria-usr" class="filtro-select" style="width:200px" onchange="onCategoriaUsrChange()">
+            <option value="">Todas las categorías</option>
+          </select>
+        </div>
+
         <button id="btn-mostrar-eliminados" class="filtro-btn" style="display:none;margin-left:auto" onclick="toggleMostrarEliminados(this)">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Mostrar eliminados
@@ -81,7 +90,7 @@ include 'layout/head.php';
               <th>Rol</th>
               <th>Empresa / Franquicia</th>
               <th>Categorías</th>
-              <th>DNI</th>
+              <th>CUIT/CUIL</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -113,15 +122,22 @@ include 'layout/head.php';
       <input type="hidden" id="form-id">
       <input type="hidden" id="form-rol-original"> <!-- rol guardado al abrir edición -->
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Nombre *</label>
-          <input type="text" id="form-nombre" placeholder="Juan" maxlength="100">
-        </div>
-        <div class="form-group">
-          <label>Apellido *</label>
-          <input type="text" id="form-apellido" placeholder="Pérez" maxlength="100">
-        </div>
+      <!-- CUIT/CUIL va primero: es el identificador de la persona.
+           La etiqueta la cambia actualizarEtiquetaCuit() segun el rol, que
+           ahora esta MAS ABAJO en el formulario: hasta que se elija un rol
+           se lee "CUIT/CUIL" generico. El dato es el mismo en los dos casos
+           — mismo formato y mismo digito verificador. -->
+      <div class="form-group">
+        <label id="label-cuit">CUIT/CUIL</label>
+        <input type="text" id="form-cuit" placeholder="20-12345678-6" maxlength="15">
+      </div>
+
+      <!-- Un solo campo, pero la base sigue guardando nombre y apellido por
+           separado: se dividen al enviar, por el primer espacio. Ver
+           partirNombreCompleto(). -->
+      <div class="form-group">
+        <label>Nombre y apellido *</label>
+        <input type="text" id="form-nombre-completo" placeholder="Juan Pérez" maxlength="200">
       </div>
 
       <div class="form-group">
@@ -141,18 +157,12 @@ include 'layout/head.php';
         <div id="hint-password" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif"></div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Rol *</label>
-          <select id="form-rol" onchange="onRolChange()" class="form-select">
-            <option value="">Seleccioná un rol</option>
-            <!-- opciones se inyectan en init() según el rol del usuario logueado -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label>DNI</label>
-          <input type="text" id="form-dni" placeholder="12345678" maxlength="15">
-        </div>
+      <div class="form-group">
+        <label>Rol *</label>
+        <select id="form-rol" onchange="onRolChange()" class="form-select">
+          <option value="">Seleccioná un rol</option>
+          <!-- opciones se inyectan en init() según el rol del usuario logueado -->
+        </select>
       </div>
 
       <!-- Empresa — solo para franquiciante -->
@@ -311,6 +321,44 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL BORRAR DEFINITIVAMENTE (PURGA)
+
+     NO cierra al clic afuera, a diferencia de modal-eliminar: es
+     irreversible y no hay confirmacion posterior.
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-purgar">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Borrar definitivamente</h3>
+      <button class="modal-close" onclick="cerrarModalPurgar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif">
+        Se van a destruir los datos personales de <strong id="purgar-nombre" style="color:var(--blanco)"></strong>:
+        nombre, email, CUIT, foto y contraseña. <strong>No se puede deshacer</strong>,
+        y después el usuario tampoco se va a poder restaurar.
+      </p>
+      <p style="font-size:12.5px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-top:10px">
+        Las aceptaciones y el registro de actividad <strong>se conservan</strong>: son la
+        prueba de cumplimiento. Los PDF ya sellados y las firmas escaneadas mantienen
+        el nombre impreso.
+      </p>
+      <div class="form-group" style="margin-top:16px">
+        <label>Escribí <span id="purgar-email" style="color:var(--dorado);text-transform:none;letter-spacing:0"></span> para confirmar</label>
+        <input type="text" id="purgar-confirmacion" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="form-error" id="purgar-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalPurgar()">Cancelar</button>
+      <button class="btn btn-danger" id="btn-purgar-confirmar" onclick="ejecutarPurgar()">Borrar definitivamente</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── TOAST ─────────────────────────────────────────────────── -->
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
@@ -414,6 +462,8 @@ let categoriasDisponibles = []; // catálogo activo de la empresa
 let todosLosUsuarios    = [];
 let todasLasEmpresas    = [];
 let todasLasFranquicias = [];
+let todasLasCategorias  = []; // catalogo ACTIVO, para el filtro de la barra
+let categoriaFiltroId   = ''; // id activo del select de categoria
 let filtroRolActual     = 'todos';
 let pendingToggle       = null;
 let modoEdicion         = false;
@@ -463,26 +513,29 @@ async function init() {
     }
 
     // Cargar datos según rol (el franquiciado no tiene acceso a /franquicias ni /empresas)
-    let usuarios = [], empresas = [], franquicias = [], manuales = [];
+    let usuarios = [], empresas = [], franquicias = [], manuales = [], categorias = [];
     if (miRol === 'franquiciado') {
       const [u, m] = await Promise.all([apiFetch('GET', '/usuarios'), apiFetch('GET', '/manuales')]);
       usuarios = u; manuales = m;
     } else if (miRol === 'super_admin') {
-      const [u, e, f, m] = await Promise.all([
+      const [u, e, f, m, cats] = await Promise.all([
         apiFetch('GET', '/usuarios'), apiFetch('GET', '/empresas'),
-        apiFetch('GET', '/franquicias'), apiFetch('GET', '/manuales')
+        apiFetch('GET', '/franquicias'), apiFetch('GET', '/manuales'),
+        apiFetch('GET', '/categorias?activa=1')
       ]);
-      usuarios = u; empresas = e; franquicias = f; manuales = m;
+      usuarios = u; empresas = e; franquicias = f; manuales = m; categorias = cats;
     } else {
-      const [u, f, m] = await Promise.all([
-        apiFetch('GET', '/usuarios'), apiFetch('GET', '/franquicias'), apiFetch('GET', '/manuales')
+      const [u, f, m, cats] = await Promise.all([
+        apiFetch('GET', '/usuarios'), apiFetch('GET', '/franquicias'), apiFetch('GET', '/manuales'),
+        apiFetch('GET', '/categorias?activa=1')
       ]);
-      usuarios = u; franquicias = f; manuales = m;
+      usuarios = u; franquicias = f; manuales = m; categorias = cats;
     }
 
     todosLosUsuarios    = usuarios;
     todasLasEmpresas    = empresas;
     todasLasFranquicias = franquicias;
+    todasLasCategorias  = categorias || [];
     todosLosManuales    = (manuales || []).filter(m => m.estado === 'publicado');
 
     // Filtros: combobox de empresa solo visible para super_admin
@@ -496,6 +549,13 @@ async function init() {
     // ya ve solo los empleados de la suya) y oculto para empleado.
     if (miRol === 'franquiciado' || miRol === 'empleado') {
       document.getElementById('grupo-franquicia-filtro').style.display = 'none';
+    }
+
+    // Categoría: solo para quien administra socios comerciales. El
+    // franquiciado ve únicamente empleados, que no tienen categorías, así
+    // que el filtro le vaciaría la tabla sin darle nada a cambio.
+    if (miRol === 'super_admin' || miRol === 'franquiciante') {
+      document.getElementById('grupo-categoria-filtro').style.display = '';
     }
 
     // Select empresa del formulario (solo super_admin, para rol franquiciante)
@@ -574,10 +634,14 @@ function renderTabla(lista) {
     // v2.3: nombre/apellido/dni viven en users (toplevel del JSON).
     const nombreFull = [u.nombre, u.apellido].filter(Boolean).join(' ').trim();
     const nombre     = nombreFull || '—';
-    const dni        = u.dni || '—';
+    const cuit       = u.cuit || '—';
 
     // Estado de eliminación (solo aparece para super_admin con flag include_deleted=1)
     const eliminado     = !!u.deleted_at;
+    // Purgado = ya se le destruyeron los datos personales. La fila sigue
+    // existiendo (es el sujeto de las aceptaciones), pero no se puede
+    // restaurar: no le queda email ni contrasena con los cuales entrar.
+    const purgado       = !!u.anonimizado_at;
     const badgeElim     = eliminado
       ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Archivo',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado</span>`
       : '';
@@ -604,13 +668,24 @@ function renderTabla(lista) {
         <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
         <td>${contexto}</td>
         <td>${renderCategoriasChips(u, nombre)}</td>
-        <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
-        <td><span class="estado-pill estado-pendiente">Eliminado</span></td>
+        <td style="font-family:'Roboto',sans-serif">${esc(cuit)}</td>
+        <td><span class="estado-pill estado-pendiente">${purgado ? 'Borrado' : 'Eliminado'}</span></td>
         <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${purgado ? `
+          <span style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;font-style:italic">Datos personales borrados</span>
+          ` : `
           <button class="accion-btn" style="color:var(--dorado)" onclick="restaurarUsuario(${u.id}, '${escAttr(nombre)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Restaurar
           </button>
+          ${miRol === 'super_admin' ? `
+          <button class="accion-btn" style="color:var(--error)" onclick="abrirModalPurgar(${u.id}, '${escAttr(u.email)}', '${escAttr(nombre)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+            Borrar definitivamente
+          </button>` : ''}
+          `}
+          </div>
         </td>
       </tr>`;
     }
@@ -646,7 +721,7 @@ function renderTabla(lista) {
       <td><span class="rol-badge ${u.rol}">${LABEL_ROL[u.rol] || u.rol}</span></td>
       <td>${contexto}</td>
       <td>${renderCategoriasChips(u, nombre)}</td>
-      <td style="font-family:'Roboto',sans-serif">${esc(dni)}</td>
+      <td style="font-family:'Roboto',sans-serif">${esc(cuit)}</td>
       <td><span class="estado-pill ${u.activo ? 'estado-completo' : 'estado-pendiente'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td>
         <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -725,6 +800,15 @@ function aplicarFiltros() {
   if (franqId)
     lista = lista.filter(u => String(u.franchise_staff?.franquicia_id) === franqId);
 
+  // Las opciones se recalculan ANTES de filtrar: si el super_admin cambió
+  // de empresa, la categoría elegida puede haber dejado de existir en la
+  // lista y refrescarOpcionesCategoriaUsr() limpia el filtro.
+  refrescarOpcionesCategoriaUsr();
+
+  if (categoriaFiltroId)
+    lista = lista.filter(u =>
+      (u.categorias || []).some(c => String(c.id) === categoriaFiltroId));
+
   if (texto) {
     lista = lista.filter(u => {
       // v2.3: nombre/apellido viven en users
@@ -734,6 +818,45 @@ function aplicarFiltros() {
   }
 
   renderTabla(lista);
+}
+
+// ── FILTRO DE CATEGORÍA ───────────────────────────────────────
+//
+// Las opciones dependen de la empresa filtrada, igual que las franquicias.
+// Se recalculan desde aplicarFiltros() porque es el único punto por el que
+// pasan los dos caminos que cambian la empresa.
+function refrescarOpcionesCategoriaUsr() {
+  const sel = document.getElementById('sel-categoria-usr');
+  if (!sel) return;
+
+  // Para el franquiciante el backend ya devuelve solo las de su empresa.
+  let pool = todasLasCategorias;
+  if (empresaFiltroId) {
+    pool = pool.filter(c => String(c.empresa_id) === empresaFiltroId);
+  }
+
+  const previo = categoriaFiltroId;
+  const sigue  = previo && pool.some(c => String(c.id) === previo);
+
+  // Solo se redibuja si cambió algo: reescribir el innerHTML en cada
+  // tecleo del buscador cerraría el desplegable mientras se usa.
+  const firma = pool.map(c => c.id).join(',');
+  if (sel.dataset.firma !== firma) {
+    sel.innerHTML = '<option value="">Todas las categorías</option>'
+      + pool.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    sel.dataset.firma = firma;
+  }
+
+  // Si la categoría elegida ya no está en la lista, se limpia el filtro.
+  // Dejarlo apuntando a algo que no figura en el desplegable daría una
+  // tabla vacía sin ninguna explicación.
+  categoriaFiltroId = sigue ? previo : '';
+  sel.value = categoriaFiltroId;
+}
+
+function onCategoriaUsrChange() {
+  categoriaFiltroId = document.getElementById('sel-categoria-usr').value;
+  aplicarFiltros();
 }
 
 // ── COMBOBOX EMPRESA (super_admin) ────────────────────────────
@@ -875,10 +998,23 @@ function abrirModalCrear() {
   }
 
   document.getElementById('modal').classList.add('open');
-  setTimeout(() => document.getElementById('form-nombre').focus(), 100);
+  setTimeout(() => document.getElementById('form-nombre-completo').focus(), 100);
 }
 
 // ── MODAL EDITAR ──────────────────────────────────────────────
+// CUIT o CUIL segun el rol elegido.
+//
+// Es SOLO la etiqueta: el dato es el mismo — 11 digitos, mismo digito
+// verificador. Cambia la semantica, no el formato: CUIT para quien factura
+// (franquiciante, socio comercial) y CUIL para el empleado en relacion de
+// dependencia. El backend valida igual en los dos casos.
+function actualizarEtiquetaCuit() {
+  const sel   = document.getElementById('form-rol');
+  const label = document.getElementById('label-cuit');
+  if (!sel || !label) return;
+  label.textContent = sel.value === 'empleado' ? 'CUIL' : 'CUIT';
+}
+
 function abrirModalEditar(id) {
   const u = todosLosUsuarios.find(x => x.id === id);
   if (!u) return;
@@ -891,10 +1027,13 @@ function abrirModalEditar(id) {
   document.getElementById('modal-titulo').textContent   = 'Editar usuario';
   document.getElementById('form-id').value              = u.id;
   document.getElementById('form-rol-original').value    = u.rol;
-  document.getElementById('form-nombre').value          = u.nombre   || '';
-  document.getElementById('form-apellido').value        = u.apellido || '';
+  // Se precarga concatenado. Al guardar se vuelve a partir por el primer
+  // espacio, asi que un apellido compuesto cargado a mano podria reacomodarse.
+  // Es el precio de tener un solo campo; el dato completo nunca se pierde.
+  document.getElementById('form-nombre-completo').value =
+    `${u.nombre || ''} ${u.apellido || ''}`.trim();
   document.getElementById('form-email').value           = u.email;
-  document.getElementById('form-dni').value             = u.dni      || '';
+  document.getElementById('form-cuit').value            = u.cuit     || '';
   document.getElementById('form-rol').value             = u.rol;
   document.getElementById('form-rol').disabled          = true; // rol no editable
 
@@ -923,7 +1062,7 @@ function abrirModalEditar(id) {
 
   onRolChange();
   document.getElementById('modal').classList.add('open');
-  setTimeout(() => document.getElementById('form-nombre').focus(), 100);
+  setTimeout(() => document.getElementById('form-nombre-completo').focus(), 100);
 }
 
 function cerrarModal() {
@@ -933,7 +1072,7 @@ function cerrarModal() {
 }
 
 function limpiarForm() {
-  ['form-nombre','form-apellido','form-email','form-password','form-dni']
+  ['form-nombre-completo','form-email','form-password','form-cuit']
     .forEach(id => document.getElementById(id).value = '');
   document.getElementById('form-rol').value          = '';
   document.getElementById('form-empresa').value      = '';
@@ -1127,20 +1266,22 @@ function leerCategoriasSocioSeleccionadas() {
 // ── GUARDAR ───────────────────────────────────────────────────
 async function guardar() {
   const id        = document.getElementById('form-id').value;
-  const nombre    = document.getElementById('form-nombre').value.trim();
-  const apellido  = document.getElementById('form-apellido').value.trim();
+  const { nombre, apellido } =
+    partirNombreCompleto(document.getElementById('form-nombre-completo').value);
   const email     = document.getElementById('form-email').value.trim();
   const password  = document.getElementById('form-password').value;
   const rol       = document.getElementById('form-rol').value || document.getElementById('form-rol-original').value;
-  const dni       = document.getElementById('form-dni').value.trim();
+  const cuit      = document.getElementById('form-cuit').value.trim();
   const empresaId = document.getElementById('form-empresa').value;
   const franqId   = document.getElementById('form-franquicia').value;
   const btn       = document.getElementById('btn-guardar');
 
   document.getElementById('form-error').style.display = 'none';
 
-  if (!nombre)   { mostrarFormError('El nombre es obligatorio.');   return; }
-  if (!apellido) { mostrarFormError('El apellido es obligatorio.'); return; }
+  if (!nombre)   { mostrarFormError('El nombre y apellido son obligatorios.'); return; }
+  // Se exige el apellido aunque el backend lo acepte vacio: una persona
+  // cargada con un solo termino casi siempre es un error de carga.
+  if (!apellido) { mostrarFormError('Ingresá nombre y apellido, separados por un espacio.'); return; }
   if (!email)    { mostrarFormError('El email es obligatorio.');    return; }
   if (!rol)      { mostrarFormError('Seleccioná un rol.');          return; }
 
@@ -1170,10 +1311,10 @@ async function guardar() {
   btn.disabled = true; btn.textContent = 'Guardando...';
 
   try {
-    const body = { nombre, apellido, email, rol, dni: dni || null };
+    const body = { nombre, apellido, email, rol, cuit: cuit || null };
 
     if (password)  body.password      = password;
-    if (franqId)   body.franquicia_id = franqId;
+    body.franquicia_id = franqId || null;
     // empresa_id la manda super_admin al crear cualquier rol con empresa
     // (franquiciante, franquiciado o empleado). El franquiciante no la manda:
     // el backend toma la empresa del actor.
@@ -1301,7 +1442,7 @@ function abrirModalEliminar(id, nombre) {
   document.getElementById('modal-eliminar').classList.add('open');
 }
 function cerrarModalEliminar() { 
-    ocument.getElementById('modal-eliminar').classList.remove('open');
+  document.getElementById('modal-eliminar').classList.remove('open');
   const btn = document.getElementById('btn-eliminar-confirmar');
   btn.disabled = false;   // re-habilitar SIEMPRE al cerrar
   btn.textContent = 'Eliminar';
@@ -1325,6 +1466,80 @@ async function ejecutarEliminar() {
 }
 
 // ── RESTAURAR USUARIO (solo super_admin) ──────────────────────
+// ── PURGA DE DATOS PERSONALES (BORRADO DEFINITIVO) ────────────
+//
+// No borra la fila. acceptances.user_id y activity_logs.user_id son
+// ON DELETE RESTRICT: esa fila es el sujeto de la cadena de cumplimiento y
+// la base no deja sacarla. Lo que se destruye son los datos de la persona.
+let pendingPurgar = null;
+
+function abrirModalPurgar(id, email, nombre) {
+  pendingPurgar = { id, email };
+
+  document.getElementById('purgar-nombre').textContent = nombre;
+  document.getElementById('purgar-email').textContent  = email;
+
+  const inp = document.getElementById('purgar-confirmacion');
+  inp.value = '';
+
+  const err = document.getElementById('purgar-error');
+  err.textContent   = '';
+  err.style.display = 'none';
+
+  const btn = document.getElementById('btn-purgar-confirmar');
+  btn.disabled    = false;
+  btn.textContent = 'Borrar definitivamente';
+
+  document.getElementById('modal-purgar').classList.add('open');
+  setTimeout(() => inp.focus(), 100);
+}
+
+function cerrarModalPurgar() {
+  document.getElementById('modal-purgar').classList.remove('open');
+  // Rehabilitar SIEMPRE al cerrar: si quedara deshabilitado, reabrir el
+  // modal daria un boton muerto sin ninguna pista de por que.
+  const btn = document.getElementById('btn-purgar-confirmar');
+  btn.disabled    = false;
+  btn.textContent = 'Borrar definitivamente';
+  pendingPurgar = null;
+}
+
+async function ejecutarPurgar() {
+  if (!pendingPurgar) return;
+
+  const escrito = document.getElementById('purgar-confirmacion').value.trim();
+  const err     = document.getElementById('purgar-error');
+
+  // El backend valida esto mismo con hash_equals y es el guard real. Aca se
+  // chequea solo para no gastar un round-trip y poner el mensaje al lado
+  // del campo.
+  if (escrito !== pendingPurgar.email) {
+    err.textContent   = 'El email no coincide.';
+    err.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('btn-purgar-confirmar');
+  btn.disabled    = true;
+  btn.textContent = 'Borrando...';
+
+  try {
+    await apiFetch('POST', `/usuarios/${pendingPurgar.id}/purgar`, {
+      confirmacion_email: escrito,
+    });
+    cerrarModalPurgar();
+    mostrarToast('Datos personales borrados.', 'exito');
+    await recargarUsuarios();
+  } catch (e) {
+    // El error se muestra DENTRO del modal, no como toast: el modal sigue
+    // abierto y un toast quedaria tapado detras del overlay.
+    err.textContent   = e.data?.error || e.data?.message || 'Error al purgar.';
+    err.style.display = 'block';
+    btn.disabled      = false;
+    btn.textContent   = 'Borrar definitivamente';
+  }
+}
+
 async function restaurarUsuario(id, nombre) {
   try {
     await apiFetch('POST', `/usuarios/${id}/restore`);
@@ -1516,6 +1731,30 @@ async function guardarCategorias() {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+// Parte "Nombre y apellido" en las dos columnas que sigue teniendo la base.
+//
+// Por el PRIMER espacio: lo de antes es el nombre, lo de despues el apellido.
+//   "Juan Perez"                 -> Juan  | Perez
+//   "Maria del Carmen Fernandez" -> Maria | del Carmen Fernandez
+//
+// Es una heuristica y se equivoca con nombres compuestos, pero el dato
+// completo queda guardado: si quedo mal se corrige editando, nunca se pierde
+// informacion. Unificar las columnas en la base seria irreversible.
+//
+// Los espacios de mas se colapsan: "Juan   Perez" no deja el apellido con
+// espacios adelante.
+function partirNombreCompleto(valor) {
+  const limpio = (valor || '').trim().replace(/\s+/g, ' ');
+  const i = limpio.indexOf(' ');
+  if (i === -1) {
+    return { nombre: limpio, apellido: '' };
+  }
+  return {
+    nombre:   limpio.slice(0, i),
+    apellido: limpio.slice(i + 1),
+  };
+}
+
 function mostrarFormError(msg) {
   const el = document.getElementById('form-error');
   el.textContent = msg; el.style.display = 'block';
