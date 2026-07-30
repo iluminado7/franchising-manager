@@ -9,6 +9,16 @@ if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
     exit;
 }
 ?>
+
+<!-- Leyenda legal. Va en el layout para que salga igual en todas las
+     pantallas del panel y no haya que acordarse de sumarla en cada una.
+
+     El año es dinámico a propósito: uno fijo queda viejo el 1 de enero y
+     nadie se acuerda de tocarlo. -->
+<footer class="pie-legal">
+  Copyright &copy; <?= date('Y') ?> GoHarv Technology. All rights reserved
+</footer>
+
 <script src="<?= BASE_URL_PHP ?>/js/layout.js"></script>
 </body>
 </html>

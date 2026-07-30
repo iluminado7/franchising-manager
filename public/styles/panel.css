@@ -32,17 +32,54 @@ body.tema-claro {
   }
 
 /* ── LAYOUT GENERAL ─────────────────────────────────────────── */
+/* Alto del pie legal, en un solo lugar: lo usan las tres reglas de abajo.
+   Si el pie cambia de alto, se toca acá y el resto acompaña. */
+:root { --pie-legal-h: 42px; }
+
 .app-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  /* Se descuenta el pie porque footer.php se incluye DESPUES de que cada
+     página cierre .app-layout: el pie queda afuera de esta caja. Sin restarlo,
+     la pantalla mediría 100vh + el pie y habría barra de scroll permanente en
+     todas, incluso en las vacías. */
+  min-height: calc(100vh - var(--pie-legal-h));
 }
 
 .app-body {
   display: grid;
   grid-template-columns: 220px 1fr;
   flex: 1;
-  min-height: calc(100vh - 56px);
+  /* 56 de la topbar + el pie legal. Mismo motivo que en .app-layout. */
+  min-height: calc(100vh - 56px - var(--pie-legal-h));
+}
+
+/* ── PIE LEGAL ───────────────────────────────────────────────── */
+.pie-legal {
+  height: var(--pie-legal-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  background: var(--gris1);
+  border-top: 1px solid var(--gris2);
+  font-family: 'Roboto', sans-serif;
+  font-size: 11.5px;
+  color: var(--gris4);
+  text-align: center;
+  /* Que no lo apriete un contenido largo al lado. */
+  flex-shrink: 0;
+}
+
+/* No se imprime: lectura.php ya esconde topbar y sidebar para que salga solo
+   el documento, y el manual trae su propio pie configurable. Un segundo pie
+   encima sería ruido sobre el documento que se firma. */
+@media print {
+  .pie-legal { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .pie-legal { font-size: 11px; padding: 0 14px; }
 }
 
 /* ── TOPBAR ──────────────────────────────────────────────────── */
