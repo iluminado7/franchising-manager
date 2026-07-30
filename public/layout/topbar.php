@@ -20,9 +20,14 @@ if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
     </svg>
   </button>
 
+  <!-- El logo es una MASCARA, no un <img>: el PNG es blanco sobre
+       transparente y asi toma el color del tema (ver .topbar-logo en
+       panel.css). Por eso lleva role e aria-label: un div no se anuncia solo.
+
+       Se fue el punto dorado que acompanaba al texto: el logo ya trae su ® y
+       se sostiene solo. -->
   <div class="topbar-brand">
-    <div class="topbar-brand-dot"></div>
-    GoHarv.
+    <div class="topbar-logo" role="img" aria-label="GoHarv"></div>
   </div>
 
   <div class="topbar-right">

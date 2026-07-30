@@ -112,6 +112,34 @@ body.tema-claro {
   border-radius: 2px;
 }
 
+/* ── LOGO DE LA TOPBAR ───────────────────────────────────────
+   El PNG es texto BLANCO sobre transparente. En vez de mostrarlo como
+   imagen, se usa su canal alfa como MASCARA y se pinta con var(--blanco).
+
+   Asi el logo sigue al tema sin ninguna regla extra:
+
+     modo oscuro   --blanco: #F5F3EE  -> logo claro
+     tema claro    --blanco: #1A1A1A  -> logo oscuro
+     lectura.php   --blanco: #1A1A1A  -> logo oscuro
+
+   Un filter: invert(1) bajo body.tema-claro NO alcanzaba: lectura.php no usa
+   esa clase, pisa las variables en su propio <style> y deja la topbar en
+   blanco — el logo habria quedado invisible justo ahi. */
+.topbar-logo {
+  width: 166px;
+  height: 26px;
+  background-color: var(--blanco);
+  -webkit-mask: url('../img/logo-goharv-marca.png') no-repeat center / contain;
+          mask: url('../img/logo-goharv-marca.png') no-repeat center / contain;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  /* En el celular la topbar comparte lugar con la hamburguesa, el avatar, la
+     campana y "Cerrar sesion". El logo cede primero. */
+  .topbar-logo { width: 124px; height: 20px; }
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
