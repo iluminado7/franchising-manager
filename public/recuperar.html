@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/style.css">
-<link rel="stylesheet" href="styles/login.css?v=2">
+<link rel="stylesheet" href="styles/login.css?v=3">
 <link rel="preconnect" href="https://challenges.cloudflare.com">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script src="js/config.js"></script>
@@ -17,29 +17,27 @@
 
 <div id="screen-login">
 
+  <!-- La foto va por background-image en login.css (dentro de un @media de
+       escritorio, para que el celular no la descargue). Lo unico que vive
+       ACA es la marca, superpuesta arriba a la izquierda. -->
   <div class="login-izq">
-    <div class="brand">
-      <img src="img/logo-goharv.jpg" alt="GoHarv" class="brand-logo">
-      <div class="brand-name">
-        Business Partner
+    <div class="login-marca">
+      <img src="img/logo-goharv.png" alt="GoHarv" class="login-marca-logo">
+      <div class="login-marca-bp">
+        <strong>Business Partner</strong>
         <span>by GoHarv.</span>
       </div>
-    </div>
-
-    <div class="login-izq-copy">
-      <h1>Gestión de<br>manuales <em>operativos</em></h1>
-      <p>Plataforma centralizada para la redacción, edición, notificación, capacitación y trazabilidad legal de manuales de franquicias conforme a la normativa vigente.</p>
-    </div>
-
-    <div class="login-features">
-      <div class="feature-item"><div class="feature-dot"></div>Gestión en tiempo real y desde cualquier lugar</div>
-      <div class="feature-item"><div class="feature-dot"></div>Doble validación digital y física</div>
-      <div class="feature-item"><div class="feature-dot"></div>Notificaciones automáticas de cambios</div>
     </div>
   </div>
 
   <div class="login-der">
     <div class="login-card">
+
+      <div class="login-titulo">
+        <h1>Gestión de<br><em>documentación empresarial</em></h1>
+        <span class="login-titulo-linea"></span>
+      </div>
+
       <h2>Recuperar contraseña</h2>
       <p class="sub">Te enviamos un enlace para crear una nueva</p>
 
@@ -89,6 +87,31 @@
       </div>
     </div>
   </div>
+
+  <footer class="login-footer">
+    <span>Copyright © 2026 GoHarv Technology. All rights reserved.</span>
+    <span class="login-footer-sep"></span>
+    <span>Senillosa 233, 1° piso, Caballito (C1424), CABA, Argentina.</span>
+    <span class="login-footer-sep"></span>
+    <a href="https://www.goharv.com.ar" target="_blank" rel="noopener">www.goharv.com.ar</a>
+
+    <!-- REDES: sin href todavia, faltan las URLs reales.
+         Para completarlos, agregarle a cada <a>:
+             href="https://..." target="_blank" rel="noopener"
+         Las mismas tres que en login.html: si se completan alla, hay que
+         completarlas aca tambien. -->
+    <span class="login-redes">
+      <a class="login-red" aria-label="Facebook">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      </a>
+      <a class="login-red" aria-label="Instagram">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a class="login-red" aria-label="LinkedIn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+      </a>
+    </span>
+  </footer>
 </div>
 
 <script>

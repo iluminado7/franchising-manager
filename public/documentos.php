@@ -433,7 +433,7 @@ include 'layout/head.php';
           <option value="">Toda la empresa (global)</option>
         </select>
         <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">
-          Si elegís una franquicia específica, solo los franquiciados/empleados de esa sucursal verán este documento.
+          Elegi a que sucursal/franquicia va dirigido este documento. 
         </div>
       </div>
 
@@ -443,7 +443,7 @@ include 'layout/head.php';
           ¿Permitir que sea visible para Socios comerciales?
         </label>
         <div style="font-size:13px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif">
-          Si está desactivado, solo los franquiciantes y super admins verán este documento. Las categorías marcadas se preservan para cuando vuelvas a activarlo.
+          Si está desactivado, ningun socio comercial ni empleado podra ver el documento. Las categorías marcadas se preservan para cuando vuelvas a activarlo.
         </div>
 
         <div id="edit-doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
@@ -471,6 +471,30 @@ include 'layout/head.php';
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalEditarDoc()">Cancelar</button>
       <button class="btn btn-success" id="btn-guardar-doc" onclick="guardarEdicionDocumento()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL NOTA DE LA VERSIÓN VIGENTE
+     Solo lectura. Editarla se hace desde el modal de versiones.
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-nota-doc">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <h3>Nota del documento</h3>
+      <button class="modal-close" onclick="cerrarModalNotaDoc()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Archivo',sans-serif;margin-bottom:8px"
+           id="nota-doc-titulo"></div>
+      <p style="font-size:14px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif;white-space:pre-wrap;margin:0"
+         id="nota-doc-texto"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalNotaDoc()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1224,6 +1248,21 @@ async function poblarFiltroCategorias(empresaId) {
 }
 
 // ── RENDER ────────────────────────────────────────────────────
+// El socio comercial y el empleado ven los documentos pero no los bajan.
+//
+// FUNCION y no constante: rolUsuario es un `let` que se asigna DESPUES,
+// cuando responde /me. Una constante a nivel de modulo se evaluaria con
+// rolUsuario === '' y dejaria sin descargar a todos, incluido el
+// super_admin, sin ningun error visible.
+//
+// Esto es SOLO la UI. El guard real esta en
+// DocumentController::streamDocumento(), que devuelve 403 para el
+// disposition 'attachment'. Sin el, esconder el boton no serviria: bastaria
+// con pegarle al endpoint.
+function puedeDescargar() {
+  return rolUsuario === 'super_admin' || rolUsuario === 'franquiciante';
+}
+
 function renderThead() {
   // "Destinatario" y no "Franquicia": la celda muestra la sucursal cuando
   // el documento esta acotado a una, y "Global" cuando aplica a toda la
@@ -1351,12 +1390,21 @@ function renderTabla(lista) {
             Vista previa
           </a>` : ''}
 
+          ${notaVersion(d) ? `
+          <a href="#"
+            onclick="event.preventDefault(); verNotaDocumento(${d.id})"
+            class="accion-btn"
+            style="color:var(--gris5)">
+            Nota
+          </a>` : ''}
+
+          ${puedeDescargar() ? `
           <a href="#"
             onclick="event.preventDefault(); descargarDocumento(${d.id})"
             class="accion-btn"
             style="color:var(--dorado)">
             Descargar
-          </a>
+          </a>` : ''}
 
           ${(rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') && !eliminado
             ? `
@@ -1633,26 +1681,52 @@ async function descargarDocumento(id) {
   }
 }
 
+// Nota de la version vigente. Llega en el JSON de /documentos: index()
+// carga versionActiva como relacion completa, sin lista de columnas.
+function notaVersion(d) {
+  const va = Array.isArray(d.version_activa) ? d.version_activa[0] : d.version_activa;
+  return (va && va.nota) ? String(va.nota).trim() : '';
+}
+
+function verNotaDocumento(id) {
+  const d = todosLosDocumentos.find(x => Number(x.id) === Number(id));
+  if (!d) return;
+  document.getElementById('nota-doc-titulo').textContent = d.titulo || 'Documento';
+  // textContent y no innerHTML: la nota la escribe un usuario.
+  document.getElementById('nota-doc-texto').textContent  = notaVersion(d);
+  document.getElementById('modal-nota-doc').classList.add('open');
+}
+
+function cerrarModalNotaDoc() {
+  document.getElementById('modal-nota-doc').classList.remove('open');
+}
+
 async function previsualizarDocumento(id) {
-  // Abrimos la pestaña en el mismo gesto del click para que no la bloquee el navegador.
-  const win = window.open('', '_blank');
-  if (win) win.document.write('<p style="font-family:sans-serif;color:#555;padding:24px">Cargando vista previa...</p>');
-  try {
-    const res = await fetch(API + '/documentos/' + id + '/preview', { credentials: 'include' });
-    if (!res.ok) {
-      if (win) win.close();
-      mostrarToast('No se pudo abrir la vista previa.', 'error');
-      return;
-    }
-    const blob = await res.blob();
-    const url  = window.URL.createObjectURL(blob);
-    if (win) { win.location.href = url; } else { window.open(url, '_blank'); }
-    // Liberamos el blob después de un rato (ya quedó cargado en el visor).
-    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-  } catch (e) {
-    if (win) win.close();
-    mostrarToast('Error al abrir la vista previa.', 'error');
-  }
+  // Va al visor propio en vez de abrir el PDF en una pestaña nueva.
+  //
+  // Antes esto hacia fetch -> blob -> window.open, y eso caia en el visor
+  // NATIVO del navegador, con sus botones de guardar e imprimir. Ahora
+  // lectura-doc.php lo renderiza a canvas con pdf.js: sin toolbar nativo y
+  // con la marca de agua del socio encima.
+  //
+  // Sigue siendo friccion, no candado: los bytes llegan al cliente igual.
+  //
+  // Se NAVEGA en vez de abrir pestana: el visor tiene su boton de volver, y
+  // una pestana nueva disparada desde un async se la come el bloqueador de
+  // popups (por eso el codigo viejo abria la ventana antes del await).
+  // BASE_PHP NO es global en este proyecto: solo la declaran las paginas
+  // que la necesitan, y esta no es una de ellas. Usarla aca era un
+  // ReferenceError, y como estaba dentro del onclick el click no hacia
+  // nada — sin ningun error visible.
+  //
+  // Se deriva de API, que si es global, igual que hace lectura.php.
+  const base = API.replace(/\/api\/?$/, '');
+  // Se navega con el ULID publico, no con el id de la base. El fallback al
+  // id cubre documentos anteriores a la migracion que por lo que sea hayan
+  // quedado sin public_id: mejor un link feo que un boton que no anda.
+  const doc = todosLosDocumentos.find(x => Number(x.id) === Number(id));
+  const ref = (doc && doc.public_id) ? doc.public_id : id;
+  window.location.href = `${base}/lectura-doc.php?d=${ref}`;
 }
 
 // ── MODAL ELIMINAR DOCUMENTO ──────────────────────────────────
@@ -2059,10 +2133,11 @@ function renderVersiones(versiones) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Vista previa
         </a>` : ''}
+        ${puedeDescargar() ? `
         <a href="#" onclick="event.preventDefault(); descargarVersion(${documentoActivo.id}, ${v.id})" class="accion-btn" style="color:var(--dorado)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Descargar
-        </a>
+        </a>` : ''}
         ${puedeEliminar ? `
         <a href="#" onclick="event.preventDefault(); abrirModalEliminarVersion(${documentoActivo.id}, ${v.id}, 'v${numeroVersion(v)}', ${vigente ? 'true' : 'false'})" class="accion-btn" style="color:var(--gris5)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

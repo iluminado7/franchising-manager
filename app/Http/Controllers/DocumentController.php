@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -141,6 +142,19 @@ class DocumentController extends Controller
                 'franquicia_id'        => $request->franquicia_id,
                 'visible_franquiciado' => $request->visible_franquiciado ?? true,
             ]);
+
+            // ULID publico para las URLs: el id de la base no se expone, igual
+            // que en los manuales.
+            //
+            // Setter directo y NO dentro del create(): public_id es identidad
+            // publica y en Manual esta fuera de $fillable. Si Document hiciera
+            // lo mismo, pasarlo en el array lo descartaria EN SILENCIO — el
+            // create() no avisa, simplemente lo ignora.
+            //
+            // Va dentro de la transaccion que ya envuelve esto, asi que no hay
+            // ningun momento en que el documento exista sin public_id.
+            $doc->public_id = (string) Str::ulid();
+            $doc->save();
 
             // Version inicial: la declarada por el usuario, o 1.0 por defecto.
             // Es el unico punto donde el numero viene del request; a partir de aca
@@ -367,6 +381,22 @@ class DocumentController extends Controller
         $user      = $request->user();
 
         $this->authorize('gestionar', $documento);
+
+        // La nota la escribe QUIEN SUBIO esa version: explica que cambio en
+        // ella, y el unico que lo sabe es quien la subio.
+        //
+        // El super_admin queda como salida de emergencia. Sin el, una nota
+        // con un error se queda con el error para siempre si su autor ya no
+        // esta en la empresa: este es el unico endpoint que la toca y no
+        // habria quien la abra.
+        //
+        // El authorize() de arriba NO alcanza: deja pasar a cualquier
+        // franquiciante de la empresa, no solo al autor.
+        if (!$user->esSuperAdmin() && (int) $version->subido_por !== (int) $user->id) {
+            return response()->json([
+                'error' => 'Solo quien subió esta versión puede editar su nota.',
+            ], 403);
+        }
 
         $data = $request->validate([
             'nota' => 'nullable|string|max:500',
@@ -720,6 +750,26 @@ class DocumentController extends Controller
             $tieneAcceso = $this->usuarioTieneAccesoAlDocumento($user->id, $documento);
             if (!$tieneAcceso) {
                 abort(403, 'Sin acceso a este documento.');
+            }
+
+            // Pueden VER el documento, no bajarlo.
+            //
+            // El guard vive aca y no en descargar()/descargarVersion()
+            // porque los dos pasan por este metodo y manana puede haber un
+            // tercero. Una sola regla, imposible de olvidar en un endpoint
+            // nuevo.
+            //
+            // 'attachment' es lo que hace que el navegador ofrezca guardar;
+            // 'inline' lo muestra. Esa distincion ya llegaba hasta aca.
+            //
+            // OJO con lo que esto NO evita: la vista previa le entrega el
+            // archivo completo igual, asi que puede guardarlo desde el visor
+            // del navegador. Permitir leer y evitar guardar son el mismo
+            // request; lo unico que cambia es que hace el cliente con los
+            // bytes. Esto corta la descarga por la aplicacion, que es lo que
+            // se puede cortar de verdad.
+            if ($disposition === 'attachment') {
+                abort(403, 'No tenés permiso para descargar este documento.');
             }
         }
 

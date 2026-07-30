@@ -2,10 +2,21 @@
 
 Plataforma multi-tenant para que una empresa franquiciante redacte, publique y
 distribuya sus **manuales operativos**, y para que sus socios comerciales los
-lean y los **acepten con registro**. La aceptación es el corazón del sistema: no
-es un gestor de documentos, es una herramienta de **cumplimiento** — lo que
-importa es poder demostrar quién leyó y aceptó qué versión de qué manual, y
-cuándo.
+lean con registro.
+
+⚠️ **El cumplimiento es la FIRMA FÍSICA, no el registro digital.** Esto cambió en
+julio de 2026 y es lo primero que hay que entender:
+
+- Cuando un socio comercial **abre** un manual se escribe una fila en
+  `acceptances`. Eso registra que lo abrió — ese día, desde esa IP. No es un
+  consentimiento y la UI ya no dice que lo sea: el botón desapareció y la
+  pantalla habla de **"Leído"**.
+- Lo que prueba cumplimiento es el **PDF firmado a mano** que el franquiciante
+  sube desde `aceptaciones.php` (`physical_signatures`).
+
+La tabla se sigue llamando `acceptances` y la acción del log `manual_aceptado`
+por la misma convención de siempre: los strings de base son inmutables, las
+etiquetas de UI cambian. Ver §7 → *Lectura y firma física*.
 
 Cliente inicial: **Cerrajería Leonardo** (razón social Acceso Leonardo S.A.S).
 
@@ -160,13 +171,30 @@ inventar tipos nuevos sin migrar el CHECK.**
 
 | Tipo | FK obligatoria |
 |---|---|
-| `nuevo_manual` | `manual_id` |
+| `nuevo_manual`, `nota_manual` | `manual_id` |
 | `modificacion_manual`, `manual_asignado`, `acceso_anomalo_pdf` | `manual_version_id` |
 | `nuevo_documento`, `documento_asignado` | `document_id` |
 | `nueva_version_documento` | `document_version_id` |
 | `manual_asignado_categoria` | `manual_id` + `category_id` |
 | `documento_asignado_categoria` | `document_id` + `category_id` |
-| `recordatorio_pendiente`, `login_bloqueado` | **ninguna** (todas NULL) |
+| `recordatorio_pendiente` | **ninguna** (todas NULL) |
+
+⚠️ **`login_bloqueado` NO está en el CHECK.** Esta tabla lo listaba y es falso:
+se verificó contra el `SHOW CREATE TABLE` real. Crear una notificación de ese
+tipo hace fallar el INSERT.
+
+⚠️ **Al modificar este CHECK, no hagas `DROP` + `ADD`.** Todas esas columnas
+tienen FK con `ON DELETE CASCADE`, y MySQL prohíbe acciones referenciales en
+columnas usadas por un CHECK (ver *Regla general de MySQL* más abajo). Si el
+`ADD` falla, la tabla queda **sin ninguna restricción** y el DDL de MySQL no se
+revierte solo. El camino seguro son cuatro pasos, y así está hecha la migración
+`add_nota_manual_to_chk_notif_fk`:
+
+1. `ADD chk_notif_fk_v2` con la expresión nueva — si MySQL la rechaza, falla acá
+   y el CHECK original sigue en pie.
+2. `DROP chk_notif_fk`
+3. `ADD chk_notif_fk` con la misma expresión, ya probada en el paso 1.
+4. `DROP chk_notif_fk_v2`
 
 Para agregar un tipo, buscá si alguna rama existente ya admite la combinación de
 FKs que necesitás y sumá el tipo a ese `IN`. Es mucho más seguro que agregar una
@@ -261,14 +289,43 @@ Limitación conocida: Mammoth **no expone el sombreado de párrafo** (`w:shd`) n
 los bordes, así que los fondos de color del Word original se pierden. Decisión
 tomada: el manual usa la estética del sistema, no la del Word.
 
-### Manuales en PDF — ⏸ PAUSADO
-Permite subir un PDF y publicarlo sin convertirlo. **Está deshabilitado**:
-`PDF_MANUALES_HABILITADO = false` en `manuales.php` y `manuales-mi-empresa.php`.
+### Manuales en PDF
+Permite subir un PDF y publicarlo sin convertirlo. **Está activo**:
+`PDF_MANUALES_HABILITADO` ya no existe en ningún archivo — la constante se
+eliminó al reactivar la funcionalidad.
 
-Se pausó porque no cerró la experiencia de lectura ni el valor de la aceptación
-(el socio puede descargar el archivo igual). **Todo el backend sigue funcionando**
-y hay manuales PDF publicados: para retomarla alcanza con poner la constante en
-`true`.
+**Versionado.** Desde julio de 2026 los PDF tienen las mismas dos preguntas que
+los manuales editables:
+
+- Al crear uno, **con qué versión arranca** (para documentos que ya venían
+  usándose fuera del sistema con su propia numeración).
+- Al subir una versión nueva, si es **cambio mayor o menor**.
+
+El backend ya las soportaba desde siempre: `ManualController::publicarArchivo()`
+valida `tipo_cambio`, `version_inicial_number` y `version_inicial_minor`. Lo que
+faltaba era que el `FormData` los mandara.
+
+Los dos modales viven en **`layout.js`** (`pedirTipoCambioPdf()`,
+`pedirVersionInicialPdf()`) con su CSS en `panel.css` bajo el prefijo `.vpdf-`.
+
+⚠️ **Los nombres llevan sufijo `Pdf` a propósito.** `editor.php` ya define
+`elegirTipoCambio`, `abrirModalVersionInicial`, `previewVersionInicial` y
+compañía — y carga `layout.js` por `footer.php`, o sea **después** de su propio
+`<script>`. Un homónimo en `layout.js` le pisaría la publicación al editor con
+un error que no menciona la colisión. Mismo caso que `renderPaginacion()` vs
+`log.php`. Por eso `editor.php` no se tocó y sus modales siguen siendo una
+tercera copia.
+
+**Las etiquetas del modal se calculan con TODAS las versiones**, no con la
+activa: `calcularEtiquetasVersion()` toma el máximo `version_minor` entre las que
+comparten `version_number`. Si un manual tiene v1.0, v1.1 y v1.2 y la activa
+volvió a ser la v1.0, `activa.minor + 1` propondría v1.1 — que ya existe.
+
+**La versión inicial se pregunta ANTES de crear el manual.** Si se preguntara
+después, cancelar dejaría un manual en borrador sin versión que nadie pidió.
+
+El visor (`pdf.js` renderizando a canvas, sin capa de texto, con marca de agua
+superpuesta) quedó terminado y funcionando.
 
 El visor (`pdf.js` renderizando a canvas, sin capa de texto, con marca de agua
 superpuesta) quedó terminado y funcionando.
@@ -296,9 +353,51 @@ vieja (`/api/manuales/{id}/archivo`) se salteaba todo eso.
 Subida y versionado de archivos, sin aceptación. Es el lugar correcto para
 material que **no** requiere firma.
 
-### Aceptaciones
-Digital (el socio confirma en pantalla, se registra contra el `documento_hash`) o
-física (el franquiciante sube el PDF firmado). Se consultan en `aceptaciones.php`.
+### Lectura y firma física
+
+Antes de julio de 2026 el socio comercial apretaba **"Aceptar manual"**, confirmaba
+en un modal que la acción quedaba registrada, y eso creaba la fila de
+`acceptances`. Ese era el cumplimiento.
+
+**Ahora no.** El botón y el modal se eliminaron. `lectura.php` llama al mismo
+endpoint (`POST /versiones/{id}/aceptar`) **automáticamente al abrir el manual**,
+y la pantalla dice **"Leído"**. Lo que queda registrado es que esa persona abrió
+esa versión, ese día, desde esa IP.
+
+El cumplimiento pasó a ser la **firma física**: el PDF firmado a mano que se sube
+desde `aceptaciones.php`.
+
+Detalles que importan:
+
+- **El registro dispara SOLO para `franquiciado`.** El endpoint no filtra por rol:
+  sin esa condición, un franquiciante entrando en vista previa o un super_admin
+  revisando el manual se registrarían a sí mismos.
+- **El fallo no puede quedar mudo.** Si el POST falla, la cola de
+  `layout/auth.php` devuelve al socio a ese mismo manual en cada page load, en
+  loop y sin explicación. Por eso hay un estado visible con **"Reintentar"** en
+  vez de un `catch` silencioso.
+- **`auth.php` no se tocó.** Su cola sigue mirando `acceptances`; lo que cambió es
+  qué significa: ahora es "tenés que abrir cada manual pendiente".
+- **`aceptar()` sigue intacto en el backend.** Si algún día se reactiva la
+  aceptación formal desde la UI, hay que agregar **antes** una columna que
+  distinga los dos tipos de fila (`origen`): mezcladas en la misma tabla son
+  indistinguibles y después no hay forma de separarlas. Postergarlo hoy es seguro
+  porque, con la aceptación apagada, todo lo nuevo es lectura.
+- Las ~60 filas anteriores al cambio eran **datos de prueba**, no consentimientos
+  reales. Por eso no hizo falta preservar la distinción.
+
+**Renombrado de UX.** `aceptaciones.php` y `mis-manuales.php` dejaron de hablar de
+aceptación. Los pills de estado cambiaron de significado, no solo de nombre:
+
+| Antes | Ahora | Por qué |
+|---|---|---|
+| Completo | Firmado | |
+| **Solo digital** | **Falta firma** | Era cumplimiento parcial; ahora es cumplimiento CERO |
+| Solo físico | Firmado sin lectura | |
+| Mi aceptación / Aceptado | Leído / Leído | |
+
+El nombre de la sección sigue siendo "Aceptaciones" por ahora. Los nombres de
+clase CSS (`estado-solo-digital`, `badge-aceptado`) no se tocaron: son internos.
 
 ### Categorías
 
@@ -308,11 +407,28 @@ Los contadores de `categorias.php` (`manuales_asignados_count`,
 Las dos condiciones en cada caso — un registro borrado puede haber quedado con
 estado publicado.
 
+El contador de **usuarios** también excluye los eliminados
+(`whereNull('users.deleted_at')`). La fila de `user_categories` sobrevive al
+soft-delete a propósito —si el usuario se restaura, recupera sus categorías— pero
+para la pantalla ese usuario ya no está. Los **inactivos sí se cuentan**: una
+cuenta bloqueada sigue perteneciendo a la categoría.
+
 ⚠️ **`destroy()` cuenta distinto a propósito.** Ahí el conteo no es informativo:
 es la barrera que impide borrar físicamente una categoría con cosas colgando. Si
 contara solo lo visible, una categoría con manuales en borrador daría 0, se
 borraría, y quedarían filas huérfanas en `manual_category_assignments`. No
 unificar los dos criterios.
+
+**Botón "Eliminar" (borrado físico).** `DELETE /api/categorias/{id}`. Se muestra
+siempre, aunque los contadores estén en 0: que la tabla muestre 0 **no** significa
+que la categoría esté vacía, precisamente porque esos conteos filtran. El único
+que sabe es el backend.
+
+⚠️ **El 409 va a contradecir a la tabla, y es correcto.** La fila puede decir
+"0 usuarios" y el error decir "1 usuario", porque `destroy()` cuenta todo —
+eliminados y archivados incluidos. El modal desglosa el detalle **y aclara de
+dónde sale la diferencia**; sin esa aclaración parece que el sistema se
+contradice.
 
 ### Notificaciones
 In-app (badge en la topbar) + email vía un **observer** de `Notification`. La
@@ -322,6 +438,31 @@ whitelist de tipos que disparan mail está en
 `NotificationController::resolverDestino()` calcula **en el backend** a dónde
 lleva cada notificación y si el recurso sigue disponible. El frontend no decide
 eso.
+
+El badge, el popup de entrada y el panel **ya están implementados** en
+`layout.js` (`actualizarBadgeNotificaciones`, `toggleNotificaciones`). Crear la
+fila en `notifications` alcanza: no hay que tocar frontend para un tipo nuevo.
+
+**`nota_manual`** — cuando un socio comercial deja una nota en un manual, se les
+avisa a todos los franquiciantes activos de esa empresa, por badge y por mail.
+
+- **Solo si el autor es `franquiciado`.** `store()` también lo usa el
+  franquiciante, y notificarse a sí mismo no aporta.
+- **Si la empresa no tiene franquiciantes cargados, no se notifica a nadie.** No
+  cae al super_admin: el feedback de una red es del franquiciante, y desviarlo en
+  silencio sería una sorpresa desagradable.
+- **Si la notificación falla, la nota igual se guarda** (`try/catch` + log).
+  Perder lo que el socio escribió por no poder mandar un aviso sería el peor
+  canje posible.
+- **Su rama en `resolverDestino()` va ANTES de la de manuales**, igual que
+  `acceso_anomalo_pdf` y por el mismo motivo: cuelga de `manual_id`, así que
+  caería ahí y terminaría en `lectura.php`, que no es donde se leen las notas. Y
+  esa rama exige estado `publicado`: archivar el manual mataría la notificación,
+  cuando la nota ya fue escrita y sigue valiendo.
+- El `titulo` nombra al autor ("Juan Pérez dejó una nota en: X") y es **también el
+  asunto del mail** (`NotificacionMail::envelope()`). Es `varchar(200)` y se
+  recorta el **título del manual**, no la cadena entera: cortar al final dejaría
+  el nombre a medias sin decir nunca en qué manual.
 
 ### Registro de actividad
 `activity_logs` guarda logins, publicaciones, accesos a archivos y accesos
@@ -435,6 +576,58 @@ de grupo, quedarían expuestas en silencio.
 A diferencia de `activity_logs`, estos registros **se pueden borrar**: son
 diagnóstico, no cumplimiento.
 
+### Purga de datos personales de un usuario
+
+En `usuarios.php`, sobre un usuario ya eliminado, el super_admin ve
+**"Borrar definitivamente"**. `POST /api/usuarios/{id}/purgar`.
+
+**NO borra la fila, y no puede.** `acceptances.user_id` y `activity_logs.user_id`
+son `ON DELETE RESTRICT`: un DELETE físico falla en la base. Y está bien que
+falle — esa fila es el **sujeto** de la cadena de cumplimiento. Sin ella, una
+aceptación diría "alguien aceptó la versión 2.1", que no prueba nada.
+
+Lo que se destruye son los datos de la persona:
+
+| Columna | Queda | Por qué |
+|---|---|---|
+| `email` | `eliminado+{id}@usuario.invalid` | Es `NOT NULL UNIQUE`. El `id` garantiza unicidad y `.invalid` está reservado por RFC 2606 |
+| `nombre` / `apellido` | `Usuario` / `eliminado` | Los dos son `NOT NULL` |
+| `cuit`, `dni_legacy`, `celular`, `foto_url` | `NULL` | `foto_url` **después** de borrar el objeto de S3 |
+| `password_hash` | hash aleatorio de 64 chars | `NOT NULL`. Más seguro que un valor conocido |
+| `activo` | `0` | |
+| `rol`, `empresa_id` | **se conservan** | No son dato personal; sin ellos los logs viejos pierden contexto |
+
+Columnas nuevas: `anonimizado_at` y `anonimizado_por`.
+
+**Guards:** solo `super_admin` (doble, ruta + controlador), no sobre uno mismo,
+solo sobre usuarios ya eliminados —obliga a pasar antes por el borrado, que sí es
+reversible— y exige el **email exacto** en `confirmacion_email`, comparado con
+`hash_equals`.
+
+⚠️ **El `ActivityLog` va DENTRO de la transacción y SIN `try/catch`**, al revés
+que el resto del proyecto. Si registrar falla, la purga se revierte entera. Una
+destrucción irreversible sin registro es peor que una que no ocurre.
+
+**El log NO guarda el email**, a propósito: escribirlo en un registro nuevo justo
+cuando se lo está borrando contradice la operación.
+
+**Un usuario purgado no se puede restaurar** (`restore()` devuelve 409) y
+**desaparece de todos los listados** (`scopeNoPurgados()` en `index()`, fuera del
+`if` de `include_deleted`). El rastro queda en `activity_logs` como
+`usuario_purgado`, consultable desde `log.php`.
+
+⚠️ **Lo que esta purga NO alcanza**, y es deuda conocida, no un olvido:
+
+- `acceptances.pdf_sellado_url`: el PDF sellado lleva el nombre impreso. Es el
+  certificado; uno anónimo no prueba nada.
+- `physical_signatures`: la firma manuscrita escaneada.
+- `acceptances.ip_address`: es dato personal y es parte de la evidencia.
+- `activity_logs.detalle` puede tener `user_email` en registros viejos. Se
+  decidió **no** redactarlo: `activity_logs` es inmutable por diseño.
+
+Si la purga sale de un pedido legal de supresión, eso es una supresión
+**incompleta** y hay que decirlo, no asumir que alcanza.
+
 ### CUIT / CUIL
 
 `users.dni` pasó a `users.cuit`. **Una sola columna para los dos**: CUIT y CUIL
@@ -537,7 +730,7 @@ masivamente generaría un diff inmanejable. Antes de editar un archivo,
 
 | Archivo | EOL |
 |---|---|
-| `ManualController.php`, `NotificationController.php`, `PdfController.php`, `AuthController.php`, `AppServiceProvider.php`, `config/services.php`, `lectura.php`, `mis-manuales.php`, `api.php`, **`usuarios.php`**, **`js/layout.js`**, **`layout/topbar.php`**, **`layout/footer.php`**, **`layout/head.php`** | LF |
+| `ManualController.php`, `NotificationController.php`, **`ManualNoteController.php`**, `PdfController.php`, `AuthController.php`, `AppServiceProvider.php`, `config/services.php`, `lectura.php`, `mis-manuales.php`, `api.php`, **`usuarios.php`**, **`js/layout.js`**, **`layout/topbar.php`**, **`layout/footer.php`**, **`layout/head.php`** | LF |
 | `ManualImageController.php`, `ProfilePhotoController.php`, `NotificationObserver.php`, `FranchiseCategoryController.php`, `ManualCategoryAssignmentController.php`, `editor.php`, `manuales.php`, `manuales-mi-empresa.php`, `log.php`, `aceptaciones.php`, `categorias.php`, `documentos.php`, `login.html`, `styles/panel.css`, `styles/login.css` | CRLF |
 
 ⚠️ **`usuarios.php` es LF, no CRLF.** Esta tabla lo listaba mal y se detectó al
@@ -706,17 +899,45 @@ prueba cuándo un socio aceptó una versión.
 
 ### Otras
 
-- **No hay recuperación de contraseña.** `AuthController` tiene `login`, `logout`,
-  `me`, `updateEmail` y `updatePassword` — y esta última exige la contraseña
-  actual, así que sirve para cambiarla, no para recuperarla. Las tablas
-  `password_reset_*` tampoco existen (la base viene de dump, no de migraciones).
-  **Salida provisoria:** `UserController::update()` acepta un `password` opcional,
-  así que un admin puede resetearla desde `usuarios.php` → Editar. Verificar si
-  esa vía registra en `activity_logs` y si revoca las sesiones del afectado — si
-  no, es un hueco: es la operación que permite tomar el control de una cuenta.
-  Cuando se construya el flujo real: mensaje neutro (no revelar si el email
-  existe), Turnstile en el formulario, token de un solo uso hasheado con
-  vencimiento, rate limit compuesto, y revocación de sesiones al resetear.
+- ~~**No hay recuperación de contraseña.**~~ **Resuelto.** Existen la tabla
+  `password_resets`, `PasswordResetController`, `Jobs/EnviarRecuperacionPassword`
+  y `Http/Concerns/VerificaTurnstile` compartido con el login. Esta sección decía
+  lo contrario y se detectó al leer las FK de `users`.
+- **El reseteo por admin sí está auditado.** `UserController::update()` acepta un
+  `password` opcional; registra `password_reseteada_admin` con el actor en
+  `user_id` y el afectado en `detalle.user_email`, y **revoca todas las sesiones**
+  del usuario tocado. Esta sección pedía verificarlo: está hecho.
+- ⚠️ **El franquiciante PUEDE resetear contraseñas de su empresa, y el
+  franquiciado las de los empleados de su sucursal.** El backend nunca lo filtró
+  por rol —solo por tenant— y desde julio de 2026 la UI también lo muestra. Antes
+  el campo estaba oculto para el franquiciante: era un guard cosmético que hacía
+  creer que la restricción existía.
+- ⚠️ **`UserController::update()` no puede BORRAR `cuit` ni `celular`.** El
+  `array_filter(..., fn($v) => $v !== null)` de la línea ~238 descarta los nulos
+  explícitos, así que una vez cargados no se pueden vaciar desde el modal.
+  `franquicia_id` sí se puede porque usa `array_key_exists`. Es el mismo caso que
+  §11 documenta y quedó repetido en los otros dos campos.
+- ⚠️ **`ManualNoteController::porManual()` no verifica acceso al manual.** El
+  bloque de release notes filtra solo por `manual_id`, sin `empresa_id` ni
+  `ManualAccessService`. Un socio comercial puede leer las `nota_publicacion` de
+  **manuales de otras empresas** enumerando ids, con el autor incluido. El
+  feedback ajeno sí está tapado (`where('user_id', $user->id)`). Es la misma
+  familia que H-001 y H-009; el arreglo es el mismo guard que ya usa `store()`.
+- **El `autor` de cada nota se serializa entero.** `User` solo tiene
+  `password_hash` en `$hidden`, así que viajan email, CUIT, `dni_legacy`, celular
+  y rol del autor. Al recortarlo, **no** usar `with('autor:id,nombre,...')`: el
+  accessor `avatar_url` devuelve `null` y el avatar desaparece sin dar error. Va
+  con `makeHidden([...])` sobre la relación ya cargada.
+- **El contador de categorías todavía cuenta usuarios suspendidos** (`activo = 0`).
+  Se excluyeron los eliminados; los suspendidos quedaron a propósito, pendiente de
+  decisión.
+- **La columna "Destinatario" de `documentos.php` no muestra los socios asignados
+  individualmente.** `DocumentController::index()` no carga
+  `document_user_assignments`. Un documento dirigido a un distribuidor puntual,
+  sin categoría, sigue diciendo "Toda la empresa".
+- **Typo en `usuarios.php`**: `cerrarModalEliminar()` empieza con
+  `ocument.getElementById` (falta la `d`). El modal de eliminar no cierra ni con
+  la X ni con el clic afuera, y el botón no se rehabilita.
 - **El árbol de asignación de visibilidad está TRIPLICADO**: `manuales.php`,
   `manuales-mi-empresa.php` y `editor.php` tienen cada uno su copia, con
   variaciones (`sublistaUsuariosHTML` vs `sublistaUsuariosHTMLEditor`, `esc` vs
@@ -1164,7 +1385,7 @@ public/
 ├── manuales.php                     listado (super_admin)
 ├── manuales-mi-empresa.php          listado (franquiciante)
 ├── editor.php                       editor WYSIWYG
-├── lectura.php                      ⭐ lectura + aceptación + visor PDF
+├── lectura.php                      ⭐ lectura + registro de lectura + visor PDF
 ├── mis-manuales.php                 cola del socio comercial
 ├── documentos.php / usuarios.php / franquicias.php / log.php ...
 ├── layout/                          config, auth, head, topbar, sidebar, footer
@@ -1220,7 +1441,18 @@ Lo que más ayuda a no romper nada:
 
 ---
 
-*Documento generado en julio de 2026, actualizado el 29/07/2026
-(migración a AWS, Turnstile, cabeceras de seguridad, `estado_previo`, avatares
-compartidos, registro de errores en base). Si el sistema cambió, este README
-también debería.*
+*Documento generado en julio de 2026, actualizado el 29/07/2026.*
+
+*Primera tanda: migración a AWS, Turnstile, cabeceras de seguridad,
+`estado_previo`, avatares compartidos, registro de errores en base.*
+
+*Segunda tanda (29/07): **el cumplimiento pasó a ser la firma física** y la
+aceptación digital se convirtió en registro de lectura al abrir; purga de datos
+personales; manuales PDF reactivados con versionado completo; tipo de cambio en
+documentos; notificación `nota_manual` al franquiciante; filtro de categorías en
+usuarios; borrado de categorías; orden por defecto de manuales por recencia. Se
+corrigieron cuatro afirmaciones falsas de este documento: `login_bloqueado` en
+`chk_notif_fk`, los manuales PDF como pausados, la recuperación de contraseña
+como inexistente, y el badge de notificaciones como pendiente.*
+
+*Si el sistema cambió, este README también debería.*

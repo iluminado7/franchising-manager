@@ -35,38 +35,49 @@ body.tema-claro {
   #screen-login {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* La imagen mas ancha que el formulario, PERO con un piso.
+       Sin el minmax, en 1024px de ancho la columna derecha quedaria en 440px
+       y ahi tiene que entrar una .login-card de 420 mas 48 de padding a cada
+       lado. El formulario se apretaria y el titulo se partiria.
+       Con el piso de 480 cede la imagen, que tiene background-size: cover y
+       se recorta sola sin deformarse. */
+    grid-template-columns: 1.33fr minmax(480px, 1fr);
+    /* Segunda fila para el pie. 'auto' hace que ocupe solo lo que necesita y
+       que la fila de arriba se quede con el resto de la pantalla. */
+    grid-template-rows: 1fr auto;
   }
 
+  /* Panel de imagen. Sin padding ni flex: ya no tiene hijos, solo la foto.
+     El gris1 queda como color de fondo mientras la imagen carga. */
   .login-izq {
     background: var(--gris1);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 48px;
     position: relative;
     overflow: hidden;
   }
 
-  .login-izq::before {
-    content: '';
-    position: absolute;
-    top: -120px; right: -120px;
-    width: 400px; height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
-    pointer-events: none;
+  /* La imagen SOLO en escritorio.
+     Con un <img> y display:none la mayoria de los navegadores la descarga
+     igual — 138 KB que el usuario del celular paga sin verlos nunca. Como
+     background dentro de un @media, no se pide.
+
+     El .jpg va ANTES del image-set(): los navegadores que no entienden
+     image-set() se quedan con el jpg, los que si lo entienden lo pisan con
+     el webp, que pesa la mitad. */
+  @media (min-width: 769px) {
+    .login-izq {
+      background-image: url('../img/login-hero.jpg');
+      background-image: image-set(
+        url('../img/login-hero.webp') type('image/webp'),
+        url('../img/login-hero.jpg')  type('image/jpeg')
+      );
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
   }
 
-  .login-izq::after {
-    content: '';
-    position: absolute;
-    bottom: -80px; left: -80px;
-    width: 300px; height: 300px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%);
-    pointer-events: none;
-  }
+  /* Los circulos dorados de fondo se fueron: quedaban ENCIMA de la foto y le
+     metian un velo amarillo. La imagen ya trae su propia luz. */
 
   /* Logo ARRIBA del nombre, no al lado.
      Alineado a la izquierda (no centrado) para que la marca comparta la misma
@@ -195,7 +206,140 @@ body.tema-claro {
 
   .login-card {
     width: 100%;
-    max-width: 380px;
+    /* 420 y no 380: ahora el titulo grande vive adentro de esta caja y a 380
+       "documentación empresarial" se parte en tres lineas. */
+    max-width: 420px;
+  }
+
+  /* ── COPY DE MARCA, AHORA ARRIBA DEL FORMULARIO ──────────── */
+  /* Conservan su nombre de clase para heredar el CSS que ya existia. Lo unico
+     que cambia son los anchos: antes vivian en media pantalla, ahora en una
+     columna de 420. */
+  .login-der .login-izq-copy {
+    margin-bottom: 22px;
+  }
+  .login-der .login-izq-copy h1 {
+    font-size: 34px;
+    line-height: 1.15;
+    max-width: none;
+    margin-bottom: 14px;
+  }
+  .login-der .login-izq-copy p {
+    font-size: 13.5px;
+    line-height: 1.6;
+    max-width: none;
+  }
+  .login-der .login-features {
+    margin-bottom: 34px;
+  }
+
+  /* ── PANTALLAS BAJAS ─────────────────────────────────────── */
+  /*
+     Todo esto vive dentro de min-width: 769px. En celular la pantalla apila y
+     scrollea, que ahi es lo correcto, y ademas las unidades vh saltan cuando
+     el navegador esconde la barra de direcciones.
+
+     clamp(minimo, preferido, maximo) con vh: el valor sigue al alto de la
+     ventana y se frena en los extremos. Asi no hay saltos entre un breakpoint
+     y el siguiente — la pantalla se comprime de a poco mientras la achicas.
+  */
+  @media (min-width: 769px) {
+    .login-der {
+      /* 48px en pantallas altas, 24 en las bajas. */
+      padding: clamp(24px, 4.4vh, 48px);
+    }
+
+    .login-der .login-izq-copy h1 {
+      font-size: clamp(24px, 3.6vh, 34px);
+      margin-bottom: clamp(8px, 1.4vh, 14px);
+    }
+    .login-der .login-izq-copy p {
+      font-size: clamp(12.5px, 1.5vh, 13.5px);
+      line-height: 1.55;
+    }
+    .login-der .login-izq-copy {
+      margin-bottom: clamp(12px, 2.2vh, 22px);
+    }
+
+    .login-features { gap: clamp(7px, 1.2vh, 12px); }
+    .feature-item   { font-size: clamp(12.5px, 1.5vh, 14px); }
+    .login-der .login-features {
+      margin-bottom: clamp(16px, 3.4vh, 34px);
+    }
+
+    .login-card h2       { font-size: clamp(20px, 2.6vh, 26px); }
+    .login-card p.sub    { margin-bottom: clamp(16px, 3.6vh, 36px); }
+    .form-group          { margin-bottom: clamp(12px, 2vh, 20px); }
+    .btn-login           { padding: clamp(11px, 1.5vh, 14px); }
+  }
+
+  /*
+     Menos de 800px de alto: ya no queda de donde recortar sin que el texto
+     quede ilegible, asi que se saca el parrafo.
+
+     Es contenido menos, y es deliberado: el titulo y las tres features ya
+     dicen lo mismo. La alternativa es dejar el boton de Ingresar abajo del
+     pliegue en una pantalla cuyo unico proposito es apretar ese boton.
+
+     800 y no 720: con el corte en 720 quedaba un hueco entre 730 y 750 donde
+     el contenido pasaba la ventana por unos 15px. Se verifico resolviendo los
+     clamp() para cada altura entre 540 y 1100.
+  */
+  @media (min-width: 769px) and (max-height: 800px) {
+    .login-der .login-izq-copy p { display: none; }
+    .login-der .login-izq-copy   { margin-bottom: 10px; }
+  }
+
+  /*
+     Menos de 620px: ventana muy baja (alguien con el navegador a media
+     pantalla). Se van tambien las features y el subtitulo. Queda el titulo y
+     el formulario — lo unico sin lo cual la pantalla no cumple su funcion.
+
+     El widget de Turnstile ocupa 65px fijos y no se puede achicar, asi que a
+     partir de aca cada bloque que se saca es el que permite que el boton siga
+     siendo visible.
+  */
+  @media (min-width: 769px) and (max-height: 620px) {
+    .login-der .login-features { display: none; }
+    .login-card p.sub          { display: none; }
+    .login-card h2             { margin-bottom: 16px; }
+  }
+
+  /* ── PIE ─────────────────────────────────────────────────── */
+  .login-footer {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 18px;
+    padding: 18px 24px;
+    background: var(--negro);
+    border-top: 1px solid var(--dorado);
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: var(--gris4);
+    text-align: center;
+  }
+  .login-footer a {
+    color: var(--dorado);
+    text-decoration: none;
+  }
+  .login-footer a:hover { text-decoration: underline; }
+
+  /* Separador. Se oculta al envolver en mobile, donde las lineas se apilan y
+     una barra suelta al principio de una linea queda huerfana. */
+  .login-footer-sep {
+    width: 1px;
+    height: 12px;
+    background: var(--gris2);
+  }
+
+  @media (min-width: 769px) {
+    .login-footer {
+      padding: clamp(10px, 1.7vh, 18px) 24px;
+      font-size: clamp(11px, 1.25vh, 12px);
+    }
   }
 
   .login-card h2 {
@@ -635,78 +779,209 @@ body.tema-claro {
 }
   /* Responsive */
   @media (max-width: 768px) {
-    /* Orden en celular:  marca -> formulario -> copy -> features
-       Quien entra desde el telefono viene a loguearse, no a leer la propuesta
-       de valor: el formulario va primero y el texto de marca queda abajo.
+    /* En celular no hay dos columnas: la imagen se va y queda el formulario
+       con su copy arriba, en el orden en que ya estan en el HTML.
 
-       El problema a resolver: .brand, .login-izq-copy y .login-features son
-       hijos de .login-izq, mientras que el formulario (.login-der) es HERMANO
-       de .login-izq. Con 'order' solo no se puede meter .login-der entre dos
-       hijos de otro contenedor.
-
-       'display: contents' en .login-izq elimina su caja y sube sus tres hijos
-       a ser items directos del flex de #screen-login. Recien ahi los cuatro
-       comparten contenedor y 'order' funciona. No hace falta tocar el HTML.
-
-       Contrapartida: al no haber caja, .login-izq pierde su background, su
-       padding y su borde. Por eso el gris1 se reasigna abajo a .brand (franja
-       superior) y al par copy+features (bloque inferior). */
+       Antes esto era mucho mas complicado: .brand, .login-izq-copy y
+       .login-features eran hijos de .login-izq mientras que el formulario era
+       HERMANO, asi que hacia falta 'display: contents' para subirlos al mismo
+       flex y poder reordenarlos. Al mover el copy adentro de .login-der eso
+       dejo de ser necesario. */
     #screen-login {
       display: flex;
       flex-direction: column;
     }
 
-    .login-izq { display: contents; }
+    /* No solo se oculta: el background-image esta declarado dentro de un
+       @media (min-width: 769px), asi que en celular ni se pide. */
+    .login-izq { display: none; }
 
-    /* Franja de marca, arriba de todo. */
-    .brand {
-      order: 1;
-      width: 100%;
-      max-width: none;
-      align-items: center;
-      gap: 10px;
-      padding: 28px 24px;
-      background: var(--gris1);
-      border-bottom: 1px solid var(--gris2);
-    }
-    .brand-name      { font-size: 22px; text-align: center; }
-    .brand-name span { font-size: 15px; }
-    /* En celular el logo vuelve a mandar por ALTO: a 100% de ancho en una
-       pantalla de 380px quedaria desproporcionado frente al formulario. */
-    .brand-logo      { width: auto; height: 58px; }
-
-    /* Formulario. */
-    .login-der  { order: 2; padding: 40px 24px; }
+    .login-der  { padding: 40px 24px; }
     .login-card { max-width: 100%; }
 
-    /* Copy + features, debajo del formulario. Los dos sobre gris1 para que
-       se lean como un solo bloque de cierre, igual que el panel de escritorio. */
-    .login-izq-copy {
-      order: 3;
-      display: block;
-      padding: 36px 24px 22px;
-      background: var(--gris1);
-      border-top: 1px solid var(--gris2);
-    }
-    .login-izq-copy h1 {
-      font-size: 30px;
-      max-width: none;
-      margin-bottom: 16px;
-    }
-    .login-izq-copy p { max-width: none; }
+    .login-der .login-izq-copy h1 { font-size: 28px; }
 
-    .login-features {
-      order: 4;
-      display: flex;
-      padding: 0 24px 36px;
-      background: var(--gris1);
+    .login-footer {
+      font-size: 11.5px;
+      padding: 16px 20px;
+      gap: 6px 12px;
     }
-
-    /* Los circulos dorados de fondo estan pensados para un panel alto y
-       ademas dependen de la caja de .login-izq, que en celular ya no existe. */
-    .login-izq::before,
-    .login-izq::after { display: none; }
+    /* Apilado, el separador queda colgando al principio de una linea. */
+    .login-footer-sep { display: none; }
 
     .app-body   { grid-template-columns: 1fr; }
     .sidebar    { display: none; }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     MARCA, TITULO Y REDES
+     Va al final del archivo por orden de cascada: el bloque
+     @media (max-width: 768px) esta mas arriba, y una regla suelta
+     insertada antes que el podria quedar pisada en celular.
+     ══════════════════════════════════════════════════════════ */
+
+  /* ── Marca sobre la imagen ────────────────────────────────── */
+  .login-marca {
+    position: absolute;
+    top: clamp(20px, 4vh, 42px);
+    left: clamp(20px, 2.4vw, 44px);
+    right: clamp(20px, 2.4vw, 44px);
+    z-index: 2;
+    pointer-events: none;   /* la foto de abajo no se vuelve clickeable */
+  }
+
+  .login-marca-logo {
+    display: block;
+    width: clamp(150px, 17vw, 230px);
+    height: auto;
+    margin-bottom: 14px;
+  }
+
+  .login-marca-bp strong {
+    display: block;
+    font-family: 'Archivo', sans-serif;
+    font-size: clamp(13px, 1.5vw, 17px);
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--dorado);
+    margin-bottom: 2px;
+  }
+
+  .login-marca-bp span {
+    display: block;
+    font-family: 'Archivo', sans-serif;
+    font-size: clamp(12px, 1.3vw, 15px);
+    color: var(--blanco);
+    letter-spacing: .02em;
+  }
+
+  /* ── Titulo del panel derecho ─────────────────────────────── */
+  .login-titulo h1 {
+    font-family: 'Roboto', sans-serif;
+    font-size: clamp(24px, 3.6vh, 34px);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--blanco);
+    margin: 0 0 clamp(14px, 2.2vh, 22px);
+  }
+
+  /* El renglon dorado es el que lleva el enfasis, asi que el <em> no va en
+     itálica: solo cambia el color. */
+  .login-titulo h1 em {
+    font-style: normal;
+    color: var(--dorado);
+  }
+
+  .login-titulo-linea {
+    display: block;
+    width: 64px;
+    height: 2px;
+    background: var(--dorado);
+    margin-bottom: clamp(18px, 3vh, 30px);
+  }
+
+  /* ── Botones de redes ─────────────────────────────────────── */
+  .login-redes {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .login-red {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--dorado);
+    color: var(--dorado);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .18s, color .18s;
+  }
+
+  .login-red:hover {
+    background: var(--dorado);
+    color: var(--negro);
+    text-decoration: none;
+  }
+
+  /* La mano SOLO cuando el link tiene destino.
+     Con el selector de atributo, el dia que se peguen las URLs reales el
+     boton empieza a comportarse como link sin tocar este archivo. */
+  .login-red[href] { cursor: pointer; }
+
+  /* ── Pantallas bajas ──────────────────────────────────────── */
+  /* Mismos escalones que el resto del panel: cuando se va el subtitulo,
+     el titulo grande tambien tiene que achicarse o se come la pantalla. */
+  @media (min-width: 769px) and (max-height: 620px) {
+    .login-titulo h1        { font-size: 22px; margin-bottom: 10px; }
+    .login-titulo-linea     { margin-bottom: 14px; }
+    .login-marca-logo       { width: 150px; margin-bottom: 10px; }
+  }
+
+  /* ── Celular ──────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+
+    /* ── Franja de marca ──────────────────────────────────────
+       .login-izq vuelve a mostrarse, pero como franja horizontal en vez de
+       columna. Sin esto el celular no tiene NINGUNA marca: solo un titulo
+       sobre negro.
+
+       No trae la foto: el background-image vive dentro de
+       @media (min-width: 769px), asi que el navegador no lo pide. Se muestra
+       la caja con el logo adentro, sin los 138 KB de la imagen. */
+    .login-izq {
+      display: block;
+      background: var(--gris1);
+      border-bottom: 1px solid var(--gris2);
+      padding: 22px 24px 20px;
+      position: static;      /* .login-marca es absolute respecto de esto */
+      overflow: visible;
+    }
+
+    .login-marca {
+      position: static;
+      top: auto; left: auto; right: auto;
+      text-align: center;
+      pointer-events: auto;
+    }
+
+    .login-marca-logo {
+      width: 168px;
+      margin: 0 auto 8px;
+    }
+
+    .login-marca-bp strong { font-size: 12px; letter-spacing: .14em; }
+    .login-marca-bp span   { font-size: 12px; }
+
+    /* ── Formulario ───────────────────────────────────────────── */
+    .login-der  { padding: 30px 24px 34px; }
+
+    .login-titulo h1    { font-size: 25px; }
+    .login-titulo-linea { width: 52px; margin-bottom: 20px; }
+
+    /* ── Pie ──────────────────────────────────────────────────
+       En columna y no envuelto: con flex-wrap la direccion se partia a mitad
+       de linea y las redes quedaban abajo del pliegue. Apilado ocupa mas
+       alto pero se lee entero. */
+    .login-footer {
+      flex-direction: column;
+      gap: 7px;
+      padding: 18px 20px 20px;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+    .login-footer-sep { display: none; }
+    .login-redes      { margin-top: 5px; }
+  }
+
+  /* ── Celular angosto ──────────────────────────────────────────
+     Debajo de 400px (iPhone SE, Android chicos) el titulo a 25px se parte en
+     cuatro lineas y come media pantalla. */
+  @media (max-width: 400px) {
+    .login-titulo h1     { font-size: 22px; }
+    .login-marca-logo    { width: 145px; }
+    .login-der           { padding: 24px 18px 28px; }
+    .login-footer        { font-size: 11px; padding: 16px 16px 18px; }
   }
