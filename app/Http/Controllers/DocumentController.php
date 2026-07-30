@@ -822,6 +822,122 @@ class DocumentController extends Controller
      * según las asignaciones por categoría activa o individuales.
      * Reutilizado por streamDocumento y por notificarDocumento.
      */
+    // GET /api/documentos/{id}/audiencia
+    //
+    // Quienes pueden VER este documento, y por que.
+    //
+    // ⚠️ ES LA INVERSA DE usuarioTieneAccesoAlDocumento(), que esta justo
+    // abajo. Una responde "¿este usuario ve este documento?" y la otra
+    // "¿quienes ven este documento?" — la MISMA regla escrita de dos formas.
+    //
+    // Si se desincronizan, esta pantalla muestra una lista que no coincide con
+    // quien realmente abre el documento, y nadie se entera. Si tocas una,
+    // revisa la otra.
+    //
+    // No se reusa GET /documentos/{id}/usuarios: ese devuelve solo las
+    // asignaciones INDIVIDUALES, y la mayoria de los socios llega por
+    // categoria. Habria mostrado una fraccion pareciendo completa.
+    public function audiencia(Request $request, int $id): JsonResponse
+    {
+        $documento = Document::findOrFail($id);
+
+        $this->authorize('gestionar', $documento);
+
+        // Sin visibilidad para socios, la audiencia es vacia por definicion.
+        // Se contesta igual y no se depende de que el frontend esconda el boton.
+        if (!$documento->visible_franquiciado) {
+            return response()->json([
+                'visible'    => false,
+                'franquicia' => $documento->franquicia?->nombre,
+                'usuarios'   => [],
+            ]);
+        }
+
+        // Por categoria activa.
+        $porCategoria = $this->baseAudiencia($documento)
+            ->join('user_categories as uc', 'uc.user_id', '=', 'u.id')
+            ->join('document_category_assignments as dca', 'dca.category_id', '=', 'uc.category_id')
+            ->join('franchise_categories as fc', 'fc.id', '=', 'dca.category_id')
+            ->where('dca.document_id', $documento->id)
+            ->where('dca.empresa_id', $documento->empresa_id)
+            ->where('fc.is_active', 1)
+            ->select('u.id', 'u.nombre', 'u.apellido', 'u.email', 'u.rol',
+                     'fq.nombre as sucursal', 'fc.name as categoria')
+            ->get();
+
+        // Individual.
+        $individual = $this->baseAudiencia($documento)
+            ->join('document_user_assignments as dua', 'dua.user_id', '=', 'u.id')
+            ->where('dua.document_id', $documento->id)
+            ->where('dua.empresa_id', $documento->empresa_id)
+            ->select('u.id', 'u.nombre', 'u.apellido', 'u.email', 'u.rol',
+                     'fq.nombre as sucursal')
+            ->get();
+
+        // Se juntan por usuario: uno puede llegar por varias categorias Y
+        // ademas individualmente. Mostrar la misma persona tres veces seria
+        // ruido; los motivos se acumulan en su fila.
+        $usuarios = [];
+        foreach ($porCategoria as $fila) {
+            $usuarios[$fila->id] ??= $this->filaAudiencia($fila);
+            $usuarios[$fila->id]['categorias'][] = $fila->categoria;
+        }
+        foreach ($individual as $fila) {
+            $usuarios[$fila->id] ??= $this->filaAudiencia($fila);
+            $usuarios[$fila->id]['individual'] = true;
+        }
+
+        // Orden alfabetico: la lista se lee, no se recorre por id.
+        $lista = array_values($usuarios);
+        usort($lista, fn($a, $b) => strcasecmp(
+            $a['apellido'] . $a['nombre'], $b['apellido'] . $b['nombre']
+        ));
+
+        return response()->json([
+            'visible'    => true,
+            'franquicia' => $documento->franquicia?->nombre,
+            'usuarios'   => $lista,
+        ]);
+    }
+
+    /**
+     * Condiciones comunes de las dos consultas de audiencia.
+     *
+     * Viven en un solo lugar para que la consulta por categoria y la
+     * individual no puedan diferir en el filtro de empresa, rol o sucursal.
+     */
+    private function baseAudiencia(Document $documento)
+    {
+        return DB::table('users as u')
+            ->leftJoin('franchise_staff as fs', 'fs.user_id', '=', 'u.id')
+            ->leftJoin('franquicias as fq', 'fq.id', '=', 'fs.franquicia_id')
+            ->where('u.empresa_id', $documento->empresa_id)
+            ->whereIn('u.rol', ['franquiciado', 'empleado'])
+            ->where('u.activo', 1)
+            ->whereNull('u.deleted_at')
+            // Si el documento esta acotado a una sucursal, solo la gente de
+            // esa sucursal. Mismo criterio que index() para el franquiciado.
+            ->when($documento->franquicia_id !== null, function ($q) use ($documento) {
+                $q->where('fs.franquicia_id', $documento->franquicia_id);
+            });
+    }
+
+    private function filaAudiencia($fila): array
+    {
+        return [
+            'id'         => $fila->id,
+            'nombre'     => $fila->nombre,
+            'apellido'   => $fila->apellido,
+            'email'      => $fila->email,
+            'rol'        => $fila->rol,
+            'sucursal'   => $fila->sucursal,
+            'categorias' => [],
+            'individual' => false,
+        ];
+    }
+
+    // ⚠️ Ver audiencia(), arriba: es la inversa de este metodo. Si cambias la
+    // regla de acceso aca, cambiala alla tambien.
     private function usuarioTieneAccesoAlDocumento(int $userId, Document $documento): bool
     {
         // Asignación por categoría activa

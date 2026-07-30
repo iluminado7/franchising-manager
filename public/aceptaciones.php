@@ -570,11 +570,52 @@ function aplicarFiltroTexto() {
     });
   }
 
+  // Orden por defecto: de lo mas reciente a lo mas viejo.
+  //
+  // Va DESPUES de filtrar y ANTES de renderTabla, que es quien corta la
+  // pagina: ordenar despues del corte ordenaria solo las 10 visibles.
+  lista = ordenarPorLecturaReciente(lista);
+
   // Al filtrar hay que volver a la 1: si se estaba en la pagina 5 y el
   // resultado tiene 2, el slice apuntaria a un rango inexistente y la tabla
   // saldria VACIA sin ninguna explicacion.
   paginaActual = 1;
   renderTabla(lista);
+}
+
+// Ordena por la fecha de LECTURA, que es lo que muestra la columna "Leído".
+// Ordenar por otro campo dejaria esa columna viendose desordenada.
+//
+// Las filas sin lectura van al FINAL: son las que ni siquiera abrieron el
+// manual, no tienen fecha con la cual competir, y ponerlas arriba con un "—"
+// empujaria hacia abajo lo que si tiene actividad. Entre ellas se desempata
+// por nombre, que es como se las busca.
+function ordenarPorLecturaReciente(filas) {
+  const fecha = (f) => {
+    const raw = f.aceptacion_digital?.aceptado_at;
+    if (!raw) return null;
+    // MySQL devuelve "2026-07-29 14:12:00" (con espacio). Date.parse de ese
+    // formato depende del motor; con la 'T' es ISO y se parsea igual en
+    // todos lados.
+    const t = Date.parse(String(raw).replace(' ', 'T'));
+    return Number.isNaN(t) ? null : t;
+  };
+  const nombre = (f) =>
+    `${f.socio?.apellido || ''} ${f.socio?.nombre || ''}`.trim().toLowerCase();
+
+  // Copia: no se muta todasLasFilas, que es la fuente de verdad de los
+  // filtros. Reordenarla in situ escondería efectos raros al buscar.
+  return [...(filas || [])].sort((a, b) => {
+    const fa = fecha(a);
+    const fb = fecha(b);
+
+    if (fa === null && fb === null) return nombre(a).localeCompare(nombre(b));
+    if (fa === null) return 1;   // sin lectura, al final
+    if (fb === null) return -1;
+
+    if (fb !== fa) return fb - fa;
+    return nombre(a).localeCompare(nombre(b));
+  });
 }
 
 // 10 por pagina: esta es una pantalla de gestion, se mira fila por fila.

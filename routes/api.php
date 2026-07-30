@@ -37,7 +37,6 @@ Route::post('/login', [AuthController::class, 'login'])
 Route::post('/csp-report', [CspReportController::class, 'receive'])
     ->middleware('throttle:60,1');
 
-
 // Recuperacion de contrasena. PUBLICAS a proposito: quien se olvido la
 // contrasena no tiene sesion, asi que dentro de auth:sanctum solo podrian
 // recuperarla los que ya estan adentro.
@@ -259,6 +258,11 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // ── Asignación de manuales a usuarios individuales ──────────
         Route::get('/manuales/{manualId}/usuarios', [ManualAssignmentController::class, 'porManual']);
         Route::put('/manuales/{manualId}/usuarios', [ManualAssignmentController::class, 'sincronizarPorManual']);
+
+        // Quiénes pueden ver un documento, y por qué. Va en este grupo
+        // (super_admin + franquiciante) porque expone la lista completa de
+        // socios de la empresa con sus categorías.
+        Route::get('/documentos/{id}/audiencia', [DocumentController::class, 'audiencia']);
 
         // ── Asignación de documentos a categorías ───────────────────
         Route::get('/documentos/{documentId}/categorias',                 [DocumentAssignmentController::class, 'listarCategorias']);

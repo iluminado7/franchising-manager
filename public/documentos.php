@@ -212,7 +212,7 @@ include 'layout/head.php';
 
       <!-- Empresa — solo super_admin -->
       <div class="form-group">
-          <label>Destinatario</label>
+          <label>Franquicia/sucursal destinada</label>
           <select id="doc-franquicia" class="form-select">
             <option value="">Toda la empresa (global)</option>
           </select>
@@ -428,7 +428,7 @@ include 'layout/head.php';
       </div>
 
       <div class="form-group">
-        <label>Destinatario</label>
+        <label>Sucursal/franquicia destinada</label>
         <select id="edit-doc-franquicia" class="form-select">
           <option value="">Toda la empresa (global)</option>
         </select>
@@ -471,6 +471,29 @@ include 'layout/head.php';
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalEditarDoc()">Cancelar</button>
       <button class="btn btn-success" id="btn-guardar-doc" onclick="guardarEdicionDocumento()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL AUDIENCIA — quiénes ven el documento
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-audiencia">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <div>
+        <h3>Quiénes pueden ver este documento</h3>
+        <div id="audiencia-sub" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif"></div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalAudiencia()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="audiencia-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalAudiencia()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1351,11 +1374,19 @@ function renderTabla(lista) {
           : `<span style="font-size:11px;color:var(--gris3);font-style:italic">Global</span>`
         }</td>` : '';
 
+    // El botón "Ver" solo cuando el documento ES visible para socios: si está
+    // oculto la audiencia es vacía por definición y la celda ya lo dice.
+    // Un botón que abre una lista vacía no informa nada.
+    const btnAudiencia = d.visible_franquiciado
+      ? `<a href="#" onclick="event.preventDefault(); verAudiencia(${d.id})"
+             class="accion-btn" style="color:var(--gris5);margin-left:8px">Ver</a>`
+      : '';
+
     const visibilidadCol = (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante')
       ? `<td>${d.visible_franquiciado
           ? `<span style="color:var(--exito);font-size:11px">● Visible</span>`
           : `<span style="color:var(--gris3);font-size:11px">● Oculto</span>`
-        }</td>` : '';
+        }${btnAudiencia}</td>` : '';
 
     const esPdf = (mime === 'application/pdf') || /\.pdf$/i.test(va?.archivo_url || '');
 
@@ -1698,6 +1729,68 @@ function notaVersion(d) {
   return (va && va.nota) ? String(va.nota).trim() : '';
 }
 
+// ── AUDIENCIA DEL DOCUMENTO ───────────────────────────────────
+//
+// Muestra quiénes lo ven Y POR QUÉ. El motivo es lo que la vuelve accionable:
+// sin él es una lista de nombres; con él, el franquiciante ve de dónde sale
+// cada acceso y puede corregirlo desde la categoría o desde la asignación.
+//
+// La calcula el backend en audiencia(), que es la inversa de la regla de
+// acceso. Acá no se replica nada de esa lógica a propósito.
+async function verAudiencia(id) {
+  const doc = todosLosDocumentos.find(x => Number(x.id) === Number(id));
+  document.getElementById('audiencia-sub').textContent = doc ? (doc.titulo || '') : '';
+  document.getElementById('audiencia-lista').innerHTML =
+    `<div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando...</div>`;
+  document.getElementById('modal-audiencia').classList.add('open');
+
+  try {
+    const res  = await apiFetch('GET', `/documentos/${id}/audiencia`);
+    const cont = document.getElementById('audiencia-lista');
+
+    if (!res.visible) {
+      cont.innerHTML = `<div style="text-align:center;padding:28px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">Este documento está oculto para los socios comerciales.</div>`;
+      return;
+    }
+
+    if (!res.usuarios.length) {
+      // Visible pero sin nadie: el documento no está asignado a ninguna
+      // categoría ni a ningún socio. Se dice qué hacer, no solo que está vacío.
+      cont.innerHTML = `<div style="text-align:center;padding:28px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.6">Todavía no lo ve nadie.<br>Asignalo a una categoría o a socios puntuales desde <strong style="color:var(--gris5)">Editar</strong>.</div>`;
+      return;
+    }
+
+    const acotado = res.franquicia
+      ? `<div style="font-size:11.5px;color:var(--gris4);margin-bottom:12px;font-family:'Roboto',sans-serif">Acotado a <strong style="color:var(--gris5)">${esc(res.franquicia)}</strong>: solo gente de esa sucursal.</div>`
+      : '';
+
+    cont.innerHTML = acotado + res.usuarios.map(u => {
+      const motivos = u.categorias.map(c =>
+        `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:rgba(201,168,76,.12);color:var(--dorado);border:1px solid rgba(201,168,76,.3)">${esc(c)}</span>`
+      ).join(' ');
+      const indiv = u.individual
+        ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:var(--gris2);color:var(--gris5)">Asignado individualmente</span>`
+        : '';
+
+      return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</div>
+          <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">${esc(u.email || '')}${u.sucursal ? ' · ' + esc(u.sucursal) : ' · Sin sucursal asignada'}</div>
+          <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">${motivos} ${indiv}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch (e) {
+    document.getElementById('audiencia-lista').innerHTML =
+      `<div style="text-align:center;padding:28px;font-size:13px;color:var(--error);font-family:'Roboto',sans-serif">No se pudo cargar la lista.</div>`;
+  }
+}
+
+function cerrarModalAudiencia() {
+  document.getElementById('modal-audiencia').classList.remove('open');
+}
+
 function verNotaDocumento(id) {
   const d = todosLosDocumentos.find(x => Number(x.id) === Number(id));
   if (!d) return;
@@ -1819,14 +1912,34 @@ async function abrirModalEditarDoc(id) {
   let usuariosAsignados = new Set();
   try {
     const asignadas = await apiFetch('GET', `/documentos/${id}/categorias`);
-    idsAsignadas = new Set((asignadas || []).map(c => c.id));
-  } catch {
-    // Si el endpoint falla (ej. no existe), seguimos con set vacío — el usuario puede asignar de cero.
+
+    // category_id y NO id.
+    //
+    // Este endpoint devuelve las ASIGNACIONES, no las categorías: cada fila es
+    // un registro de document_category_assignments, con su propio `id`. El de
+    // la categoría vive en `category_id`.
+    //
+    // Con `c.id` el Set quedaba lleno de ids de asignación y después se
+    // comparaba contra ids de CATEGORÍA al pintar los checkboxes: no coincidía
+    // ninguno, todos salían desmarcados, y el modal avisaba "ningún socio
+    // comercial verá este documento" sobre uno que sí estaba asignado.
+    //
+    // Y era destructivo: guardar sincroniza con lo que se ve, así que abrir el
+    // modal y apretar "Guardar cambios" sin tocar nada desasignaba todo.
+    idsAsignadas = new Set((asignadas || []).map(a => a.category_id));
+  } catch (e) {
+    // Se sigue con el set vacío para poder editar título y tipo, pero queda
+    // rastro: sin esto, un endpoint caído se ve EXACTAMENTE igual que un
+    // documento sin asignaciones y no hay forma de distinguirlos.
+    console.warn('No se pudieron leer las categorías asignadas:', e);
   }
   try {
     const asigU = await apiFetch('GET', `/documentos/${id}/usuarios`);
+    // Acá sí es user_id: listarUsuarios devuelve asignaciones y user_id es su
+    // columna. Es el mismo caso que arriba, resuelto bien.
     usuariosAsignados = new Set((asigU || []).map(a => a.user_id));
-  } catch {
+  } catch (e) {
+    console.warn('No se pudieron leer los usuarios asignados:', e);
     // Sin asignaciones individuales o endpoint no disponible: set vacío.
   }
   renderListaCategoriasModal('edit-doc', idsAsignadas, usuariosAsignados);

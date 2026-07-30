@@ -284,6 +284,22 @@ body.lectura-pdf .doc-page {
 .pdfjs-pagina canvas { display: block; max-width: 100%; height: auto; }
 /* Marca de agua por encima del canvas (con el iframe no se podia). */
 .pdfjs-wm { position: absolute; inset: 0; pointer-events: none; }
+
+/* Resaltados de busqueda en el visor PDF.
+   Divs absolutos sobre el canvas, NO una capa de texto: no hay nada
+   seleccionable ni copiable. Mas saturados que en lectura-doc.php porque
+   aca el fondo es claro. */
+.pdf-hl {
+  position: absolute;
+  background: rgba(232, 196, 106, .45);
+  border-radius: 2px;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+.pdf-hl.actual {
+  background: rgba(240, 176, 60, .78);
+  outline: 1px solid rgba(180, 130, 30, .9);
+}
 .pdfjs-msg {
   text-align: center;
   color: #999;
@@ -627,6 +643,10 @@ body.lectura-pdf .doc-page {
 
 <div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
+<!-- Motor de busqueda del visor PDF. El mismo archivo que usa
+     lectura-doc.php: el visor esta duplicado, este motor no. -->
+<script src="<?= BASE_URL_PHP ?>/js/pdf-buscador.js"></script>
+
 <script>
 // La URL usa el identificador PUBLICO (?m=<ulid>): no expone el id de la base.
 // Se acepta ?id= como respaldo, porque las pantallas de admin siguen linkeando
@@ -775,7 +795,7 @@ async function init() {
       // El buscador del sistema recorre el DOM y las paginas son canvas: no hay
       // texto que encontrar. Se oculta para no ofrecer algo que no funciona.
       const btnBuscar = document.getElementById('btn-buscar');
-      if (btnBuscar) btnBuscar.style.display = 'none';
+      if (btnBuscar) btnBuscar.style.display = 'block';
     } else {
       document.getElementById('doc-content-wrap').innerHTML =
         version.contenido_html || '<p style="color:#999">Sin contenido.</p>';
@@ -1161,6 +1181,15 @@ async function abrirVisorPdf(url) {
     cajaPaginas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     await armarPaginasPdf();
+
+    // Indice de texto para el buscador. Va DESPUES de mostrar las paginas:
+    // extraerlo antes retrasaria el primer dibujo por algo que quiza no se
+    // use. Si falla, el visor sigue andando sin buscador.
+    try {
+      await pdfBuscarPreparar(pdfDoc, MANUAL_REF);
+    } catch (err) {
+      console.warn('No se pudo indexar el texto para buscar:', err);
+    }
   } catch (e) {
     cont.innerHTML =
       `<div class="pdfjs-msg" style="color:#B04A4A">No se pudo mostrar el documento.` +
@@ -1277,6 +1306,13 @@ async function renderPaginaPdf(n) {
       wm.style.backgroundImage = wmBase.style.backgroundImage;
       div.appendChild(wm);
     }
+
+    // innerHTML = '' borro los resaltados de busqueda. Repintar aca es lo que
+    // hace que sobrevivan al scroll y al zoom: sin esto desaparecen al
+    // alejarse de la pagina y volver, o quedan corridos al cambiar la escala.
+    if (typeof pdfBuscarPintarPagina === 'function') {
+      pdfBuscarPintarPagina(n, vp, pdfLib);
+    }
   } catch (e) {
     delete div.dataset.render;   // que pueda reintentarse
   }
@@ -1348,12 +1384,24 @@ function cerrarBuscador() {
 }
 
 function limpiarHighlights() {
+  // En PDF los resaltados no son de la CSS Highlight API sino divs sobre el
+  // canvas, y ademas findSupported no aplica: el early return de abajo los
+  // dejaria sin limpiar.
+  if (manualEsPdf) {
+    if (typeof pdfBuscarLimpiar === 'function') pdfBuscarLimpiar();
+    return;
+  }
   if (!findSupported) return;
   CSS.highlights.delete('doc-find');
   CSS.highlights.delete('doc-find-active');
 }
 
 function ejecutarBusqueda() {
+  // En PDF no hay nodos de texto que recorrer: solo <canvas>. Se deriva al
+  // motor compartido y se sale ANTES de tocar nada de lo de abajo, que es el
+  // buscador de los manuales editables y funciona.
+  if (manualEsPdf) { ejecutarBusquedaPdf(); return; }
+
   const term = document.getElementById('find-input').value;
   limpiarHighlights();
   findMatches = [];
@@ -1424,8 +1472,60 @@ function activarMatch(i) {
 }
 
 function buscarNav(dir) {
+  if (manualEsPdf) { buscarNavPdf(dir); return; }
   if (!findMatches.length) return;
   activarMatch(findIndex + dir);
+}
+
+// ── BUSCADOR EN MANUALES PDF ──────────────────────────────────
+//
+// Usa js/pdf-buscador.js, el mismo motor que lectura-doc.php.
+//
+// Se puede BUSCAR pero no copiar: el motor lee el texto con getTextContent()
+// sin meterlo en el DOM, y los resaltados son divs con pointer-events: none.
+// Los bloqueos de Ctrl+C, Ctrl+P y menu contextual siguen intactos.
+
+function ejecutarBusquedaPdf() {
+  const term   = document.getElementById('find-input').value;
+  const countEl = document.getElementById('find-count');
+
+  if (typeof pdfBuscar !== 'function') { countEl.textContent = 'N/D'; return; }
+
+  const n = pdfBuscar(term);
+  countEl.textContent =
+    n ? `0/${n}` : (term.trim().length >= 2 ? '0/0' : '0/0');
+
+  repintarPaginasVisiblesPdf();
+
+  // Salta al primero solo: si no, hay que apretar la flecha para ver algo.
+  if (n) buscarNavPdf(1);
+}
+
+function buscarNavPdf(dir) {
+  const pagina = pdfBuscarMover(dir);
+  if (!pagina) return;
+
+  document.getElementById('find-count').textContent =
+    `${pdfBuscarActual()}/${pdfBuscarTotal()}`;
+
+  pdfIrPagina(pagina);
+
+  // El scroll es suave, asi que la pagina destino puede no estar dibujada
+  // todavia. Se repinta cuando termino el movimiento.
+  setTimeout(repintarPaginasVisiblesPdf, 350);
+}
+
+// Repinta solo lo que esta en pantalla (mas un margen): recorrer 200 paginas
+// en cada tecla no tendria sentido.
+function repintarPaginasVisiblesPdf() {
+  if (!pdfDoc || !pdfLib) return;
+  document.querySelectorAll('.pdfjs-pagina').forEach(async (el) => {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < -600 || r.top > window.innerHeight + 600) return;
+    const n = parseInt(el.dataset.pag, 10);
+    const page = await pdfDoc.getPage(n);
+    pdfBuscarPintarPagina(n, page.getViewport({ scale: pdfEscala }), pdfLib);
+  });
 }
 
 function actualizarFindCount() {

@@ -130,6 +130,68 @@ body {
 /* Marca de agua por encima del canvas. */
 .pdfjs-wm { position: absolute; inset: 0; pointer-events: none; }
 
+/* ── Resaltados de búsqueda ──────────────────────────────────
+   Divs absolutos sobre el canvas, NO una capa de texto: no hay nada
+   seleccionable ni copiable. pointer-events: none para que no tapen
+   el bloqueo de menú contextual del canvas de abajo. */
+.pdf-hl {
+  position: absolute;
+  background: rgba(232, 196, 106, .38);
+  border-radius: 2px;
+  pointer-events: none;
+  mix-blend-mode: multiply;   /* deja leer el texto debajo */
+}
+.pdf-hl.actual {
+  background: rgba(232, 196, 106, .75);
+  outline: 1px solid rgba(191, 174, 118, .9);
+}
+
+/* ── Barra de búsqueda ───────────────────────────────────────── */
+.buscar-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 5px 8px;
+  background: #1F1F1F;
+  border: 1px solid #383838;
+  border-radius: 8px;
+}
+.buscar-bar.abierta { display: flex; }
+.buscar-input {
+  width: 190px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #E8E4DC;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+}
+.buscar-input::placeholder { color: #6E6A63; }
+.buscar-cont {
+  font-family: 'Roboto', sans-serif;
+  font-size: 11.5px;
+  color: #8A857D;
+  min-width: 44px;
+  text-align: center;
+}
+.buscar-btn {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  color: #C9C4BA;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.buscar-btn:hover:not(:disabled) { background: #2A2A2A; color: var(--dorado); }
+.buscar-btn:disabled { opacity: .35; cursor: default; }
+
+@media (max-width: 768px) {
+  .buscar-bar  { margin-left: 0; width: 100%; }
+  .buscar-input { width: 100%; }
+}
+
 .pdfjs-msg {
   text-align: center;
   color: #8A857D;
@@ -197,6 +259,26 @@ body {
       <h1 class="visor-titulo" id="visor-titulo">Cargando…</h1>
       <div class="visor-meta" id="visor-meta"></div>
     </div>
+
+    <!-- Buscador. Arranca oculto: se abre con Ctrl+F o con la lupa. -->
+    <button class="buscar-btn" id="btn-abrir-buscar" onclick="toggleBuscador()" title="Buscar (Ctrl+F)" aria-label="Buscar en el documento">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    </button>
+
+    <div class="buscar-bar" id="buscar-bar">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6A63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input type="text" id="buscar-input" class="buscar-input" placeholder="Buscar en el documento…" autocomplete="off" spellcheck="false">
+      <span class="buscar-cont" id="buscar-cont">0/0</span>
+      <button class="buscar-btn" id="buscar-prev" onclick="buscarMover(-1)" title="Anterior (Shift+Enter)" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </button>
+      <button class="buscar-btn" id="buscar-next" onclick="buscarMover(1)" title="Siguiente (Enter)" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <button class="buscar-btn" onclick="cerrarBuscador()" title="Cerrar (Esc)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Guarda el tile de la marca de agua. Oculto: cada página se copia el
@@ -213,6 +295,10 @@ body {
         aria-label="Ir al final del documento">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
 </button>
+
+<!-- Motor de busqueda. Vive en un archivo compartido porque lectura.php
+     tambien lo va a usar: el visor esta duplicado, este motor no. -->
+<script src="<?= BASE_URL_PHP ?>/js/pdf-buscador.js"></script>
 
 <script>
 // El id del documento viaja en la URL. Los documentos no tienen public_id
@@ -276,6 +362,17 @@ async function abrirVisorPdf(url) {
     await armarPaginasPdf();
     ajustarTopBarra();
     actualizarBotonIrFinal();
+
+    // Indice de texto para el buscador. Va DESPUES de mostrar las paginas:
+    // extraerlo antes retrasaria el primer dibujo por algo que quiza no se
+    // use. Si falla, el visor sigue andando sin buscador.
+    try {
+      await pdfBuscarPreparar(pdfDoc, DOC_REF);
+      document.getElementById('btn-abrir-buscar').style.display = '';
+    } catch (e) {
+      console.warn('No se pudo indexar el texto para buscar:', e);
+      document.getElementById('btn-abrir-buscar').style.display = 'none';
+    }
   } catch (e) {
     cont.innerHTML =
       `<div class="pdfjs-msg" style="color:#D46A6A">No se pudo mostrar el documento.` +
@@ -384,6 +481,13 @@ async function renderPaginaPdf(n) {
     div.innerHTML = '';
     div.appendChild(canvas);
 
+    // innerHTML = '' borro los resaltados. Repintar aca es lo que hace que
+    // sobrevivan al scroll: sin esto desaparecen al alejarse de la pagina y
+    // volver.
+    if (typeof pdfBuscarPintarPagina === 'function') {
+      pdfBuscarPintarPagina(n, vp, pdfLib);
+    }
+
     const wmBase = document.getElementById('watermark');
     if (wmBase && wmBase.style.backgroundImage) {
       const wm = document.createElement('div');
@@ -442,6 +546,9 @@ function pdfZoom(dir) {
   document.querySelectorAll('.pdfjs-pagina').forEach((el) => {
     const r = el.getBoundingClientRect();
     if (r.bottom > -600 && r.top < window.innerHeight + 600) {
+      // renderPaginaPdf repinta los resaltados con el viewport NUEVO. Sin
+      // rehacerlos, quedarian en las coordenadas de la escala anterior: es
+      // decir, corridos respecto del texto.
       renderPaginaPdf(parseInt(el.dataset.pag, 10));
     }
   });
@@ -539,6 +646,110 @@ function activarBloqueosLectura() {
     // Ctrl+Shift+I (inspeccionar): mismo caso que F12.
     if (e.shiftKey && k === 'i') {
       e.preventDefault();
+    }
+  });
+}
+
+// ── BUSCADOR ──────────────────────────────────────────────────
+//
+// El motor esta en js/pdf-buscador.js. Aca solo vive la UI.
+//
+// Se puede BUSCAR pero no copiar: el motor lee el texto con getTextContent()
+// sin meterlo en el DOM, y los resaltados son divs con pointer-events: none.
+// Los bloqueos de Ctrl+C y menu contextual siguen intactos.
+
+let buscarTimer = null;
+
+function toggleBuscador() {
+  const bar = document.getElementById('buscar-bar');
+  if (bar.classList.contains('abierta')) cerrarBuscador();
+  else abrirBuscador();
+}
+
+function abrirBuscador() {
+  document.getElementById('buscar-bar').classList.add('abierta');
+  const inp = document.getElementById('buscar-input');
+  inp.focus();
+  inp.select();
+  if (inp.value) ejecutarBusqueda();
+}
+
+function cerrarBuscador() {
+  document.getElementById('buscar-bar').classList.remove('abierta');
+  pdfBuscarLimpiar();
+  document.getElementById('buscar-cont').textContent = '0/0';
+  actualizarBotonesBuscar();
+}
+
+function ejecutarBusqueda() {
+  const term = document.getElementById('buscar-input').value;
+  const n = pdfBuscar(term);
+
+  document.getElementById('buscar-cont').textContent =
+    n ? `0/${n}` : (term.trim().length >= 2 ? 'Sin resultados' : '0/0');
+
+  actualizarBotonesBuscar();
+  repintarPaginasVisibles();
+
+  // Salta al primero solo — si no, hay que apretar la flecha para ver algo.
+  if (n) buscarMover(1);
+}
+
+function buscarMover(dir) {
+  const pagina = pdfBuscarMover(dir);
+  if (!pagina) return;
+
+  document.getElementById('buscar-cont').textContent =
+    `${pdfBuscarActual()}/${pdfBuscarTotal()}`;
+
+  pdfIrPagina(pagina);
+
+  // El scroll es suave, asi que la pagina destino puede no estar dibujada
+  // todavia. Se repinta despues de que termine el movimiento.
+  setTimeout(repintarPaginasVisibles, 350);
+}
+
+function actualizarBotonesBuscar() {
+  const hay = pdfBuscarTotal() > 0;
+  document.getElementById('buscar-prev').disabled = !hay;
+  document.getElementById('buscar-next').disabled = !hay;
+}
+
+// Repinta solo lo que esta en pantalla (mas un margen): recorrer 200 paginas
+// en cada tecla no tendria sentido.
+function repintarPaginasVisibles() {
+  if (!pdfDoc || !pdfLib) return;
+  document.querySelectorAll('.pdfjs-pagina').forEach(async (el) => {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < -600 || r.top > window.innerHeight + 600) return;
+    const n = parseInt(el.dataset.pag, 10);
+    const page = await pdfDoc.getPage(n);
+    pdfBuscarPintarPagina(n, page.getViewport({ scale: pdfEscala }), pdfLib);
+  });
+}
+
+function initBuscador() {
+  const inp = document.getElementById('buscar-input');
+
+  // Debounce: buscar en cada tecla sobre un documento largo traba la escritura.
+  inp.addEventListener('input', () => {
+    clearTimeout(buscarTimer);
+    buscarTimer = setTimeout(ejecutarBusqueda, 220);
+  });
+
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')  { e.preventDefault(); buscarMover(e.shiftKey ? -1 : 1); }
+    if (e.key === 'Escape') { e.preventDefault(); cerrarBuscador(); }
+  });
+
+  // Ctrl+F abre ESTE buscador, no el del navegador.
+  //
+  // El nativo sobre un canvas no encuentra nada y muestra "0/0": peor que no
+  // tener buscador, porque parece que el documento no contiene la palabra.
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key || '').toLowerCase() === 'f') {
+      e.preventDefault();
+      abrirBuscador();
     }
   });
 }
@@ -644,6 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // init() es async: sin este catch, cualquier excepcion adentro queda
   // como promesa rechazada y la pagina se cuelga en "Cargando…" sin un
   // solo mensaje. Fue exactamente lo que paso con BASE_PHP.
+  initBuscador();
   init().catch((e) => {
     console.error('Fallo al iniciar el visor:', e);
     const t = document.getElementById('visor-titulo');
