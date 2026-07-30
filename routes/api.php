@@ -68,6 +68,10 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     // (varios intentos con current_password mal) pero bloquea brute-force.
     Route::middleware('throttle:5,60')->group(function () {
         Route::put('/me/email',    [AuthController::class, 'updateEmail']);
+        // El guard por rol vive en el controlador, no en la ruta: el
+        // franquiciado y el empleado tienen que poder LLEGAR para recibir el
+        // 403 con su mensaje, en vez de un 404 de ruta que no explica nada.
+        Route::put('/me/cuit',     [AuthController::class, 'updateCuit']);
         Route::put('/me/password', [AuthController::class, 'updatePassword']);
     });
 
@@ -285,6 +289,15 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // un manual a un empleado/franquiciado específico de su scope)
         Route::post('/empleados/{userId}/asignaciones',              [ManualAssignmentController::class, 'asignar']);
         Route::delete('/empleados/{userId}/asignaciones/{manualId}', [ManualAssignmentController::class, 'desasignar']);
+
+        // Documentos asignados individualmente a un usuario.
+        //
+        // Va en ESTE grupo y no en el abierto donde esta su equivalente de
+        // manuales: la unica pantalla que la usa es usuarios.php, a la que no
+        // entra el empleado. Abrir de mas una ruta nueva "por consistencia"
+        // con una vieja es heredar una decision que quiza tampoco fue
+        // deliberada.
+        Route::get('/empleados/{userId}/documentos', [DocumentAssignmentController::class, 'porEmpleado']);
 
         // Notas de manuales — lectura
         // (super_admin ve todas, franquiciante las de su empresa, franquiciado las suyas)

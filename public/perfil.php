@@ -90,6 +90,23 @@ include 'layout/head.php';
             <button class="btn btn-primary btn-sm" onclick="cambiarEmail()">Actualizar email</button>
           </div>
 
+          <!-- Tarjeta cambiar CUIT — solo super_admin y franquiciante.
+               El guard REAL está en AuthController::updateCuit(); esto es
+               para no ofrecer una opción que igual va a fallar. -->
+          <div class="card-perfil" id="card-cuit" style="display:none">
+            <div class="card-perfil-titulo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Cambiar CUIT
+            </div>
+            <div class="form-group">
+              <label>Nuevo CUIT</label>
+              <input type="text" id="nuevo-cuit" placeholder="20-12345678-6" maxlength="15" autocomplete="off">
+            </div>
+            <div class="form-error" id="error-cuit" style="display:none"></div>
+            <div class="form-exito" id="exito-cuit" style="display:none"></div>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalCuit()">Actualizar CUIT</button>
+          </div>
+
           <!-- Tarjeta cambiar contraseña -->
           <div class="card-perfil" id="card-pass">
             <div class="card-perfil-titulo">
@@ -185,6 +202,30 @@ include 'layout/head.php';
     </div>
 
     </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL CONFIRMAR CAMBIO DE CUIT
+     No cierra al clic afuera: el CUIT va en la facturación y un
+     error de tipeo no se nota hasta que alguien factura mal.
+══════════════════════════════════════════ -->
+<div class="mcuit-overlay" id="modal-cuit">
+  <div class="mcuit-box">
+    <div class="mcuit-header">¿Confirmás el cambio?</div>
+    <div class="mcuit-body">
+      Vas a cambiar tu CUIT. Este dato se usa en la facturación, así que
+      revisá que esté bien antes de confirmar.
+      <div class="mcuit-cambio">
+        <span class="mcuit-viejo" id="mcuit-viejo">—</span>
+        <span style="color:var(--gris4)">→</span>
+        <span class="mcuit-nuevo" id="mcuit-nuevo">—</span>
+      </div>
+    </div>
+    <div class="mcuit-footer">
+      <button class="mcuit-btn" onclick="cerrarModalCuit()">Cancelar</button>
+      <button class="mcuit-btn primario" id="mcuit-confirmar" onclick="confirmarCambioCuit()">Sí, cambiar</button>
+    </div>
   </div>
 </div>
 
@@ -414,6 +455,72 @@ include 'layout/head.php';
   z-index: 600; font-family: 'Roboto', sans-serif; max-width: 320px;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── Modal de confirmación del CUIT ──────────────────────────
+   Trae sus propios estilos con prefijo .mcuit-: perfil.php NO tiene
+   .modal-overlay ni .modal-box ni .btn-ghost. Se verificó, no hay
+   ninguno — en este proyecto casi nada es global. */
+.mcuit-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 700;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.mcuit-overlay.open { display: flex; }
+.mcuit-box {
+  background: var(--gris1);
+  border: 1px solid var(--gris2);
+  border-radius: 12px;
+  width: 100%; max-width: 400px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.mcuit-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gris2);
+  font-family: 'Archivo', sans-serif;
+  font-size: 15px; font-weight: 700;
+  color: var(--blanco);
+}
+.mcuit-body {
+  padding: 18px 20px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--gris5);
+}
+.mcuit-cambio {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px; padding: 12px;
+  background: var(--negro);
+  border: 1px solid var(--gris2);
+  border-radius: 8px;
+  font-family: 'Archivo', sans-serif; font-size: 14px;
+}
+.mcuit-viejo  { color: var(--gris4); text-decoration: line-through; }
+.mcuit-nuevo  { color: var(--dorado); font-weight: 700; }
+.mcuit-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--gris2);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.mcuit-btn {
+  padding: 8px 16px;
+  border-radius: 7px;
+  font-family: 'Archivo', sans-serif; font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--gris2);
+  background: transparent;
+  color: var(--gris5);
+}
+.mcuit-btn.primario {
+  background: var(--dorado);
+  border-color: var(--dorado);
+  color: #1A1A1A;
+  font-weight: 600;
+}
+.mcuit-btn:disabled { opacity: .5; cursor: not-allowed; }
 </style>
 
 <script>
@@ -478,6 +585,13 @@ function renderPerfil(u) {
     }
   }
   document.getElementById('dato-cuit').textContent  = u.cuit || '—';
+
+  // La tarjeta de CUIT solo para quien puede usarla. El guard real es el 403
+  // de AuthController::updateCuit(); esto evita ofrecerla en vano.
+  if (u.rol === 'super_admin' || u.rol === 'franquiciante') {
+    const card = document.getElementById('card-cuit');
+    if (card) card.style.display = '';
+  }
 
   // Badge de rol
   const labels = { super_admin: 'Super Admin', franquiciante: 'Franquiciante', franquiciado: 'Socio Comercial', empleado: 'Empleado' };
@@ -600,6 +714,84 @@ function renderFacturas(invoices) {
         </tbody>
       </table>
     </div>`;
+}
+
+// ── CAMBIAR CUIT (solo super_admin y franquiciante) ───────────
+//
+// El guard real está en AuthController::updateCuit(), que devuelve 403 para
+// franquiciado y empleado. Ocultar la tarjeta es para no ofrecer algo que
+// igual va a fallar, no la restricción.
+//
+// A diferencia del email, no pide contraseña: el email es la credencial de
+// login y el CUIT no abre ninguna puerta. Lo que sí lleva es confirmación,
+// porque un error de tipeo acá no se nota hasta que alguien factura mal.
+
+function abrirModalCuit() {
+  const nuevo = document.getElementById('nuevo-cuit').value.trim();
+  const err   = document.getElementById('error-cuit');
+  const ok    = document.getElementById('exito-cuit');
+  err.style.display = 'none';
+  ok.style.display  = 'none';
+
+  if (!nuevo) {
+    err.textContent = 'Ingresá el CUIT nuevo.';
+    err.style.display = 'block';
+    return;
+  }
+  if (miPerfil && nuevo === (miPerfil.cuit || '')) {
+    err.textContent = 'Ese ya es tu CUIT actual.';
+    err.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('mcuit-viejo').textContent = (miPerfil && miPerfil.cuit) || '—';
+  document.getElementById('mcuit-nuevo').textContent = nuevo;
+
+  const btn = document.getElementById('mcuit-confirmar');
+  btn.disabled = false;
+  btn.textContent = 'Sí, cambiar';
+
+  document.getElementById('modal-cuit').classList.add('open');
+}
+
+function cerrarModalCuit() {
+  document.getElementById('modal-cuit').classList.remove('open');
+  // Rehabilitar SIEMPRE al cerrar: si quedara deshabilitado, reabrir el modal
+  // daría un botón muerto sin ninguna pista de por qué.
+  const btn = document.getElementById('mcuit-confirmar');
+  btn.disabled = false;
+  btn.textContent = 'Sí, cambiar';
+}
+
+async function confirmarCambioCuit() {
+  const nuevo = document.getElementById('nuevo-cuit').value.trim();
+  const err   = document.getElementById('error-cuit');
+  const ok    = document.getElementById('exito-cuit');
+  const btn   = document.getElementById('mcuit-confirmar');
+
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    const res = await apiFetch('PUT', '/me/cuit', { cuit: nuevo });
+
+    cerrarModalCuit();
+    document.getElementById('dato-cuit').textContent = res.cuit || nuevo;
+    if (miPerfil) miPerfil.cuit = res.cuit || nuevo;
+    document.getElementById('nuevo-cuit').value = '';
+
+    ok.textContent = 'CUIT actualizado correctamente.';
+    ok.style.display = 'block';
+    mostrarToast('CUIT actualizado.', 'exito');
+
+  } catch (e) {
+    cerrarModalCuit();
+    // El backend valida el dígito verificador y devuelve el motivo. Se muestra
+    // tal cual en vez de un "no se pudo" genérico.
+    const detalle = e.data?.errors?.cuit?.[0];
+    err.textContent = detalle || e.data?.error || e.data?.message || 'No se pudo actualizar el CUIT.';
+    err.style.display = 'block';
+  }
 }
 
 // ── CAMBIAR EMAIL ─────────────────────────────────────────────

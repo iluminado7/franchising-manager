@@ -301,6 +301,51 @@ class DocumentAssignmentController extends Controller
         return response()->json($asignaciones);
     }
 
+    // GET /api/empleados/{userId}/documentos
+    //
+    // Que documentos tiene asignados INDIVIDUALMENTE este usuario. Espejo de
+    // ManualAssignmentController::porEmpleado, que es lo que usa el modal de
+    // manuales de usuarios.php.
+    //
+    // No incluye los que le llegan por categoria: eso se gestiona desde el
+    // boton "Categorias", y mezclarlos aca haria que el modal ofrezca quitar
+    // una asignacion que no existe como fila.
+    public function porEmpleado(Request $request, int $userId): JsonResponse
+    {
+        $actor   = $request->user();
+        $usuario = User::findOrFail($userId);
+
+        // Quien puede mirar las asignaciones de quien.
+        //
+        // El grupo de la ruta ya limita los roles; esto acota el ALCANCE: un
+        // franquiciante solo ve usuarios de su empresa, y un franquiciado solo
+        // empleados de su propia sucursal. Sin esto, cualquiera de los dos
+        // podria enumerar asignaciones ajenas cambiando el id de la URL.
+        if (!$actor->esSuperAdmin()) {
+            if ($usuario->empresa_id !== $actor->empresa_id) {
+                return response()->json(['error' => 'Sin acceso a este usuario.'], 403);
+            }
+            if ($actor->esFranquiciado()) {
+                $mismaFranquicia = $usuario->franchiseStaff?->franquicia_id
+                                === $actor->franchiseStaff?->franquicia_id;
+                if (!$usuario->esEmpleado() || !$mismaFranquicia) {
+                    return response()->json(['error' => 'Sin acceso a este usuario.'], 403);
+                }
+            }
+        }
+
+        $asignaciones = DocumentUserAssignment::with(['document.versionActiva'])
+                                              ->where('user_id', $userId)
+                                              ->get()
+                                              // Un documento eliminado sigue teniendo su fila de
+                                              // asignacion. Mostrarlo seria ofrecer algo que el
+                                              // usuario no puede abrir.
+                                              ->filter(fn($a) => $a->document && $a->document->deleted_at === null)
+                                              ->values();
+
+        return response()->json($asignaciones);
+    }
+
     // POST /api/documentos/{documentId}/usuarios
     // Body: { "user_id": N }
     public function asignarUsuario(Request $request, int $documentId): JsonResponse

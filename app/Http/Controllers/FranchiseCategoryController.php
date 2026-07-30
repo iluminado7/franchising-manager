@@ -6,6 +6,7 @@ use App\Models\FranchiseCategory;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -226,16 +227,29 @@ class FranchiseCategoryController extends Controller
     {
         $user      = $request->user();
 
-        // A DIFERENCIA de index() y show(), aca se cuenta TODO lo asignado, sin
-        // filtrar por estado ni por visibilidad. No es un descuido.
+        // Manuales y documentos se cuentan TODOS, sin filtrar por estado ni por
+        // visibilidad. No es un descuido: aca el conteo no es informativo, es
+        // la barrera que impide borrar fisicamente una categoria que todavia
+        // tiene cosas colgando. Si se contara solo lo visible, una categoria
+        // con manuales en borrador o archivados daria total 0, se borraria, y
+        // quedarian filas huerfanas en manual_category_assignments apuntando a
+        // una categoria inexistente.
         //
-        // Aca el conteo no es informativo: es la barrera que impide borrar
-        // fisicamente una categoria que todavia tiene cosas colgando. Si se
-        // contara solo lo visible, una categoria con manuales en borrador o
-        // archivados daria total 0, se borraria, y quedarian filas huerfanas en
-        // manual_category_assignments apuntando a una categoria inexistente.
+        // Los USUARIOS ELIMINADOS son la excepcion, y es a proposito.
+        //
+        // Un usuario eliminado no se puede borrar fisicamente —
+        // acceptances.user_id y activity_logs.user_id son ON DELETE RESTRICT—
+        // asi que su fila en user_categories vive para siempre. Contandola,
+        // una categoria que alguna vez tuvo un usuario que despues se elimino
+        // NO SE PODIA BORRAR NUNCA. No habia salida posible.
+        //
+        // Y no es lo mismo que un manual en borrador: ese es contenido real
+        // que en cualquier momento se publica. Un usuario eliminado no vuelve
+        // solo, y mientras lo esta no ve nada.
+        //
+        // Las filas que quedan se limpian mas abajo, antes del delete().
         $categoria = FranchiseCategory::withCount([
-            'usuarios',
+            'usuarios' => fn ($q) => $q->whereNull('users.deleted_at'),
             'manualesAsignados',
             'documentosAsignados',
         ])->findOrFail($id);
@@ -263,7 +277,29 @@ class FranchiseCategoryController extends Controller
 
         $nombre    = $categoria->name;
         $empresaId = $categoria->empresa_id;
-        $categoria->delete();
+
+        // Las asignaciones de usuarios ELIMINADOS no bloquearon el borrado, asi
+        // que hay que sacarlas de en medio o quedarian apuntando a una
+        // categoria inexistente.
+        //
+        // Se borran explicitamente aunque la FK pudiera tener ON DELETE
+        // CASCADE: si la tiene, esto es redundante y no molesta; si no la
+        // tiene, es lo unico que evita el huerfano. No depende de una
+        // definicion de esquema que puede cambiar sin que nadie lo mire.
+        //
+        // Va en una transaccion con el delete(): si el borrado de la categoria
+        // fallara despues de limpiar el pivote, esos usuarios se quedarian sin
+        // su categoria y la categoria seguiria existiendo.
+        DB::transaction(function () use ($categoria) {
+            DB::table('user_categories')
+              ->where('category_id', $categoria->id)
+              ->whereIn('user_id', function ($q) {
+                  $q->select('id')->from('users')->whereNotNull('deleted_at');
+              })
+              ->delete();
+
+            $categoria->delete();
+        });
 
         ActivityLog::registrar(
             userId:      $user->id,

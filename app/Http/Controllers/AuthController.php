@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Concerns\VerificaTurnstile;
 use App\Models\User;
 use App\Models\ActivityLog;
+use App\Rules\Cuit;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -263,6 +264,67 @@ class AuthController extends Controller
         } catch (\Throwable $e) { /* best-effort */ }
 
         return response()->json(['message' => 'Email actualizado correctamente.']);
+    }
+
+    // PUT /api/me/cuit
+    //
+    // Mismo criterio que updateEmail: el socio comercial y el empleado no
+    // administran sus propios datos de identidad. Su cuenta la crea y la
+    // gestiona la franquicia.
+    //
+    // Esto es la restriccion REAL. perfil.php ademas oculta la tarjeta, pero
+    // eso es cosmetico: sin este guard el endpoint sigue abierto desde la
+    // consola.
+    //
+    // A DIFERENCIA de updateEmail, NO pide la contrasena. El email es la
+    // credencial de login —cambiarlo es tomar el control de la cuenta— y el
+    // CUIT no abre ninguna puerta. Lo que si lleva es confirmacion explicita
+    // en la pantalla: es un dato que va en la facturacion y un error de tipeo
+    // no se nota hasta que alguien factura mal.
+    public function updateCuit(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (in_array($user->rol, ['franquiciado', 'empleado'], true)) {
+            return response()->json([
+                'error' => 'Tu CUIT no se puede modificar desde acá. Pedíselo al administrador de tu red.',
+            ], 403);
+        }
+
+        // La regla Cuit valida el digito verificador con modulo 11, igual que
+        // en UserController. Eso descarta los errores de tipeo, que son la
+        // mayoria; verificar que el CUIT EXISTA y a nombre de quien necesita
+        // ARCA y sigue pendiente.
+        $data = $request->validate([
+            'cuit' => ['required', 'string', 'max:15', new Cuit],
+        ]);
+
+        $anterior = $user->cuit;
+
+        // cuit SI esta en $fillable (no es un campo de privilegio), asi que
+        // update() alcanza.
+        $user->update(['cuit' => $data['cuit']]);
+
+        // Solo claves permitidas por chk_detalle_schema y maximo 5.
+        try {
+            ActivityLog::registrar(
+                userId:    $user->id,
+                accion:    'cuit_actualizado',
+                ip:        $request->ip(),
+                empresaId: $user->empresa_id,
+                detalle:   [
+                    'campo'          => 'cuit',
+                    'valor_anterior' => $anterior ?? '',
+                    'valor_nuevo'    => $data['cuit'],
+                ],
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort */ }
+
+        return response()->json([
+            'message' => 'CUIT actualizado correctamente.',
+            'cuit'    => $user->cuit,
+        ]);
     }
 
     public function updatePassword(Request $request)

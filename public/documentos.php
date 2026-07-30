@@ -749,10 +749,20 @@ async function init() {
       document.getElementById('filtros-wrap').style.display   = 'flex';
     }
 
-    // Franquiciado y empleado redirigen si no tienen acceso
-    if (rolUsuario === 'empleado') {
-      window.location.href = 'manuales.php'; return;
-    }
+    // El empleado ve esta pantalla como el socio comercial.
+    //
+    // Antes lo expulsaba a manuales.php, y eso estaba mal por partida doble:
+    // manuales.php es del super_admin, asi que terminaba en "Acceso denegado"
+    // — la redireccion "amable" llevaba a una puerta cerrada. Y la premisa ya
+    // no vale: desde el modal "Documentos" de usuarios.php se le pueden
+    // asignar documentos individualmente.
+    //
+    // Si no tiene ninguno asignado ve la lista vacia, que es informacion
+    // correcta y mejor que rebotarlo a otra pantalla sin decir por que.
+    //
+    // No hace falta nada mas: las funciones de admin ya estan gateadas por
+    // super_admin || franquiciante, la tabla usa su vista simplificada en la
+    // rama else de renderThead(), y puedeDescargar() devuelve false para el.
 
     renderThead();
 

@@ -70,6 +70,7 @@ function renderSidebar(rol) {
     ],
     empleado: [
       { id: 'manuales', label: 'Mis manuales', href: 'mis-manuales.php', icon: 'file-text' },
+      { id: 'documentos',  label: 'Mis documentos',       href: 'documentos.php',  icon: 'folder'      },
       { id: 'perfil',   label: 'Mi perfil',    href: 'perfil.php',   icon: 'user'      },
     ],
   };

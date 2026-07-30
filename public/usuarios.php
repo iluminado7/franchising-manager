@@ -250,6 +250,47 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL DOCUMENTOS DEL EMPLEADO
+     Gemelo del de manuales. Hasta que existió, un empleado no podía
+     ver ningún documento: no puede tener categorías, y el árbol de
+     documentos.php solo lista usuarios que sí las tienen.
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-docs-empleado">
+  <div class="modal-box" style="max-width:580px">
+    <div class="modal-header">
+      <div>
+        <h3 id="docs-emp-titulo">Documentos asignados</h3>
+        <div id="docs-emp-subtitulo" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif"></div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalDocsEmpleado()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:9px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Asignar documento</div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <select id="sel-doc-asignar" class="form-select" style="flex:1">
+            <option value="">Seleccioná un documento</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="asignarDocEmpleado()" style="white-space:nowrap;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Asignar
+          </button>
+        </div>
+        <div class="form-error" id="docs-emp-error" style="display:none;margin-top:8px"></div>
+      </div>
+
+      <div id="lista-docs-empleado"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalDocsEmpleado()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL CATEGORÍAS (solo franquiciado) ─────────────────── -->
 <div class="modal-overlay" id="modal-categorias">
   <div class="modal-box" style="max-width:480px">
@@ -729,6 +770,11 @@ function renderTabla(lista) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
           </button>
+          ${u.rol === 'empleado' ? `
+            <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalDocsEmpleado(${u.id}, '${escAttr(nombre)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Documentos
+          </button>` : ''}
           ${u.rol === 'empleado' ? `
             <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalManuales(${u.id}, '${escAttr(nombre)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -1565,6 +1611,112 @@ async function abrirModalManuales(empleadoId, empleadoNombre) {
 function cerrarModalManuales() {
   document.getElementById('modal-manuales').classList.remove('open');
   empleadoSeleccionado = null;
+}
+
+// ── DOCUMENTOS DE UN EMPLEADO ─────────────────────────────────
+//
+// Hasta que existió este modal, un empleado no podía ver NINGÚN documento: no
+// puede tener categorías, y el árbol de asignación de documentos.php solo
+// lista usuarios que sí las tienen. El backend siempre lo permitió
+// (validarAsignacionUsuario acepta 'empleado'); faltaba la pantalla.
+
+// Los documentos se cargan la PRIMERA vez que se abre el modal, no en init().
+// Es una función que se usa poco: sumarle un request a cada carga de
+// usuarios.php para esto sería pagarlo siempre por usarlo a veces.
+let docsEmpresaCache = null;
+
+async function abrirModalDocsEmpleado(empleadoId, empleadoNombre) {
+  empleadoSeleccionado = { id: empleadoId, nombre: empleadoNombre };
+
+  document.getElementById('docs-emp-titulo').textContent    = `Documentos de ${empleadoNombre}`;
+  document.getElementById('docs-emp-subtitulo').textContent = 'Gestioná los documentos que puede ver este empleado';
+  document.getElementById('docs-emp-error').style.display   = 'none';
+  document.getElementById('modal-docs-empleado').classList.add('open');
+
+  await cargarDocsEmpleado();
+}
+
+function cerrarModalDocsEmpleado() {
+  document.getElementById('modal-docs-empleado').classList.remove('open');
+  empleadoSeleccionado = null;
+}
+
+async function cargarDocsEmpleado() {
+  const lista = document.getElementById('lista-docs-empleado');
+  lista.innerHTML = `<div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando...</div>`;
+
+  try {
+    if (!docsEmpresaCache) {
+      docsEmpresaCache = await apiFetch('GET', '/documentos') || [];
+    }
+
+    const asignados = await apiFetch('GET', `/empleados/${empleadoSeleccionado.id}/documentos`);
+    const idsAsignados = asignados.map(a => a.document_id);
+
+    // El select ofrece los NO asignados todavía.
+    const sel = document.getElementById('sel-doc-asignar');
+    sel.innerHTML = '<option value="">Seleccioná un documento</option>';
+    docsEmpresaCache
+      .filter(d => !idsAsignados.includes(d.id) && !d.deleted_at)
+      .forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id; opt.textContent = d.titulo;
+        sel.appendChild(opt);
+      });
+
+    if (!asignados.length) {
+      lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">No tiene documentos asignados todavía.</div>`;
+      return;
+    }
+
+    lista.innerHTML = asignados.map(a => {
+      const doc = a.document;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(doc?.titulo || '—')}</div>
+          <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">${esc(doc?.tipo || '')}</div>
+        </div>
+        <button class="accion-btn" style="color:var(--error);flex-shrink:0" onclick="desasignarDocEmpleado(${a.document_id})">
+          Quitar
+        </button>
+      </div>`;
+    }).join('');
+
+  } catch (e) {
+    lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--error);font-family:'Roboto',sans-serif">Error al cargar.</div>`;
+  }
+}
+
+async function asignarDocEmpleado() {
+  const sel = document.getElementById('sel-doc-asignar');
+  const docId = sel.value;
+  const err = document.getElementById('docs-emp-error');
+  err.style.display = 'none';
+
+  if (!docId) { err.textContent = 'Elegí un documento.'; err.style.display = 'block'; return; }
+
+  try {
+    // El endpoint es POR DOCUMENTO, no por usuario: es el que ya existía.
+    await apiFetch('POST', `/documentos/${docId}/usuarios`, {
+      user_id: empleadoSeleccionado.id,
+    });
+    await cargarDocsEmpleado();
+  } catch (e) {
+    // El backend rechaza con 422 y un mensaje util: documento acotado a otra
+    // franquicia, usuario inactivo, etc. Se muestra tal cual en vez de un
+    // "no se pudo" generico.
+    err.textContent = e.data?.error || e.data?.message || 'No se pudo asignar.';
+    err.style.display = 'block';
+  }
+}
+
+async function desasignarDocEmpleado(docId) {
+  try {
+    await apiFetch('DELETE', `/documentos/${docId}/usuarios/${empleadoSeleccionado.id}`);
+    await cargarDocsEmpleado();
+  } catch (e) {
+    mostrarToast(e.data?.error || e.data?.message || 'No se pudo quitar.', 'error');
+  }
 }
 
 async function cargarManualAsignados() {

@@ -516,7 +516,7 @@ class UserController extends Controller
         }
 
         if ($user->anonimizado_at !== null) {
-            return response()->json(['error' => 'El usuario ya fue purgado.'], 409);
+            return response()->json(['error' => 'El usuario ya fue borrado.'], 409);
         }
 
         // El email exacto tiene que viajar en el body. Es la unica barrera
