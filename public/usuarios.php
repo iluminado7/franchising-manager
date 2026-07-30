@@ -1083,18 +1083,26 @@ function abrirModalEditar(id) {
   document.getElementById('form-rol').value             = u.rol;
   document.getElementById('form-rol').disabled          = true; // rol no editable
 
-  // Empresa del franquiciante — no editable en edición
-  if (u.rol === 'franquiciante') {
-    document.getElementById('form-empresa').value    = u.empresa_id || '';
-    document.getElementById('form-empresa').disabled = true;
-    document.getElementById('hint-empresa').textContent =
-      'La empresa del franquiciante no se puede modificar una vez asignada.';
-  }
+  // Empresa: se precarga y se BLOQUEA, para todos los roles.
+  //
+  // Antes esto corría solo `if (u.rol === 'franquiciante')`, así que al editar
+  // un socio comercial o un empleado el select mostraba "Seleccioná una
+  // empresa" y había que elegirla de nuevo cada vez.
+  //
+  // Se bloquea porque UserController::update() NI SIQUIERA ACEPTA empresa_id:
+  // no está en su validate(), así que si viaja se descarta. Un select editable
+  // prometía un cambio que el backend nunca iba a aplicar, y sin avisar.
+  //
+  // Un <select> disabled sigue devolviendo su .value desde JS, así que las
+  // validaciones de guardar() que lo leen siguen andando — y además todas
+  // están guardadas por !modoEdicion.
+  document.getElementById('form-empresa').value    = u.empresa_id || '';
+  document.getElementById('form-empresa').disabled = true;
+  document.getElementById('hint-empresa').textContent =
+    'La empresa no se puede modificar una vez asignada.';
 
-  // Franquicia del franquiciado/empleado
-  if (u.franchise_staff) {
-    document.getElementById('form-franquicia').value = u.franchise_staff.franquicia_id || '';
-  }
+  // OJO: la sucursal NO se precarga acá. Ver el bloque de abajo, después de
+  // onRolChange().
 
   // Contraseña: oculta para super_admin editado, oculta siempre para franquiciante logueado
   if (u.rol === 'super_admin' || miRol === 'franquiciante') {
@@ -1107,6 +1115,18 @@ function abrirModalEditar(id) {
   }
 
   onRolChange();
+
+  // Sucursal actual. Va DESPUES de onRolChange() a proposito: esa funcion
+  // llama a onEmpresaChange(), que reconstruye este <select>. Puesto antes,
+  // el valor se pierde — y asignar un value que no existe entre las opciones
+  // no tira error, simplemente no hace nada.
+  //
+  // Un usuario sin sucursal (un distribuidor, por ejemplo) queda en
+  // "Sin sucursal asignada", que es la opcion vacia. Correcto.
+  if (u.franchise_staff && u.franchise_staff.franquicia_id) {
+    document.getElementById('form-franquicia').value = u.franchise_staff.franquicia_id;
+  }
+
   document.getElementById('modal').classList.add('open');
   setTimeout(() => document.getElementById('form-nombre-completo').focus(), 100);
 }
