@@ -1195,7 +1195,20 @@ async function crearManual() {
     if (!versionInicialPdf) return;
   }
 
-  btn.disabled = true; btn.textContent = 'Creando...';
+  // btn.textContent DESTRUIRIA el <span id="btn-crear-label"> y el spinner que
+  // viven adentro del boton. A partir de ahi getElementById('btn-crear-label')
+  // devuelve null, y abrirModalNuevo() —que le escribe el textContent— tira
+  // TypeError y corta ANTES de rehabilitar el boton.
+  //
+  // Ese era el bug: crear un manual PDF y no poder crear otro sin refrescar.
+  //
+  // El resto del archivo ya usaba el span correctamente; solo esta funcion se
+  // habia salido del patron.
+  const labelCrear    = document.getElementById('btn-crear-label');
+  const textoOriginal = labelCrear ? labelCrear.textContent : 'Crear y abrir editor';
+
+  btn.disabled = true;
+  if (labelCrear) labelCrear.textContent = 'Creando...';
   try {
     const payload = { titulo, categoria: categoria || null, orden: 0, empresa_id: empresaId };
     if (modoImport === 'pdf') payload.tipo = 'pdf';
@@ -1235,7 +1248,7 @@ async function crearManual() {
     // listado. No hay editor que abrir. Si la subida falla, el manual queda
     // creado en borrador y se puede reintentar con "Nueva version".
     if (modoImport === 'pdf') {
-      btn.textContent = 'Subiendo PDF...';
+      if (labelCrear) labelCrear.textContent = 'Subiendo PDF...';
       await subirPdfComoVersion(manual.id, archivoPdfSeleccionado, {
         version_inicial_number: versionInicialPdf?.number,
         version_inicial_minor:  versionInicialPdf?.minor,
@@ -1252,7 +1265,15 @@ async function crearManual() {
   } catch (e) {
     const msg = e.data?.errors ? Object.values(e.data.errors).flat().join(' ') : e.data?.message || 'Error al crear el manual.';
     mostrarNuevoError(msg);
-    btn.disabled = false; btn.textContent = 'Crear y abrir editor';
+  } finally {
+    // El finally es lo que garantiza que el boton vuelva en TODOS los caminos.
+    //
+    // El de PDF hacia `return` sin rehabilitarlo, y no se notaba en el camino
+    // normal porque ese termina en window.location.href y la pagina se recarga
+    // entera. Con el finally, cualquier salida futura queda cubierta sin que
+    // haya que acordarse.
+    btn.disabled = false;
+    if (labelCrear) labelCrear.textContent = textoOriginal;
   }
 }
 

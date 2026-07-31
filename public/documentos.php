@@ -1845,6 +1845,11 @@ function cerrarModalEliminar() { document.getElementById('modal-eliminar').class
 async function ejecutarEliminar() {
   if (!pendingEliminar) return;
   const btn = document.getElementById('btn-eliminar-confirmar');
+
+  // Se guarda el texto original en vez de hardcodear 'Eliminar' en el reset:
+  // si algun dia el boton dice otra cosa, el reset la pisaria en silencio.
+  const textoBtn = btn.textContent;
+
   btn.disabled = true; btn.textContent = 'Eliminando...';
   try {
     await apiFetch('DELETE', `/documentos/${pendingEliminar}`);
@@ -1854,7 +1859,14 @@ async function ejecutarEliminar() {
   } catch (e) {
     document.getElementById('eliminar-error').textContent = e.data?.message || 'Error al eliminar.';
     document.getElementById('eliminar-error').style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Eliminar';
+  } finally {
+    // El reset vivia SOLO en el catch, asi que cuando el borrado salia bien el
+    // boton quedaba deshabilitado y diciendo "Eliminando...".
+    //
+    // abrirModalEliminar() tampoco lo resetea, de modo que la segunda vez el
+    // modal abria con el boton muerto y habia que refrescar la pagina.
+    btn.disabled = false;
+    btn.textContent = textoBtn;
   }
 }
 
