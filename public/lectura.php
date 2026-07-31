@@ -1227,7 +1227,7 @@ async function armarPaginasPdf() {
     const anchoBase = pag1.getViewport({ scale: 1 }).width;
     if (anchoBase > 0) {
       // Se limita entre 0.8 y 3 para no exagerar en ningun extremo.
-      pdfEscala = Math.min(3, Math.max(0.8, anchoUtil / anchoBase));
+      pdfEscala = Math.min(1.5, Math.max(0.8, anchoUtil / anchoBase));
     }
     pdfEscalaAjustada = true;
     const lblZoom = document.getElementById('pdf-zoom-lbl');
