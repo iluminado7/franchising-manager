@@ -954,6 +954,57 @@ class ManualController extends Controller
         return $this->entregarArchivo($request, Manual::findOrFail($id));
     }
 
+    // GET /api/manuales/{id}/versiones/{versionId}/archivo
+    //
+    // El PDF de una version CONCRETA, incluidas las que ya no estan vigentes.
+    //
+    // Solo super_admin y franquiciante. Para el socio comercial una version
+    // anterior no es informacion sino riesgo: si opera con la v1.3 el sistema
+    // le entrego material desactualizado, y la version que le corresponde es
+    // la vigente — que ademas es la que su aceptacion certifica.
+    //
+    // Sin token opaco a proposito: ese mecanismo existe para que el socio lea
+    // sin exponer el id de la base. Estos dos roles ya piden la version
+    // vigente por servirArchivo con el id desnudo.
+    public function servirArchivoVersion(Request $request, int $id, int $versionId)
+    {
+        $user = $request->user();
+
+        if (!$user->esSuperAdmin() && !$user->esFranquiciante()) {
+            return response()->json([
+                'error' => 'Sin permiso para acceder a versiones anteriores.',
+            ], 403);
+        }
+
+        $manual = Manual::findOrFail($id);
+
+        // where('manual_id') ademas del id: sin eso, pasando el versionId de
+        // OTRO manual se entregaria su archivo, con el gate de acceso puesto
+        // sobre el manual equivocado.
+        $version = ManualVersion::where('manual_id', $manual->id)
+                                ->where('id', $versionId)
+                                ->firstOrFail();
+
+        // Se registra ANTES de entregar: es material que estuvo vigente y
+        // sobre el que hay aceptaciones firmadas. Si entregarArchivo falla
+        // despues, queda igual el rastro del intento, que es lo que interesa.
+        try {
+            ActivityLog::registrar(
+                userId:    $user->id,
+                accion:    'version_historica_consultada',
+                ip:        $request->ip(),
+                empresaId: $user->empresa_id,
+                detalle:   [
+                    'manual_titulo' => mb_substr($manual->titulo, 0, 180),
+                    'version'       => $version->version_number . '.' . $version->version_minor,
+                ],
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort */ }
+
+        return $this->entregarArchivo($request, $manual, $version);
+    }
+
     // GET /api/manuales/archivo/{token} — todos los roles.
     //
     // El token es un payload CIFRADO con Crypt (que ademas autentica con MAC, asi
@@ -1012,7 +1063,15 @@ class ManualController extends Controller
      * control de acceso, el log y la deteccion de acceso anomalo viven ACA, para
      * que no dependan de por donde entro el pedido.
      */
-    private function entregarArchivo(Request $request, Manual $manual)
+    /**
+     * @param ManualVersion|null $version  Version puntual a entregar. Si viene
+     *        null se usa la ACTIVA, que es el comportamiento de siempre.
+     *
+     * El parametro es opcional para no tocar a los tres llamadores existentes
+     * (servirArchivo, servirArchivoToken y el visor del socio). Solo
+     * servirArchivoVersion lo pasa.
+     */
+    private function entregarArchivo(Request $request, Manual $manual, ?ManualVersion $version = null)
     {
         $user = $request->user();
 
@@ -1020,7 +1079,7 @@ class ManualController extends Controller
             return response()->json(['error' => 'Sin acceso a este manual.'], 403);
         }
 
-        $version = ManualVersion::where('manual_id', $manual->id)
+        $version = $version ?: ManualVersion::where('manual_id', $manual->id)
                                 ->where('es_activa', 1)
                                 ->first();
 

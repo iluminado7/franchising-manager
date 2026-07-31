@@ -273,6 +273,29 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL HISTORIAL DE VERSIONES (manuales PDF)
+     Solo super_admin y franquiciante: para el socio una versión
+     anterior no es información sino material desactualizado.
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-versiones-pdf">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <div>
+        <h3>Historial de versiones</h3>
+        <div id="verpdf-sub" style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif"></div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalVersionesPdf()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body"><div id="verpdf-lista"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalVersionesPdf()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast">
   <span id="toast-icon"></span>
@@ -499,6 +522,10 @@ function renderTabla(lista) {
           <button class="accion-btn" style="color:var(--dorado)" onclick="subirNuevaVersionPdf(${m.id}, '${esc(m.titulo)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Nueva versión
+          </button>
+          <button class="accion-btn" style="color:var(--gris5)" onclick="verVersionesPdf(${m.id}, '${esc(m.titulo)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+            Versiones
           </button>` : `
           <button class="accion-btn" style="color:var(--dorado)" onclick="irEditor(${m.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1369,6 +1396,70 @@ function formatFechaHora(str) { if (!str) return '—'; return new Date(str).toL
 function esc(str) { if (!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 let toastTimer;
+// ── HISTORIAL DE VERSIONES DE UN MANUAL PDF ───────────────────
+//
+// Los archivos de las versiones anteriores nunca se borraron: cada fila de
+// manual_versions conserva su archivo_path. Lo que faltaba era poder pedirlos,
+// porque entregarArchivo() estaba clavado en la versión activa.
+//
+// Solo lo ven super_admin y franquiciante. El guard real está en
+// ManualController::servirArchivoVersion(); el botón no aparece en las
+// pantallas del socio porque estas pantallas son de administración.
+//
+// Cada apertura queda registrada en activity_logs.
+async function verVersionesPdf(manualId, titulo) {
+  document.getElementById('verpdf-sub').textContent = titulo || '';
+  document.getElementById('verpdf-lista').innerHTML =
+    `<div class="loading-msg"><div class="spinner" style="display:block"></div>Cargando...</div>`;
+  document.getElementById('modal-versiones-pdf').classList.add('open');
+
+  try {
+    const vs = await apiFetch('GET', `/manuales/${manualId}/versiones`);
+    const cont = document.getElementById('verpdf-lista');
+
+    if (!vs || !vs.length) {
+      cont.innerHTML = `<div style="text-align:center;padding:28px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">Todavía no hay versiones publicadas.</div>`;
+      return;
+    }
+
+    // Orden: la más nueva arriba. El backend ordena por version_number, que no
+    // alcanza cuando hay minor (1.10 vs 1.9).
+    const orden = [...vs].sort((a, b) =>
+      (b.version_number - a.version_number) || (b.version_minor - a.version_minor));
+
+    cont.innerHTML = orden.map(v => {
+      const activa = !!v.es_activa;
+      const autor  = v.publicado_por
+        ? `${v.publicado_por.nombre || ''} ${v.publicado_por.apellido || ''}`.trim()
+        : 'Sistema';
+      const nota = v.nota_publicacion
+        ? `<div style="font-size:11.5px;color:var(--gris4);margin-top:6px;font-family:'Roboto',sans-serif;white-space:pre-wrap">${esc(v.nota_publicacion)}</div>`
+        : '';
+
+      return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;background:var(--negro);border:1px solid ${activa ? 'var(--dorado)' : 'var(--gris2)'};border-radius:8px;margin-bottom:8px">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:'Archivo',sans-serif;font-size:14px;font-weight:700;color:${activa ? 'var(--dorado)' : 'var(--blanco)'}">v${v.version_number}.${v.version_minor}</span>
+            ${activa ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(201,168,76,.14);color:var(--dorado)">Vigente</span>` : ''}
+          </div>
+          <div style="font-size:11.5px;color:var(--gris4);margin-top:3px;font-family:'Roboto',sans-serif">${esc(autor)} · ${v.publicado_at ? new Date(String(v.publicado_at).replace(' ', 'T')).toLocaleDateString('es-AR') : '—'}</div>
+          ${nota}
+        </div>
+        <a class="accion-btn" style="color:var(--dorado);flex-shrink:0" target="_blank" rel="noopener"
+           href="${API}/manuales/${manualId}/versiones/${v.id}/archivo">Ver PDF</a>
+      </div>`;
+    }).join('');
+
+  } catch (e) {
+    document.getElementById('verpdf-lista').innerHTML =
+      `<div style="text-align:center;padding:28px;font-size:13px;color:var(--error);font-family:'Roboto',sans-serif">No se pudo cargar el historial.</div>`;
+  }
+}
+
+function cerrarModalVersionesPdf() {
+  document.getElementById('modal-versiones-pdf').classList.remove('open');
+}
+
 function mostrarToast(msg, tipo = 'exito') {
   const el = document.getElementById('toast');
   const icon = tipo === 'exito'

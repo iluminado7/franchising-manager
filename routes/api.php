@@ -241,6 +241,14 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         // Versiones de manuales
         Route::get('/manuales/{id}/versiones', [ManualController::class, 'versiones']);
 
+        // El PDF de una version concreta, incluidas las que ya no estan
+        // vigentes. El guard de rol vive tambien en el controlador: este grupo
+        // deja pasar al franquiciante, y es justo lo que se quiere, pero un
+        // refactor que mueva la ruta no puede abrirla al socio en silencio.
+        Route::get('/manuales/{id}/versiones/{versionId}/archivo',
+                   [ManualController::class, 'servirArchivoVersion'])
+             ->whereNumber(['id', 'versionId']);
+
         // Activity Log
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);
 
