@@ -68,8 +68,18 @@
                 <tr>
                   <td style="padding:16px 20px;">
                     <p style="margin:0 0 6px 0; font-size:13px; color:#A93838; font-weight:bold;">
-                      Cambiá esta contraseña la primera vez que entres, desde la pestaña <strong>Mi perfil</strong>
+                      Cambiá esta contraseña la primera vez que entres.
                     </p>
+                    <p style="margin:0 0 8px 0; font-size:13px; color:#8A4040; line-height:1.6;">
+                      Para modificarla, una vez que hayas ingresado al sistema:
+                    </p>
+                    <ol style="margin:0; padding-left:18px; font-size:13px; color:#8A4040; line-height:1.7;">
+                      <li>Andá al menú lateral izquierdo.</li>
+                      <li>Entrá en <strong>Mi perfil</strong>.</li>
+                      <li>Bajá hasta <strong>Cambiar contraseña</strong>.</li>
+                      <li>Ingresá la contraseña provisoria de este correo.</li>
+                      <li>Escribí dos veces tu contraseña nueva (mínimo 8 caracteres).</li>
+                    </ol>
                   </td>
                 </tr>
               </table>
