@@ -26,9 +26,33 @@ include 'layout/head.php';
       </div>
 
       <!-- Búsqueda rápida -->
-      <div style="margin-bottom:20px;position:relative;display:inline-block">
+      <div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <!-- Cuantos manuales por pagina. Solo afecta la vista de este
+             usuario y no se recuerda al recargar. -->
+        <select id="sel-por-pagina" class="form-select" onchange="cambiarPorPagina(this.value)"
+                title="Manuales por página"
+                style="width:auto;min-width:96px;padding:8px 10px;font-size:13px">
+          <option value="10">10 por página</option>
+          <option value="20">20 por página</option>
+          <option value="50">50 por página</option>
+        </select>
+        <!-- Filtro por categoria de manual. Las opciones se derivan de los
+             manuales cargados: manuals.categoria es texto libre, no hay tabla. -->
+        <div id="cat-combo" style="position:relative;width:200px">
+          <input type="text" id="inp-categoria" placeholder="Categoría..." autocomplete="off"
+                 class="buscar-input" style="width:100%;box-sizing:border-box;padding-right:30px"
+                 oninput="filtrarOpcionesCategoria()" onfocus="filtrarOpcionesCategoria()">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <button type="button" id="cat-clear" onclick="limpiarCategoria()" title="Todas las categorías"
+                  style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div id="categoria-opciones" class="combo-opciones"></div>
+        </div>
+      <div style="position:relative;display:inline-block">
         <input type="text" id="inp-buscar" placeholder="Buscar manual..." oninput="aplicarFiltros()" class="buscar-input">
         <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
       </div>
 
       <!-- Tabla -->
@@ -49,6 +73,10 @@ include 'layout/head.php';
             </td></tr>
           </tbody>
         </table>
+
+        <!-- Lo llena renderPaginacion() de layout.js, la misma que usan las
+             pantallas de gestion. Si sobra una sola pagina no dibuja nada. -->
+        <div id="paginacion"></div>
       </div>
 
     </main>
@@ -123,7 +151,9 @@ include 'layout/head.php';
 .nota-card:last-child { margin-bottom:0; }
 .nota-card-top { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px; }
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
-
+.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
+.form-select:focus { border-color:var(--dorado); }
+.form-select option { background:var(--gris1); }
 /* Release notes: anuncios del publicador, estilo destacado */
 .nota-card.nota-release { background:rgba(196,162,107,.05);border-color:rgba(196,162,107,.3);border-left:3px solid var(--dorado); }
 .nota-release-tag {
@@ -138,6 +168,12 @@ include 'layout/head.php';
 .nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
 .nota-resuelta { background:rgba(92,184,122,.14);color:var(--exito); }
+/* Combobox de categoría. Estas clases YA existen en manuales.php; acá van
+   porque en este proyecto casi nada es global (README §13). */
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
+.combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 </style>
 
 <script>
@@ -179,6 +215,132 @@ async function cargarManuales() {
 }
 
 // ── FILTRO DE BÚSQUEDA ────────────────────────────────────────
+// ── FILTRO POR CATEGORÍA DE MANUAL ────────────────────────────
+//
+// manuals.categoria es un varchar de TEXTO LIBRE, no una FK: no hay tabla de
+// categorías de manual ni listado canónico por empresa. Las opciones se
+// derivan de los manuales ya cargados, así que esto no necesita backend.
+//
+// Es un filtro de VISTA: no cambia nada para los demás usuarios.
+
+let categoriaFiltro = '';   // clave normalizada; '' = todas
+
+// Paginacion. Antes esta pantalla mostraba TODO; se agrego junto con el
+// selector de cantidad, que sin paginacion no tendria efecto.
+let paginaActual = 1;
+let POR_PAGINA   = 10;
+
+function cambiarPorPagina(valor) {
+  const n = parseInt(valor, 10);
+  // Se ignora cualquier valor fuera de la lista: POR_PAGINA alimenta un slice
+  // y un NaN ahi deja la tabla vacia sin decir por que.
+  if (![10, 20, 50].includes(n)) return;
+
+  POR_PAGINA = n;
+
+  // Volver a la 1 NO es opcional: si estaba en la pagina 3 con 10 por pagina
+  // y pasa a 50, la 3 puede no existir. El slice apuntaria a un rango vacio y
+  // la tabla saldria VACIA sin ninguna explicacion.
+  paginaActual = 1;
+
+  aplicarFiltros();
+}
+
+// Quita acentos y pasa a minúsculas.
+//
+// Al ser texto libre conviven "Pruebas" y "pruebas": son la misma categoría
+// escrita distinto y sin esto aparecerían como dos opciones que filtran cosas
+// distintas. NFD separa la letra de su tilde y el rango \u0300-\u036f son las
+// marcas diacríticas.
+function claveCategoria(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+// Categorías presentes en los manuales visibles, agrupadas por clave.
+//
+// Se muestra la variante MÁS FRECUENTE de cada grupo: si el equipo escribió
+// "Pruebas" seis veces y "pruebas" una, la que se usa de verdad es la primera.
+function categoriasDisponibles() {
+  const grupos = new Map();
+
+  manualesParaCategorias().forEach(m => {
+    const orig = (m.categoria || '').trim();
+    if (!orig) return;
+    const k = claveCategoria(orig);
+    if (!k) return;
+
+    if (!grupos.has(k)) grupos.set(k, new Map());
+    const variantes = grupos.get(k);
+    variantes.set(orig, (variantes.get(orig) || 0) + 1);
+  });
+
+  return [...grupos.entries()]
+    .map(([clave, variantes]) => {
+      const orden = [...variantes.entries()].sort((a, b) => b[1] - a[1]);
+      const total = orden.reduce((s, [, n]) => s + n, 0);
+      return { clave, etiqueta: orden[0][0], total };
+    })
+    .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
+}
+
+function filtrarOpcionesCategoria() {
+  const inp  = document.getElementById('inp-categoria');
+  const cont = document.getElementById('categoria-opciones');
+  if (!inp || !cont) return;
+
+  const q = claveCategoria(inp.value);
+  const opciones = categoriasDisponibles().filter(c => !q || c.clave.includes(q));
+
+  cont.style.display = 'block';
+
+  if (!opciones.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    return;
+  }
+
+  // onmousedown y no onclick: el blur del input dispara antes que el click y
+  // cerraría la lista antes de que el click llegue. Mismo criterio que el
+  // combo de empresa.
+  cont.innerHTML = opciones.map(c => `
+    <div class="combo-opcion" onmousedown="seleccionarCategoria('${esc(c.clave).replace(/'/g, "\\'")}', '${esc(c.etiqueta).replace(/'/g, "\\'")}')">
+      ${esc(c.etiqueta)} <span style="color:var(--gris4);font-size:11px">(${c.total})</span>
+    </div>`).join('');
+}
+
+function seleccionarCategoria(clave, etiqueta) {
+  categoriaFiltro = clave;
+  document.getElementById('inp-categoria').value = etiqueta;
+  document.getElementById('categoria-opciones').style.display = 'none';
+  document.getElementById('cat-clear').style.display = 'block';
+  aplicarFiltros();
+}
+
+function limpiarCategoria() {
+  categoriaFiltro = '';
+  document.getElementById('inp-categoria').value = '';
+  document.getElementById('categoria-opciones').style.display = 'none';
+  document.getElementById('cat-clear').style.display = 'none';
+  aplicarFiltros();
+}
+
+// Cierra la lista al hacer clic afuera.
+document.addEventListener('click', (e) => {
+  const combo = document.getElementById('cat-combo');
+  if (combo && !combo.contains(e.target)) {
+    const cont = document.getElementById('categoria-opciones');
+    if (cont) cont.style.display = 'none';
+  }
+});
+
+// Esta pantalla ya muestra una sola empresa: no hay nada que acotar.
+function manualesParaCategorias() {
+  return todosLosManuales;
+}
+
 function aplicarFiltros() {
   const texto = (document.getElementById('inp-buscar')?.value || '').toLowerCase().trim();
   let lista   = [...todosLosManuales];
@@ -188,9 +350,30 @@ function aplicarFiltros() {
 
   // Orden por defecto: del mas reciente al mas viejo, igual que en las
   // pantallas de gestion. Esta no pagina, asi que alcanza con ordenar acá.
-  lista = ordenarManualesRecientes(lista);
+  // Categoría: se compara por la clave normalizada, así "Pruebas" y "pruebas"
+  // caen en el mismo filtro.
+  if (categoriaFiltro) {
+    lista = lista.filter(m => claveCategoria(m.categoria) === categoriaFiltro);
+  }
+
+  // El orden lo decide el BACKEND (orderBy('orden') + created_at como
+  // desempate). Reordenar acá por fecha pisaría el orden manual que los
+  // administradores configuran desde "Ordenar", y el bug sería difícil de
+  // entender: el guardado funciona, la consulta devuelve bien, y la pantalla
+  // muestra otra cosa.
+  //
+  // ordenarManualesRecientes() sigue existiendo en layout.js; solo se dejó de
+  // invocar acá.
+
+  // Al filtrar hay que volver a la 1: si estaba en la pagina 3 y el resultado
+  // tiene 2 manuales, el slice apuntaria a un rango inexistente y la tabla
+  // saldria vacia sin ninguna explicacion.
+  paginaActual = 1;
 
   renderTabla(lista);
+  // El total es el FILTRADO, no el de la pagina: si dijera los de la pagina,
+  // con 25 manuales el titulo diria "10 manual(es)" y el socio pensaria que
+  // perdio quince.
   document.getElementById('tabla-titulo').textContent = `${lista.length} manual(es)`;
 }
 
@@ -201,10 +384,27 @@ function renderTabla(lista) {
 
   if (!lista.length) {
     tbody.innerHTML = `<tr><td colspan="${cols}"><div class="empty-state">Sin manuales disponibles.</div></td></tr>`;
+    // Sin resultados tampoco tiene que quedar la paginacion de la busqueda
+    // anterior: seria un control para navegar una lista vacia.
+    renderPaginacion({ total: 0, pagina: 1, porPagina: POR_PAGINA, onCambio: () => {} });
     return;
   }
 
-  tbody.innerHTML = lista.map(m => {
+  const total  = lista.length;
+  const inicio = (paginaActual - 1) * POR_PAGINA;
+  const pagina = lista.slice(inicio, inicio + POR_PAGINA);
+
+  // renderPaginacion vive en layout.js, que carga DESPUES del <script> de esta
+  // pagina (footer.php). Por eso solo se la llama desde aca, que corre por
+  // eventos, y nunca en el nivel superior del script.
+  renderPaginacion({
+    total,
+    pagina: paginaActual,
+    porPagina: POR_PAGINA,
+    onCambio: (p) => { paginaActual = p; renderTabla(lista); },
+  });
+
+  tbody.innerHTML = pagina.map(m => {
     const version  = m.version_activa?.[0] || null;
     const verNum   = version ? `v${version.version_label || (version.version_number + '.' + (version.version_minor ?? 0))}` : '—';
     const fecha    = version ? formatFecha(version.publicado_at) : formatFecha(m.created_at);

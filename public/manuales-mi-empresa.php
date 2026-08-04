@@ -24,6 +24,10 @@ include 'layout/head.php';
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nuevo manual
         </button>
+        <button class="btn btn-ghost" id="btn-ordenar" onclick="abrirModalOrden()" style="margin-left:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="16" y2="6"/><line x1="3" y1="12" x2="12" y2="12"/><line x1="3" y1="18" x2="20" y2="18"/></svg>
+          Ordenar
+        </button>
       </div>
 
       <!-- Filtros -->
@@ -32,7 +36,29 @@ include 'layout/head.php';
         <button class="filtro-btn" onclick="filtrar('borrador', this)">Borrador</button>
         <button class="filtro-btn" onclick="filtrar('publicado', this)">Publicados</button>
         <button class="filtro-btn" onclick="filtrar('archivado', this)">Archivados</button>
-        <div style="margin-left:auto;position:relative">
+        <!-- Cuantos manuales por pagina. Solo afecta la vista de este
+             usuario y no se recuerda al recargar. -->
+        <select id="sel-por-pagina" class="form-select" onchange="cambiarPorPagina(this.value)"
+                title="Manuales por página"
+                style="width:auto;min-width:96px;padding:8px 10px;font-size:13px">
+          <option value="10">10 por página</option>
+          <option value="20">20 por página</option>
+          <option value="50">50 por página</option>
+        </select>
+        <!-- Filtro por categoria de manual. Las opciones se derivan de los
+             manuales cargados: manuals.categoria es texto libre, no hay tabla. -->
+        <div id="cat-combo" style="position:relative;width:200px;margin-left:auto">
+          <input type="text" id="inp-categoria" placeholder="Categoría..." autocomplete="off"
+                 class="buscar-input" style="width:100%;box-sizing:border-box;padding-right:30px"
+                 oninput="filtrarOpcionesCategoria()" onfocus="filtrarOpcionesCategoria()">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <button type="button" id="cat-clear" onclick="limpiarCategoria()" title="Todas las categorías"
+                  style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div id="categoria-opciones" class="combo-opciones"></div>
+        </div>
+        <div style="position:relative">
           <input type="text" id="inp-buscar" placeholder="Buscar manual..." oninput="aplicarFiltros()" class="buscar-input">
           <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
@@ -296,6 +322,39 @@ include 'layout/head.php';
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL ORDENAR MANUALES
+     Lista COMPLETA de una empresa, sin paginar ni filtrar: la tabla
+     pagina de a 10 y arrastrar entre páginas es imposible.
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-orden">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <div>
+        <h3>Ordenar manuales</h3>
+        <div style="font-size:12px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">
+          Arrastrá para cambiar el orden. Lo ven todos los usuarios de la empresa.
+        </div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalOrden()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" id="grupo-orden-empresa" style="display:none">
+        <label for="orden-empresa">Empresa</label>
+        <select id="orden-empresa" class="form-select" onchange="cargarListaOrden()"></select>
+      </div>
+      <div id="orden-error" class="form-error" style="display:none;margin-bottom:10px"></div>
+      <ul id="orden-lista" style="list-style:none;padding:0;margin:0"></ul>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalOrden()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-orden" onclick="guardarOrden()">Guardar orden</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast">
   <span id="toast-icon"></span>
@@ -318,6 +377,9 @@ include 'layout/head.php';
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
 .form-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
+.form-select:focus { border-color:var(--dorado); }
+.form-select option { background:var(--gris1); }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
 .form-group input[type=text] { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s; }
@@ -373,6 +435,47 @@ include 'layout/head.php';
 .nota-estado-btn { background:transparent;border:1px solid var(--gris2);border-radius:20px;padding:4px 12px;font-size:11px;font-family:'Archivo',sans-serif;color:var(--gris4);cursor:pointer;transition:all .15s; }
 .nota-estado-btn:hover { border-color:var(--gris3);color:var(--blanco); }
 .nota-estado-btn.activo { background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--dorado); }
+/* ── Lista de ordenamiento ────────────────────────────────────
+   El arrastre es HTML5 nativo, sin librería. No responde al tacto en
+   celular; se asumió porque ordenar es tarea de escritorio y solo la
+   hacen los administradores. */
+.orden-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: var(--negro);
+  border: 1px solid var(--gris2);
+  border-radius: 8px;
+  cursor: grab;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  color: var(--gris5);
+}
+.orden-item:active { cursor: grabbing; }
+/* El elemento que se está arrastrando: se atenúa para que se vea de dónde
+   salió mientras el hueco se mueve. */
+.orden-item.arrastrando { opacity: .35; border-style: dashed; }
+.orden-item .orden-num {
+  font-family: 'Archivo', sans-serif;
+  font-size: 11px;
+  color: var(--gris4);
+  min-width: 22px;
+}
+.orden-item .orden-asa { color: var(--gris3); flex-shrink: 0; }
+.orden-item .orden-titulo {
+  color: var(--blanco);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Combobox de categoría. Estas clases YA existen en manuales.php; acá van
+   porque en este proyecto casi nada es global (README §13). */
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
+.combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
+.combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 </style>
 
 <script src="<?= BASE_URL_PHP ?>/js/mammoth.browser.min.js"></script>
@@ -442,6 +545,128 @@ function filtrar(tipo, btn) {
   aplicarFiltros();
 }
 
+// ── FILTRO POR CATEGORÍA DE MANUAL ────────────────────────────
+//
+// manuals.categoria es un varchar de TEXTO LIBRE, no una FK: no hay tabla de
+// categorías de manual ni listado canónico por empresa. Las opciones se
+// derivan de los manuales ya cargados, así que esto no necesita backend.
+//
+// Es un filtro de VISTA: no cambia nada para los demás usuarios.
+
+let categoriaFiltro = '';   // clave normalizada; '' = todas
+
+// Quita acentos y pasa a minúsculas.
+//
+// Al ser texto libre conviven "Pruebas" y "pruebas": son la misma categoría
+// escrita distinto y sin esto aparecerían como dos opciones que filtran cosas
+// distintas. NFD separa la letra de su tilde y el rango \u0300-\u036f son las
+// marcas diacríticas.
+function claveCategoria(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+// Categorías presentes en los manuales visibles, agrupadas por clave.
+//
+// Se muestra la variante MÁS FRECUENTE de cada grupo: si el equipo escribió
+// "Pruebas" seis veces y "pruebas" una, la que se usa de verdad es la primera.
+function categoriasDisponibles() {
+  const grupos = new Map();
+
+  manualesParaCategorias().forEach(m => {
+    const orig = (m.categoria || '').trim();
+    if (!orig) return;
+    const k = claveCategoria(orig);
+    if (!k) return;
+
+    if (!grupos.has(k)) grupos.set(k, new Map());
+    const variantes = grupos.get(k);
+    variantes.set(orig, (variantes.get(orig) || 0) + 1);
+  });
+
+  return [...grupos.entries()]
+    .map(([clave, variantes]) => {
+      const orden = [...variantes.entries()].sort((a, b) => b[1] - a[1]);
+      const total = orden.reduce((s, [, n]) => s + n, 0);
+      return { clave, etiqueta: orden[0][0], total };
+    })
+    .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
+}
+
+function filtrarOpcionesCategoria() {
+  const inp  = document.getElementById('inp-categoria');
+  const cont = document.getElementById('categoria-opciones');
+  if (!inp || !cont) return;
+
+  const q = claveCategoria(inp.value);
+  const opciones = categoriasDisponibles().filter(c => !q || c.clave.includes(q));
+
+  cont.style.display = 'block';
+
+  if (!opciones.length) {
+    cont.innerHTML = `<div class="combo-vacio">Sin coincidencias</div>`;
+    return;
+  }
+
+  // onmousedown y no onclick: el blur del input dispara antes que el click y
+  // cerraría la lista antes de que el click llegue. Mismo criterio que el
+  // combo de empresa.
+  cont.innerHTML = opciones.map(c => `
+    <div class="combo-opcion" onmousedown="seleccionarCategoria('${esc(c.clave).replace(/'/g, "\\'")}', '${esc(c.etiqueta).replace(/'/g, "\\'")}')">
+      ${esc(c.etiqueta)} <span style="color:var(--gris4);font-size:11px">(${c.total})</span>
+    </div>`).join('');
+}
+
+function seleccionarCategoria(clave, etiqueta) {
+  categoriaFiltro = clave;
+  document.getElementById('inp-categoria').value = etiqueta;
+  document.getElementById('categoria-opciones').style.display = 'none';
+  document.getElementById('cat-clear').style.display = 'block';
+  aplicarFiltros();
+}
+
+function cambiarPorPagina(valor) {
+  const n = parseInt(valor, 10);
+  // Se ignora cualquier valor que no sea de la lista: el <select> no deberia
+  // mandar otra cosa, pero POR_PAGINA se usa en un slice y un NaN ahi dejaria
+  // la tabla vacia sin decir por que.
+  if (![10, 20, 50].includes(n)) return;
+
+  POR_PAGINA = n;
+
+  // Volver a la 1 NO es opcional: si estabas en la pagina 5 con 10 por pagina
+  // y pasas a 50, la 5 puede no existir. El slice apuntaria a un rango vacio y
+  // la tabla saldria VACIA sin ninguna explicacion.
+  paginaActual = 1;
+
+  aplicarFiltros();
+}
+
+function limpiarCategoria() {
+  categoriaFiltro = '';
+  document.getElementById('inp-categoria').value = '';
+  document.getElementById('categoria-opciones').style.display = 'none';
+  document.getElementById('cat-clear').style.display = 'none';
+  aplicarFiltros();
+}
+
+// Cierra la lista al hacer clic afuera.
+document.addEventListener('click', (e) => {
+  const combo = document.getElementById('cat-combo');
+  if (combo && !combo.contains(e.target)) {
+    const cont = document.getElementById('categoria-opciones');
+    if (cont) cont.style.display = 'none';
+  }
+});
+
+// Esta pantalla ya muestra una sola empresa: no hay nada que acotar.
+function manualesParaCategorias() {
+  return todosLosManuales;
+}
+
 function aplicarFiltros() {
   let lista  = [...todosLosManuales];
   const texto = (document.getElementById('inp-buscar')?.value || '').toLowerCase().trim();
@@ -453,7 +678,20 @@ function aplicarFiltros() {
   // Orden por defecto: del mas reciente al mas viejo. Va DESPUES de
   // filtrar y ANTES de paginar — si se ordenara despues del slice, se
   // ordenarian solo los 10 de la pagina y el resto quedaria al azar.
-  lista = ordenarManualesRecientes(lista);
+  // Categoría: se compara por la clave normalizada, así "Pruebas" y "pruebas"
+  // caen en el mismo filtro.
+  if (categoriaFiltro) {
+    lista = lista.filter(m => claveCategoria(m.categoria) === categoriaFiltro);
+  }
+
+  // El orden lo decide el BACKEND (orderBy('orden') + created_at como
+  // desempate). Reordenar acá por fecha pisaría el orden manual que los
+  // administradores configuran desde "Ordenar", y el bug sería difícil de
+  // entender: el guardado funciona, la consulta devuelve bien, y la pantalla
+  // muestra otra cosa.
+  //
+  // ordenarManualesRecientes() sigue existiendo en layout.js; solo se dejó de
+  // invocar acá.
 
   // Al filtrar hay que volver a la 1: si se estaba en la pagina 5 y el
   // resultado tiene 2, el slice apuntaria a un rango inexistente y la tabla
@@ -474,7 +712,9 @@ function aplicarFiltros() {
 // empresa porque todos los manuales son de la empresa del franquiciante. Por
 // eso el corte va directo sobre la lista filtrada y no hay que preocuparse
 // por encabezados de grupo contando como filas.
-const POR_PAGINA = 10;
+// `let` y no `const`: el usuario lo cambia desde el selector de la barra de
+// filtros. Los cinco usos la leen en el momento, asi que reasignarla alcanza.
+let POR_PAGINA = 10;
 let paginaActual = 1;
 
 function renderTabla(lista) {
@@ -1479,6 +1719,178 @@ async function verVersionesPdf(manualId, titulo) {
 
 function cerrarModalVersionesPdf() {
   document.getElementById('modal-versiones-pdf').classList.remove('open');
+}
+
+// ── ORDENAR MANUALES ──────────────────────────────────────────
+//
+// El orden es GLOBAL por empresa: lo ven todos los roles, porque index() del
+// backend hace orderBy('orden'). Los filtros de cada pantalla siguen siendo la
+// vista momentánea de cada usuario y no lo modifican.
+//
+// Va en un modal y no arrastrando en la tabla porque las listas paginan de a
+// 10: arrastrar de la página 1 a la 3 sería imposible.
+
+let ordenArrastrado = null;
+
+// Las dos pantallas nombran sus globales distinto: manuales.php usa `miRol` y
+// manuales-mi-empresa.php usa `rolUsuario`. Y manuales.php NO tiene
+// miEmpresaId, porque el super_admin no pertenece a ninguna empresa.
+//
+// Estos dos helpers evitan depender del nombre. Sin ellos el modal tiraba
+// ReferenceError al abrirse en manuales.php.
+function ordenRolActual() {
+  if (typeof rolUsuario === 'string' && rolUsuario) return rolUsuario;
+  if (typeof miRol === 'string' && miRol) return miRol;
+  return '';
+}
+
+function ordenEmpresaPropia() {
+  return (typeof miEmpresaId !== 'undefined' && miEmpresaId) ? miEmpresaId : null;
+}
+
+function abrirModalOrden() {
+  document.getElementById('orden-error').style.display = 'none';
+  document.getElementById('modal-orden').classList.add('open');
+
+  // El super_admin ve manuales de varias empresas y ordena una por vez.
+  // El franquiciante tiene la suya y no elige nada.
+  const grupo = document.getElementById('grupo-orden-empresa');
+  const sel   = document.getElementById('orden-empresa');
+
+  if (ordenRolActual() === 'super_admin') {
+    const empresas = [...new Map(
+      todosLosManuales
+        .filter(m => m.empresa)
+        .map(m => [m.empresa.id, m.empresa])
+    ).values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    sel.innerHTML = empresas
+      .map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`)
+      .join('');
+    grupo.style.display = empresas.length ? '' : 'none';
+  } else {
+    grupo.style.display = 'none';
+  }
+
+  cargarListaOrden();
+}
+
+function cerrarModalOrden() {
+  document.getElementById('modal-orden').classList.remove('open');
+}
+
+// Arma la lista con TODOS los manuales de la empresa: sin paginar, sin
+// filtros y sin los eliminados, que no tiene sentido posicionar.
+function cargarListaOrden() {
+  const sel = document.getElementById('orden-empresa');
+  const empId = (ordenRolActual() === 'super_admin' && sel.value)
+    ? Number(sel.value) : null;
+
+  const lista = todosLosManuales
+    .filter(m => m.estado !== 'eliminado' && !m.deleted_at)
+    .filter(m => !empId || (m.empresa && Number(m.empresa.id) === empId));
+
+  const ul = document.getElementById('orden-lista');
+
+  if (!lista.length) {
+    ul.innerHTML = `<li style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">Esta empresa no tiene manuales.</li>`;
+    return;
+  }
+
+  ul.innerHTML = lista.map((m, i) => `
+    <li class="orden-item" draggable="true" data-id="${m.id}">
+      <span class="orden-num">${i + 1}</span>
+      <svg class="orden-asa" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+      <span class="orden-titulo">${esc(m.titulo)}</span>
+    </li>`).join('');
+
+  activarArrastre(ul);
+}
+
+function activarArrastre(ul) {
+  ul.querySelectorAll('.orden-item').forEach(li => {
+    li.addEventListener('dragstart', () => {
+      ordenArrastrado = li;
+      li.classList.add('arrastrando');
+    });
+
+    li.addEventListener('dragend', () => {
+      li.classList.remove('arrastrando');
+      ordenArrastrado = null;
+      renumerarOrden(ul);
+    });
+  });
+
+  // El listener va en la LISTA y no en cada item: así el drop también
+  // funciona sobre los huecos entre elementos.
+  ul.addEventListener('dragover', (e) => {
+    e.preventDefault();   // sin esto el navegador no permite soltar
+    if (!ordenArrastrado) return;
+
+    const despues = itemDespuesDelCursor(ul, e.clientY);
+    if (despues == null) ul.appendChild(ordenArrastrado);
+    else ul.insertBefore(ordenArrastrado, despues);
+  });
+}
+
+// Cuál es el primer item cuyo centro queda POR DEBAJO del cursor: ese es el
+// que tiene que quedar después del arrastrado.
+function itemDespuesDelCursor(ul, y) {
+  const items = [...ul.querySelectorAll('.orden-item:not(.arrastrando)')];
+  return items.find(li => {
+    const r = li.getBoundingClientRect();
+    return y < r.top + r.height / 2;
+  }) || null;
+}
+
+function renumerarOrden(ul) {
+  ul.querySelectorAll('.orden-item').forEach((li, i) => {
+    const num = li.querySelector('.orden-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+
+async function guardarOrden() {
+  const btn = document.getElementById('btn-guardar-orden');
+  const err = document.getElementById('orden-error');
+  const textoBtn = btn.textContent;
+  err.style.display = 'none';
+
+  const ids = [...document.querySelectorAll('#orden-lista .orden-item')]
+    .map(li => Number(li.dataset.id));
+
+  if (!ids.length) { cerrarModalOrden(); return; }
+
+  // El backend valida empresa_id contra la empresa del actor, así que para el
+  // franquiciante alcanza con la suya.
+  const sel = document.getElementById('orden-empresa');
+  const empresaId = (ordenRolActual() === 'super_admin' && sel.value)
+    ? Number(sel.value) : ordenEmpresaPropia();
+
+  if (!empresaId) {
+    err.textContent = 'No se pudo determinar la empresa.';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  try {
+    await apiFetch('PUT', '/manuales/orden', { empresa_id: empresaId, ids });
+    cerrarModalOrden();
+    await cargarManuales();
+    mostrarToast('Orden actualizado.', 'exito');
+  } catch (e) {
+    err.textContent = e.data?.error || e.data?.message || 'No se pudo guardar el orden.';
+    err.style.display = 'block';
+  } finally {
+    // finally y no solo catch: al cerrar el modal en el camino de éxito el
+    // botón quedaría deshabilitado y diciendo "Guardando...", y la próxima vez
+    // abriría muerto. Es el mismo bug que ya apareció en crear manual y en
+    // eliminar documento.
+    btn.disabled = false;
+    btn.textContent = textoBtn;
+  }
 }
 
 function mostrarToast(msg, tipo = 'exito') {

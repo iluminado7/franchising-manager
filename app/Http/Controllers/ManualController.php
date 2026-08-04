@@ -45,6 +45,13 @@ class ManualController extends Controller
                            )
                        )
                        ->orderBy('orden')
+                       // Desempate: hoy TODOS los manuales tienen orden = 0 y
+                       // sin esto MySQL los devolveria en un orden arbitrario.
+                       // Con la fecha como segundo criterio, mientras nadie
+                       // ordene la lista se ve por recencia — igual que hasta
+                       // ahora— y el cambio es invisible hasta que alguien
+                       // arrastre.
+                       ->orderByDesc('created_at')
                        ->get()
                        ->map(function ($manual) {
                            $empresa = $manual->empresasAsignadas->first();
@@ -63,6 +70,8 @@ class ManualController extends Controller
                              $q->where('empresa_id', $user->empresa_id)
                          )
                          ->orderBy('orden')
+                         // Mismo desempate que el camino del super_admin.
+                         ->orderByDesc('created_at')
                          ->get(),
 
             // Franquiciado y empleado: comportamiento unificado en v2.3.
@@ -139,6 +148,93 @@ class ManualController extends Controller
         return response()->json($manual);
     }
 
+    // PUT /api/manuales/orden
+    // Body: { "empresa_id": N, "ids": [12, 7, 30, ...] }
+    //
+    // Guarda el orden manual de los manuales de UNA empresa. Es el orden que
+    // ven todos los roles: index() ya hace orderBy('orden') en los dos
+    // caminos.
+    //
+    // Un solo request con la lista completa, no un PUT por manual: asi el
+    // orden se aplica entero o no se aplica, y no queda a medias si el tercero
+    // falla.
+    public function reordenar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'empresa_id' => 'required|integer|exists:empresas,id',
+            'ids'        => 'required|array|min:1',
+            'ids.*'      => 'integer',
+        ]);
+
+        // El franquiciante solo ordena SU empresa. Sin esto, con el
+        // empresa_id de otra podria reordenarle los manuales a una red ajena.
+        if ($user->esFranquiciante() && (int) $data['empresa_id'] !== (int) $user->empresa_id) {
+            return response()->json(['error' => 'Sin acceso a esa empresa.'], 403);
+        }
+
+        $empresaId = (int) $data['empresa_id'];
+
+        // Se filtran contra los manuales QUE REALMENTE son de esa empresa. Un
+        // id colado de otra empresa se descarta en silencio en vez de
+        // reordenarla: el pedido no tendria por que fallar entero por eso, y
+        // tampoco puede tener efecto.
+        $validos = Manual::deEmpresa($empresaId)
+                         ->whereIn('id', $data['ids'])
+                         ->pluck('id')
+                         ->all();
+
+        $orden = array_values(array_filter($data['ids'], fn($id) => in_array($id, $validos, true)));
+
+        if (empty($orden)) {
+            return response()->json(['error' => 'Ningún manual válido para esa empresa.'], 422);
+        }
+
+        DB::transaction(function () use ($orden) {
+            foreach ($orden as $pos => $id) {
+                // update() sobre Query Builder: no pasa por $fillable y no
+                // dispara eventos del modelo. Es lo que se quiere — esto no es
+                // una edicion del manual, es solo su posicion.
+                Manual::where('id', $id)->update(['orden' => $pos]);
+            }
+        });
+
+        // Solo claves permitidas por chk_detalle_schema.
+        try {
+            ActivityLog::registrar(
+                userId:    $user->id,
+                accion:    'manuales_reordenados',
+                ip:        $request->ip(),
+                empresaId: $empresaId,
+                detalle:   ['campo' => 'orden', 'valor_nuevo' => (string) count($orden)],
+                userAgent: $request->userAgent()
+            );
+        } catch (\Throwable $e) { /* best-effort */ }
+
+        return response()->json([
+            'message'     => 'Orden actualizado.',
+            'reordenados' => count($orden),
+        ]);
+    }
+
+    /**
+     * Posicion para un manual nuevo: PRIMERO de la lista de su empresa.
+     *
+     * menor = primero, asi que se toma el minimo actual y se le resta uno. Si
+     * la empresa no tiene manuales todavia, arranca en 0.
+     */
+    private function ordenParaManualNuevo(?int $empresaId): int
+    {
+        if (!$empresaId) {
+            return 0;
+        }
+
+        $min = Manual::deEmpresa($empresaId)->min('orden');
+
+        return $min === null ? 0 : ((int) $min) - 1;
+    }
+
     // GET /api/manuales/{id}/versiones
     public function versiones(Request $request, int $id): JsonResponse
     {
@@ -185,7 +281,15 @@ class ManualController extends Controller
             'categoria'  => $data['categoria'] ?? null,
             'created_by' => $user->id,
             'estado'     => 'borrador',
-            'orden'      => $data['orden'] ?? 0,
+            // Un manual nuevo entra PRIMERO, no al final.
+            //
+            // Antes era `?? 0`, con lo cual quedaba mezclado con todos los que
+            // tambien tienen 0 y su posicion la decidia MySQL.
+            //
+            // menor = primero, asi que se toma el minimo de la empresa y se le
+            // resta uno. Los negativos son correctos: reordenar() renumera
+            // desde 0 cada vez que alguien guarda, asi que no se acumulan.
+            'orden'      => $data['orden'] ?? $this->ordenParaManualNuevo($empresaId),
         ]);
 
         // `tipo` esta fuera del $fillable de Manual (ver el comentario alli):

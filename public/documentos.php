@@ -48,6 +48,14 @@ include 'layout/head.php';
         </div>
 
         <!-- Filtros de tipo, visibilidad y franquicia -->
+        <!-- Cuantos documentos por pagina. Lo ven todos los roles. -->
+        <select id="sel-por-pagina" class="filtro-select" onchange="cambiarPorPagina(this.value)"
+                title="Documentos por página">
+          <option value="10">10 por página</option>
+          <option value="20">20 por página</option>
+          <option value="50">50 por página</option>
+        </select>
+
         <select id="sel-tipo" class="filtro-select" onchange="aplicarFiltros()">
           <option value="">Todos los tipos</option>
           <option value="contrato">Contrato</option>
@@ -70,9 +78,11 @@ include 'layout/head.php';
           <option value="global">Solo globales</option>
         </select>
 
-        <div style="margin-left:auto;position:relative">
-          <input type="text" id="inp-buscar" placeholder="Buscar documento..." oninput="aplicarFiltros()" class="buscar-input">
+        <div id="buscar-combo" style="margin-left:auto;position:relative">
+          <input type="text" id="inp-buscar" placeholder="Buscar documento..." autocomplete="off"
+            oninput="sugerirDocumentos()" onfocus="sugerirDocumentos()" class="buscar-input">
           <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gris4)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <div id="buscar-opciones" class="combo-opciones"></div>
         </div>
       </div>
 
@@ -766,10 +776,29 @@ async function init() {
     rolUsuario  = me.rol;
     miEmpresaId = me.empresa_id;
 
-    // Solo super_admin y franquiciante ven filtros y pueden subir
+    // Subir documentos sigue siendo solo de super_admin y franquiciante.
     if (rolUsuario === 'super_admin' || rolUsuario === 'franquiciante') {
-      document.getElementById('btn-subir').style.display      = 'flex';
-      document.getElementById('filtros-wrap').style.display   = 'flex';
+      document.getElementById('btn-subir').style.display = 'flex';
+    }
+
+    // La barra de filtros la ven TODOS los roles.
+    //
+    // Antes estaba oculta entera para el socio comercial y el empleado, y con
+    // ella se iban el filtro por tipo y el buscador — que le sirven igual que
+    // a un administrador. No habia que construirlos: ya estaban ahi.
+    //
+    // aplicarFiltros() no necesita cambios: lee los cinco filtros y los que
+    // quedan ocultos devuelven '' y no filtran nada.
+    document.getElementById('filtros-wrap').style.display = 'flex';
+
+    // Categoría y franquicia SI son de gestión: el socio no asigna ninguna de
+    // las dos, y ofrecérselas sería ruido sobre conceptos que no maneja.
+    if (rolUsuario !== 'super_admin' && rolUsuario !== 'franquiciante') {
+      const ocultar = ['sel-categoria', 'sel-franquicia'];
+      ocultar.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
     }
 
     // El empleado ve esta pantalla como el socio comercial.
@@ -1210,6 +1239,62 @@ async function cargarDocumentos() {
 }
 
 // ── FILTROS ───────────────────────────────────────────────────
+function cambiarPorPagina(valor) {
+  const n = parseInt(valor, 10);
+  // Se ignora cualquier valor fuera de la lista: POR_PAGINA alimenta un slice
+  // y un NaN ahi deja la tabla vacia sin decir por que.
+  if (![10, 20, 50].includes(n)) return;
+
+  POR_PAGINA = n;
+
+  // Volver a la 1 NO es opcional: si estaba en la pagina 3 con 10 por pagina y
+  // pasa a 50, la 3 puede no existir. El slice apuntaria a un rango vacio y la
+  // tabla saldria VACIA sin ninguna explicacion.
+  paginaActual = 1;
+
+  aplicarFiltros();
+}
+// Sugerencias de nombre. La lista sale de los documentos ya cargados: no
+// hace falta endpoint, y solo muestra los que este usuario puede ver.
+function sugerirDocumentos() {
+  const inp  = document.getElementById('inp-buscar');
+  const cont = document.getElementById('buscar-opciones');
+
+  // Filtrar siempre, aunque no elija ninguna sugerencia: escribir tiene que
+  // seguir acotando la tabla como antes.
+  aplicarFiltros();
+
+  const q = inp.value.toLowerCase().trim();
+  if (q.length < 2) { cont.style.display = 'none'; return; }
+
+  const titulos = [...new Set(
+    todosLosDocumentos
+      .filter(d => (d.titulo || '').toLowerCase().includes(q))
+      .map(d => d.titulo)
+  )].slice(0, 8);   // más de 8 deja de ser una sugerencia y es otra lista
+
+  cont.style.display = 'block';
+  cont.innerHTML = titulos.length
+    ? titulos.map(t => `<div class="combo-opcion" onmousedown="elegirDocumento('${esc(t).replace(/'/g, "\\'")}')">${esc(t)}</div>`).join('')
+    : `<div class="combo-vacio">Sin coincidencias</div>`;
+}
+
+function elegirDocumento(titulo) {
+  document.getElementById('inp-buscar').value = titulo;
+  document.getElementById('buscar-opciones').style.display = 'none';
+  aplicarFiltros();
+}
+
+// Cierra el desplegable al hacer clic afuera.
+document.addEventListener('click', (e) => {
+  const combo = document.getElementById('buscar-combo');
+  if (combo && !combo.contains(e.target)) {
+    const cont = document.getElementById('buscar-opciones');
+    if (cont) cont.style.display = 'none';
+  }
+});
+
+
 function aplicarFiltros() {
   let lista = [...todosLosDocumentos];
   const tipo       = document.getElementById('sel-tipo').value;
@@ -1313,7 +1398,9 @@ function renderThead() {
 
 // 10 por pagina: es una pantalla de gestion, se mira fila por fila.
 // (log.php usa 50 porque es de consulta y conviene ver mucho de una.)
-const POR_PAGINA = 10;
+// `let` y no `const`: el usuario elige cuantos ve por pagina. Los cinco usos
+// la leen en el momento, asi que reasignarla alcanza.
+let POR_PAGINA = 10;
 let paginaActual = 1;
 
 function renderTabla(lista) {

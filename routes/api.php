@@ -200,6 +200,14 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
         // Manuales — escritura
         Route::post('/manuales',                  [ManualController::class, 'store']);
+        // Orden manual de los manuales de una empresa.
+        //
+        // ⚠️ VA PEGADA ANTES de PUT /manuales/{id}, que es la unica que
+        // compite: Laravel resuelve por orden de declaracion, y si quedara
+        // despues matchearia 'orden' como si fuera un id — el request
+        // terminaria en update() con un id no numerico.
+        Route::put('/manuales/orden', [ManualController::class, 'reordenar']);
+
         Route::put('/manuales/{id}',              [ManualController::class, 'update']);
         Route::delete('/manuales/{id}',           [ManualController::class, 'destroy']);
         Route::post('/manuales/{id}/restore',     [ManualController::class, 'restore']);
