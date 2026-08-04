@@ -9,6 +9,8 @@ use App\Models\SystemAdmin;
 use App\Models\FranchiseStaff;
 use App\Models\FranchiseCategory;
 use App\Models\ActivityLog;
+use App\Mail\AltaUsuarioMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -198,8 +201,40 @@ class UserController extends Controller
             userAgent:   $request->userAgent()
         );
 
+        // Correo de alta con las credenciales y el manual adjunto.
+        //
+        // SINCRONO (Mail::send, no Mail::queue) y es lo importante de este
+        // bloque: el correo lleva la contrasena en texto plano, y encolarlo la
+        // dejaria serializada en la tabla `jobs` — y en `failed_jobs` si el
+        // envio fallara, que no se limpia nunca y nadie mira.
+        //
+        // El try/catch es amplio a proposito: un problema de Resend, del DNS o
+        // de la red no puede deshacer un alta ya guardada y ya registrada.
+        // Se devuelve mail_enviado para que la pantalla avise y las
+        // credenciales se comuniquen por otro medio. Un fallo mudo dejaria a
+        // una persona con cuenta y sin saberlo.
+        $mailEnviado = false;
+        try {
+            Mail::to($user->email)->send(new AltaUsuarioMail(
+                nombre:      $user->nombreCompleto(),
+                email:       $user->email,
+                password:    $data['password'],
+                urlLogin:    rtrim(config('app.url'), '/') . '/login.html',
+                rolEtiqueta: $this->etiquetaRol($user->rol),
+            ));
+            $mailEnviado = true;
+        } catch (\Throwable $e) {
+            // Sin el mensaje del throwable: puede arrastrar el cuerpo del
+            // correo, y ahi va la contrasena.
+            Log::warning('No se pudo enviar el correo de alta', [
+                'user_id' => $user->id,
+                'clase'   => get_class($e),
+            ]);
+        }
+
         return response()->json(
-            $user->load(['superAdmin', 'systemAdmin', 'franchiseStaff.franquicia']),
+            $user->load(['superAdmin', 'systemAdmin', 'franchiseStaff.franquicia'])
+                 ->setAttribute('mail_enviado', $mailEnviado),
             201
         );
     }
@@ -598,6 +633,25 @@ class UserController extends Controller
     }
 
     // ── Categorías del usuario (v2.3) ───────────────────────────────────
+
+    /**
+     * Nombre del rol tal como lo ve el usuario.
+     *
+     * Los strings de base son inmutables (README §3) pero NO son lo que se le
+     * muestra a nadie: 'franquiciado' se llama "Socio comercial" en toda la
+     * interfaz. Mandarle "franquiciado" en el correo de bienvenida seria la
+     * primera vez que ve una palabra que el sistema no usa en ningun lado.
+     */
+    private function etiquetaRol(string $rol): string
+    {
+        return match ($rol) {
+            'super_admin'   => 'Administrador',
+            'franquiciante' => 'Franquiciante',
+            'franquiciado'  => 'Socio comercial',
+            'empleado'      => 'Empleado',
+            default         => 'Usuario',
+        };
+    }
 
     /**
      * GET /api/usuarios/{id}/categorias
