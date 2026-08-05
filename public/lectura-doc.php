@@ -153,7 +153,7 @@ body {
   gap: 8px;
   margin-left: auto;
   padding: 5px 8px;
-  background: #1F1F1F;
+  background: #2c2b2b;
   border: 1px solid #383838;
   border-radius: 8px;
 }

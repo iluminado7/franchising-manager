@@ -147,7 +147,8 @@ function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
     // ONLY_FULL_GROUP_BY no permite ordenar por columnas que no estén en el
     // SELECT cuando se usa DISTINCT.
     $stmt = $pdo->prepare("
-        SELECT DISTINCT m.id AS manual_id, m.created_at AS m_created_at
+        SELECT DISTINCT m.id AS manual_id, m.public_id AS manual_public_id,
+                        m.created_at AS m_created_at
         FROM manuals m
         JOIN manual_empresa_assignments mea
           ON mea.manual_id = m.id
@@ -197,21 +198,52 @@ function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
 
     if (!$pendientes) return;
 
-    // Si ya está en lectura.php viendo uno de los manuales pendientes, lo dejamos pasar
+    // Si ya está en lectura.php viendo uno de los manuales pendientes, lo dejamos pasar.
+    //
+    // ⚠️ SE ACEPTAN LAS DOS FORMAS, ?m= y ?id=, Y NO ES OPCIONAL.
+    //
+    // El redirect de abajo usa ?m= con el ULID público. Si este guard mirara
+    // solo ?id=, nunca matchearía: auth.php redirigiría a la misma URL una y
+    // otra vez hasta que el navegador corte con ERR_TOO_MANY_REDIRECTS.
+    //
+    // Y ?id= tiene que seguir aceptándose aunque ya no se genere: un socio
+    // puede tener guardado un enlace viejo, o llegar desde una notificación
+    // emitida antes de este cambio. Esos enlaces caerían en el mismo bucle.
     $scriptName    = basename($_SERVER['SCRIPT_NAME'] ?? '');
     $manualIdEnUrl = (int) ($_GET['id'] ?? 0);
+    $manualRefEnUrl = trim((string) ($_GET['m'] ?? ''));
 
-    if ($scriptName === 'lectura.php' && $manualIdEnUrl > 0) {
+    if ($scriptName === 'lectura.php' && ($manualIdEnUrl > 0 || $manualRefEnUrl !== '')) {
         foreach ($pendientes as $p) {
-            if ((int) $p['manual_id'] === $manualIdEnUrl) {
+            if ($manualIdEnUrl > 0 && (int) $p['manual_id'] === $manualIdEnUrl) {
+                return;
+            }
+            // hash_equals y no ===: es una comparación de identificadores que
+            // viene del request, y no cuesta nada hacerla de tiempo constante.
+            if ($manualRefEnUrl !== ''
+                && !empty($p['manual_public_id'])
+                && hash_equals((string) $p['manual_public_id'], $manualRefEnUrl)) {
                 return;
             }
         }
     }
 
-    // Redirigir al primer manual pendiente
-    $primero = (int) $pendientes[0]['manual_id'];
-    header('Location: ' . BASE_URL_PHP . '/lectura.php?id=' . $primero);
+    // Redirigir al primer manual pendiente.
+    //
+    // Con el ULID público, igual que mis-manuales.php y las notificaciones.
+    // Antes usaba el id de la base, y como la cola corre ANTES de que el socio
+    // llegue a su listado, era la primera URL que veía — y la única con el id
+    // expuesto.
+    //
+    // El fallback al id numérico cubre un manual que por lo que sea no tenga
+    // public_id: mejor una URL fea que una ruta rota.
+    $primeroRef = $pendientes[0]['manual_public_id'] ?? null;
+
+    $destino = !empty($primeroRef)
+        ? '/lectura.php?m=' . rawurlencode((string) $primeroRef)
+        : '/lectura.php?id=' . (int) $pendientes[0]['manual_id'];
+
+    header('Location: ' . BASE_URL_PHP . $destino);
     exit;
 }
 

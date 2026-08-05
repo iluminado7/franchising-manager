@@ -10,6 +10,9 @@ use App\Models\FranchiseStaff;
 use App\Models\FranchiseCategory;
 use App\Models\ActivityLog;
 use App\Mail\AltaUsuarioMail;
+use App\Mail\AsignacionesInicialesMail;
+use App\Models\Document;
+use App\Services\ManualAccessService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -762,10 +765,132 @@ class UserController extends Controller
             }
         });
 
+        // Avisos de lo que el socio va a ver, SOLO en la primera asignacion.
+        //
+        // $actuales son las categorias que tenia ANTES de este sync. Vacio =
+        // es la primera vez, o sea el alta. Sin este guard, cada ajuste de
+        // categorias de un socio existente le mandaria dos correos con toda su
+        // lista.
+        //
+        // Va DESPUES de la transaccion y en try/catch: la asignacion ya se
+        // guardo y ya se registro; un problema de Resend no puede deshacerla.
+        if (empty($actuales) && $usuario->esFranquiciado()) {
+            try {
+                $this->avisarAsignacionesIniciales($usuario);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning(
+                    'No se pudieron enviar los avisos de asignaciones', [
+                        'user_id' => $usuario->id,
+                        'clase'   => get_class($e),
+                    ]
+                );
+            }
+        }
+
         return response()->json([
             'message'    => 'Categorías actualizadas correctamente.',
             'categorias' => $usuario->fresh()->categorias,
         ]);
+    }
+
+    /**
+     * Le avisa al socio comercial que manuales y que documentos va a ver.
+     *
+     * DOS CORREOS SEPARADOS, y cada uno sale solo si su lista tiene algo. Una
+     * categoria puede tener manuales y no documentos, o al reves: en ese caso
+     * llega uno solo.
+     *
+     * "Estos son los manuales que vas a ver" seguido de nada es peor que no
+     * escribir, asi que la lista vacia no genera correo.
+     */
+    private function avisarAsignacionesIniciales(User $usuario): void
+    {
+        $base = rtrim(config('app.url'), '/');
+
+        // Manuales: se usa ManualAccessService, que el README marca como la
+        // fuente de verdad de quien ve que manual. Reimplementar el filtro aca
+        // seria arriesgarse a que el correo liste algo que la pantalla no
+        // muestra.
+        $manuales = ManualAccessService::manualesVisiblesParaUsuario($usuario)
+                                       ->pluck('titulo')
+                                       ->filter()
+                                       ->values()
+                                       ->all();
+
+        if (!empty($manuales)) {
+            Mail::to($usuario->email)->send(new AsignacionesInicialesMail(
+                nombre:     $usuario->nombreCompleto(),
+                tipo:       'manuales',
+                titulos:    $manuales,
+                urlSeccion: $base . '/mis-manuales.php',
+            ));
+        }
+
+        $documentos = $this->documentosVisiblesPara($usuario);
+
+        if (!empty($documentos)) {
+            Mail::to($usuario->email)->send(new AsignacionesInicialesMail(
+                nombre:     $usuario->nombreCompleto(),
+                tipo:       'documentos',
+                titulos:    $documentos,
+                urlSeccion: $base . '/documentos.php',
+            ));
+        }
+    }
+
+    /**
+     * Titulos de los documentos que este socio va a ver.
+     *
+     * ⚠️ ESTA CONSULTA ES UNA COPIA de la rama de franquiciado de
+     * DocumentController::index(). No hay un DocumentAccessService equivalente
+     * a ManualAccessService, asi que se replico.
+     *
+     * Si cambia la regla de visibilidad de documentos, HAY QUE CAMBIARLA EN
+     * LOS DOS LADOS. Si divergen, este correo va a listar documentos que la
+     * pantalla no muestra —o al reves— y nadie se va a enterar.
+     */
+    private function documentosVisiblesPara(User $usuario): array
+    {
+        $empresaId    = $usuario->empresa_id;
+        $userId       = $usuario->id;
+        $franquiciaId = $usuario->franchiseStaff?->franquicia_id;
+
+        return Document::where('empresa_id', $empresaId)
+            // franquicia_id NULL = sin limitar a una sucursal. Un socio sin
+            // sucursal asignada solo ve esos.
+            ->where(function ($q) use ($franquiciaId) {
+                $q->whereNull('franquicia_id');
+                if ($franquiciaId) {
+                    $q->orWhere('franquicia_id', $franquiciaId);
+                }
+            })
+            ->visiblesParaFranquiciado()
+            ->noEliminados()
+            ->where(function ($q) use ($userId, $empresaId) {
+                $q->whereExists(function ($sub) use ($userId, $empresaId) {
+                    $sub->select(DB::raw(1))
+                        ->from('document_category_assignments as dca')
+                        ->join('user_categories as uc', 'uc.category_id', '=', 'dca.category_id')
+                        ->join('franchise_categories as fc', function ($j) {
+                            $j->on('fc.id', '=', 'dca.category_id')
+                              ->where('fc.is_active', 1);
+                        })
+                        ->whereColumn('dca.document_id', 'documents.id')
+                        ->where('dca.empresa_id', $empresaId)
+                        ->where('uc.user_id', $userId);
+                })->orWhereExists(function ($sub) use ($userId, $empresaId) {
+                    $sub->select(DB::raw(1))
+                        ->from('document_user_assignments as dua')
+                        ->whereColumn('dua.document_id', 'documents.id')
+                        ->where('dua.user_id', $userId)
+                        ->where('dua.empresa_id', $empresaId);
+                });
+            })
+            ->orderBy('titulo')
+            ->pluck('titulo')
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
