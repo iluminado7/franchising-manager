@@ -272,16 +272,50 @@ body.lectura-pdf .doc-page {
 .pdfjs-paginas {
   display: flex;
   flex-direction: column;
-  align-items: center;
+
+  /* align-items: center rompe el scroll horizontal: lo que sobresale por la
+     izquierda queda inalcanzable. flex-start + margin-inline: auto en el hijo
+     centra cuando la pagina entra y no recorta cuando no entra. */
+  align-items: flex-start;
   gap: 18px;
+
+  /* EL FIX. Antes .pdfjs-pagina y el canvas tenian max-width: 100%, asi que
+     cualquier zoom por encima del ancho del contenedor se dibujaba grande y
+     CSS lo volvia a achicar: en el celular apretar "+" no cambiaba nada.
+     Ahora la pagina puede ser mas ancha que la pantalla y se navega en
+     horizontal, que es la unica forma de leer un A4 en 360px. */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
 }
 .pdfjs-pagina {
   position: relative;
-  max-width: 100%;
+  flex: 0 0 auto;
+  margin-inline: auto;
   background: #fff;
   box-shadow: 0 1px 6px rgba(0, 0, 0, .12);
 }
-.pdfjs-pagina canvas { display: block; max-width: 100%; height: auto; }
+.pdfjs-pagina canvas { display: block; }
+
+/* Celular: la barra ocupaba dos renglones y, siendo sticky, se comia media
+   pantalla justo donde menos altura hay. */
+@media (max-width: 600px) {
+  .pdfjs-toolbar {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 7px 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .pdfjs-btn  { min-width: 34px; height: 32px; padding: 0 8px; font-size: 15px; }
+  .pdfjs-info { min-width: 0; white-space: nowrap; }
+  .pdfjs-sep  { display: none; }
+  .pdfjs-txt-largo { display: none; }
+  .pdfjs-txt-corto { display: inline; }
+}
+.pdfjs-txt-corto { display: none; }
 /* Marca de agua por encima del canvas (con el iframe no se podia). */
 .pdfjs-wm { position: absolute; inset: 0; pointer-events: none; }
 
@@ -1147,6 +1181,10 @@ function imprimirManual() {
 let pdfDoc       = null;
 let pdfEscala    = 1.2;   // valor inicial; se recalcula para ajustar al ancho
 let pdfEscalaAjustada = false;
+let pdfAnchoBase = 0;     // ancho de la pagina 1 a escala 1 (para recalcular el ajuste)
+let pdfZoomManual = false; // si el usuario toco +/-, el resize no le pisa el zoom
+let pdfResizeTmr = null;
+let pdfEscalaHueco = 1.2; // escala con la que se dimensionaron los huecos aun no dibujados
 let pdfPagActual = 1;
 let pdfObs       = null;
 let pdfLib       = null;
@@ -1201,12 +1239,13 @@ function plantillaVisorPdf(total) {
   return `
     <div class="pdfjs-toolbar">
       <button class="pdfjs-btn" onclick="pdfIrPagina(pdfPagActual - 1)" title="Página anterior">‹</button>
-      <span class="pdfjs-info">Página <strong id="pdf-pag-actual">1</strong> de ${total}</span>
+      <span class="pdfjs-info"><span class="pdfjs-txt-largo">Página </span><strong id="pdf-pag-actual">1</strong><span class="pdfjs-txt-largo"> de </span><span class="pdfjs-txt-corto">/</span>${total}</span>
       <button class="pdfjs-btn" onclick="pdfIrPagina(pdfPagActual + 1)" title="Página siguiente">›</button>
       <span class="pdfjs-sep"></span>
       <button class="pdfjs-btn" onclick="pdfZoom(-1)" title="Reducir">−</button>
       <span class="pdfjs-info" id="pdf-zoom-lbl">120%</span>
       <button class="pdfjs-btn" onclick="pdfZoom(1)" title="Ampliar">+</button>
+      <button class="pdfjs-btn" onclick="pdfAjustarAncho()" title="Ajustar al ancho">⤢</button>
     </div>
     <div class="pdfjs-paginas" id="pdfjs-paginas"></div>`;
 }
@@ -1222,17 +1261,13 @@ async function armarPaginasPdf() {
   // llene la hoja en vez de usar un valor fijo. Un 1.2 fijo se veia chico en
   // pantallas grandes y desbordaba en las chicas.
   const pag1 = await pdfDoc.getPage(1);
+  pdfAnchoBase = pag1.getViewport({ scale: 1 }).width;
   if (!pdfEscalaAjustada) {
-    const anchoUtil = cont.clientWidth || 900;
-    const anchoBase = pag1.getViewport({ scale: 1 }).width;
-    if (anchoBase > 0) {
-      // Se limita entre 0.8 y 3 para no exagerar en ningun extremo.
-      pdfEscala = Math.min(1.5, Math.max(0.8, anchoUtil / anchoBase));
-    }
+    pdfEscala = pdfEscalaAjusteAncho();
     pdfEscalaAjustada = true;
-    const lblZoom = document.getElementById('pdf-zoom-lbl');
-    if (lblZoom) lblZoom.textContent = Math.round(pdfEscala * 100) + '%';
+    pdfPintarZoom();
   }
+  pdfEscalaHueco = pdfEscala;
 
   const vp1 = pag1.getViewport({ scale: pdfEscala });
 
@@ -1338,26 +1373,82 @@ function pdfIrPagina(n) {
 function pdfZoom(dir) {
   if (!pdfDoc) return;
 
-  const pasos = [0.8, 1, 1.2, 1.5, 2, 2.5, 3];
-  let i = pasos.findIndex((v) => Math.abs(v - pdfEscala) < 0.01);
-  if (i === -1) i = 2;
-  i = Math.max(0, Math.min(pasos.length - 1, i + dir));
-  if (pasos[i] === pdfEscala) return;
+  // Multiplicativo en vez de una lista de pasos fijos: la escala inicial es la
+  // del ajuste al ancho y casi nunca cae justo en la lista, asi que el
+  // findIndex daba -1, caia en el indice 2 y el primer "+" saltaba a 150%
+  // vinieras de donde vinieras.
+  const nuevo = Math.min(4, Math.max(0.3,
+    Math.round((dir > 0 ? pdfEscala * 1.25 : pdfEscala / 1.25) * 100) / 100));
+  if (Math.abs(nuevo - pdfEscala) < 0.005) return;
 
-  pdfEscala = pasos[i];
+  pdfZoomManual = true;
+  pdfEscala = nuevo;
+  pdfAplicarEscala();
+}
+
+// Vuelve al ancho de la pantalla. Sin esto, despues de zoomear no habia forma
+// de recuperar la vista completa salvo recargando.
+function pdfAjustarAncho() {
+  if (!pdfDoc || !pdfAnchoBase) return;
+  pdfZoomManual = false;
+  pdfEscala = pdfEscalaAjusteAncho();
+  pdfAplicarEscala();
+}
+
+function pdfEscalaAjusteAncho() {
+  const cont = document.getElementById('pdfjs-paginas');
+  if (!cont || !pdfAnchoBase) return pdfEscala;
+  // -2 por el borde/sombra: sin el margen aparece un scroll horizontal de un
+  // pixel que en tactil se siente como que la pagina "baila".
+  const anchoUtil = (cont.clientWidth || 900) - 2;
+  // Piso 0.3, no 0.8: en un celular de 360px un A4 necesita ~0.5, y el piso
+  // viejo forzaba una pagina de 476px dentro de un contenedor de 300.
+  return Math.min(3, Math.max(0.3, anchoUtil / pdfAnchoBase));
+}
+
+function pdfPintarZoom() {
   const lbl = document.getElementById('pdf-zoom-lbl');
   if (lbl) lbl.textContent = Math.round(pdfEscala * 100) + '%';
+}
+
+function pdfAplicarEscala() {
+  pdfPintarZoom();
 
   // Se invalida lo dibujado y se rehace SOLO lo que esta en pantalla. No se
   // reconstruye la lista de paginas para no perder la posicion de lectura.
+  // A las que NO se redibujan hay que corregirles igual el alto del hueco, si
+  // no el scroll total queda con la medida de la escala anterior.
   document.querySelectorAll('.pdfjs-pagina').forEach((el) => {
+    // Las que nunca se dibujaron no tienen dataset.render: se las mide con
+    // pdfEscalaHueco, que es la escala con la que se armaron los huecos.
+    const previa = parseFloat(el.dataset.render || '0') || pdfEscalaHueco;
     delete el.dataset.render;
     const r = el.getBoundingClientRect();
     if (r.bottom > -600 && r.top < window.innerHeight + 600) {
       renderPaginaPdf(parseInt(el.dataset.pag, 10));
+    } else if (previa > 0) {
+      const k = pdfEscala / previa;
+      const w = parseFloat(el.style.width);
+      const h = parseFloat(el.style.height);
+      if (w > 0) el.style.width  = (w * k) + 'px';
+      if (h > 0) el.style.height = (h * k) + 'px';
     }
   });
+  pdfEscalaHueco = pdfEscala;
 }
+
+// Girar el telefono cambia el ancho util. Si el usuario no toco el zoom, se
+// reajusta solo; si lo toco, se respeta lo que eligio.
+window.addEventListener('resize', () => {
+  if (!pdfDoc || pdfZoomManual || !pdfAnchoBase) return;
+  clearTimeout(pdfResizeTmr);
+  pdfResizeTmr = setTimeout(() => {
+    const nueva = pdfEscalaAjusteAncho();
+    if (Math.abs(nueva - pdfEscala) < 0.02) return;
+    pdfEscala = nueva;
+    pdfAplicarEscala();
+  }, 200);
+});
 
 function toggleBuscador() {
   const bar = document.getElementById('find-bar');
