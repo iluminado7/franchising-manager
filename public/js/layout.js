@@ -454,7 +454,18 @@ async function marcarTodasPanel() {
 function actualizarHamburguesa() {
   const btn = document.getElementById('btn-hamburger');
   if (!btn) return;
-  btn.style.display = window.innerWidth <= 767 ? 'flex' : 'none';
+
+  // No alcanza con el ancho: hay pantallas sin sidebar (lectura.php no incluye
+  // sidebar.php). Ahi el boton se mostraba y no hacia NADA, porque
+  // toggleSidebar() sale por `if (!sidebar || !overlay) return;`. Un boton que
+  // no responde parece la pantalla rota, y encima ocupa lugar en la barra mas
+  // apretada del sistema.
+  //
+  // Se pregunta por #sidebar en vez de por $modo_editor a proposito: no depende
+  // de que cada pagina declare esa variable ni de acordarse al crear una nueva.
+  // Si no hay sidebar, no hay boton para abrirlo.
+  const haySidebar = !!document.getElementById('sidebar');
+  btn.style.display = (haySidebar && window.innerWidth <= 767) ? 'flex' : 'none';
 }
 
 window.addEventListener('resize', () => {

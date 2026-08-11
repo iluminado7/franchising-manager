@@ -152,6 +152,19 @@ body.tema-claro {
   font-family: 'Roboto', sans-serif;
 }
 
+/* El boton de usuario del topbar tiene avatar + nombre.
+   OJO CON EL ORDEN: esta regla va ANTES del bloque @media (max-width: 767px)
+   de mas abajo, que la oculta en celular. Las @media no suman especificidad,
+   asi que entre dos reglas del mismo peso gana la que aparece ultima en el
+   archivo. Estando abajo (que es donde estaba) anulaba la de mobile: el nombre
+   se mostraba igual en el telefono, la topbar no entraba a lo ancho y
+   "Cerrar sesion" quedaba cortado fuera de la pantalla. */
+.topbar-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .rol-badge {
   font-size: 11px;
   font-weight: 500;
@@ -840,13 +853,6 @@ body.tema-claro {
 }
 
 .avatar-lb-x:hover { background: rgba(255, 255, 255, .12); }
-
-/* El boton de usuario del topbar ahora tiene avatar + nombre. */
-.topbar-user-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
 
 
 /* ── PAGINACION ───────────────────────────────────────────────────────
