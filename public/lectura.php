@@ -298,6 +298,15 @@ body.lectura-pdf .doc-page {
 }
 .pdfjs-pagina canvas { display: block; }
 
+/* El "/" del contador solo se usa en celular.
+   OJO CON EL ORDEN: esta regla va ANTES del @media de abajo, no despues. Las
+   @media no suman especificidad, asi que entre dos reglas del mismo peso gana
+   la que aparece ultima en el archivo. Estando abajo anulaba la de celular y
+   el separador no se mostraba NUNCA: un manual de 47 paginas mostraba "147"
+   en vez de "1 / 47", que se lee como un numero de pagina disparatado y manda
+   a buscar el bug al visor en vez de al CSS. */
+.pdfjs-txt-corto { display: none; }
+
 /* Celular: la barra ocupaba dos renglones y, siendo sticky, se comia media
    pantalla justo donde menos altura hay. */
 @media (max-width: 600px) {
@@ -315,7 +324,6 @@ body.lectura-pdf .doc-page {
   .pdfjs-txt-largo { display: none; }
   .pdfjs-txt-corto { display: inline; }
 }
-.pdfjs-txt-corto { display: none; }
 /* Marca de agua por encima del canvas (con el iframe no se podia). */
 .pdfjs-wm { position: absolute; inset: 0; pointer-events: none; }
 
