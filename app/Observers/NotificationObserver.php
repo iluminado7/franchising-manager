@@ -38,6 +38,7 @@ class NotificationObserver
         'acceso_anomalo_pdf',
         // Nota de un socio comercial. Va por mail porque el franquiciante no
         // vive mirando el panel, y una sugerencia sin leer no sirve de nada.
+        // El super_admin queda excluido mas abajo: la recibe solo in-app.
         'nota_manual',
     ];
 
@@ -51,6 +52,23 @@ class NotificationObserver
 
         // No mandar si no hay email o la cuenta esta inactiva/eliminada.
         if (!$user || empty($user->email) || !$user->activo || $user->deleted_at !== null) {
+            return;
+        }
+
+        // El super_admin recibe las notas de los socios comerciales SOLO por
+        // la campanita. Le llegan las de TODAS las empresas de la plataforma:
+        // por mail seria un goteo permanente en la casilla. Y la asimetria es
+        // deliberada — al franquiciante la nota le pide una accion sobre su
+        // propia red, al super_admin lo mantiene informado.
+        //
+        // El corte va por tipo + rol, y NO sacando 'nota_manual' de la
+        // whitelist: el franquiciante si tiene que recibir ese mail. Tampoco
+        // se resuelve dejando de crear la notificacion, porque la campanita
+        // es justamente lo que se quiere conservar.
+        //
+        // OJO: esto no aplica a 'acceso_anomalo_pdf'. Esa es una alerta de
+        // seguridad y el mail al super_admin es parte del punto.
+        if ($notificacion->tipo === 'nota_manual' && $user->esSuperAdmin()) {
             return;
         }
 
@@ -82,7 +100,17 @@ class NotificationObserver
         //   nota_manual        -> el listado, donde se abre el hilo de notas
         $url = match ($notificacion->tipo) {
             'acceso_anomalo_pdf' => $base . '/log.php',
-            'nota_manual'        => $base . '/manuales-mi-empresa.php',
+            // El super_admin no tiene una 'mi empresa': su listado es
+            // manuales.php. Mismo criterio que la version in-app, que lo
+            // resuelve en NotificationController::resolverDestino().
+            //
+            // Hoy esta rama no se alcanza — el guard de arriba corta el mail
+            // de 'nota_manual' al super_admin antes de llegar aca. Se deja a
+            // proposito: si algun dia se levanta esa exclusion, el link ya
+            // apunta a donde tiene que apuntar y no a una pantalla ajena.
+            'nota_manual'        => $base . ($user->esSuperAdmin()
+                                        ? '/manuales.php'
+                                        : '/manuales-mi-empresa.php'),
             default              => $base . '/dashboard.php',
         };
 

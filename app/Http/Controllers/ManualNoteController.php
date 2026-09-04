@@ -126,9 +126,9 @@ class ManualNoteController extends Controller
             'estado'            => 'pendiente',
         ]);
 
-        // Avisarle al franquiciante que tiene feedback nuevo.
+        // Avisarle al franquiciante y al super_admin que hay feedback nuevo.
         //
-        // Solo cuando la nota la escribe un SOCIO COMERCIAL: este metodo lo
+        // Solo cuando la nota la escribe un SOCIO COMERCIAL: este endpoint lo
         // usa tambien el franquiciante, y notificarse a si mismo no aporta.
         //
         // Va en try/catch a proposito: la nota ya esta guardada, que es lo
@@ -136,9 +136,9 @@ class ManualNoteController extends Controller
         // perder lo importante para no perder lo accesorio.
         if ($user->esFranquiciado()) {
             try {
-                $this->notificarNotaAlFranquiciante($manualId, $user, $nota);
+                $this->notificarNotaNueva($manualId, $user, $nota);
             } catch (\Throwable $e) {
-                Log::warning('No se pudo notificar la nota al franquiciante', [
+                Log::warning('No se pudo notificar la nota nueva', [
                     'manual_id' => $manualId,
                     'nota_id'   => $nota->id ?? null,
                     'error'     => $e->getMessage(),
@@ -160,36 +160,55 @@ class ManualNoteController extends Controller
     }
 
     /**
-     * Notifica a los franquiciantes de la empresa que hay una nota nueva.
+     * Notifica que hay una nota nueva: a los franquiciantes de la empresa del
+     * autor, y al super_admin de la plataforma.
      *
-     * Pueden ser varios: se le avisa a todos los activos. Si la empresa no
-     * tiene ninguno cargado, no se notifica a nadie — NO se cae al
-     * super_admin. El feedback de una red es del franquiciante, y desviarlo
-     * en silencio a la plataforma seria una sorpresa desagradable.
+     * Los franquiciantes pueden ser varios: se le avisa a todos los activos.
+     * Si la empresa no tiene ninguno cargado, ellos no reciben nada y el aviso
+     * NO se redirige a otro rol: el feedback de una red es del franquiciante.
+     *
+     * El super_admin se suma como destinatario INDEPENDIENTE, no como
+     * fallback: recibe las notas de todas las empresas las haya o no recibido
+     * el franquiciante. Y por eso su aviso es el unico que necesita decir de
+     * que empresa viene — "Juan Perez dejo una nota" es ambiguo cuando llegan
+     * notas de varias redes.
+     *
+     * La empresa va en el TITULO, no solo en el mensaje. La campanita
+     * (layout.js, tanto el popup como el panel) renderiza titulo + fecha y
+     * NUNCA 'mensaje': aclararlo solo en el mensaje se veria en el mail y no
+     * en la campanita, que es donde se pidio.
      *
      * El tipo 'nota_manual' vive en la rama de chk_notif_fk que exige
      * manual_id y prohibe el resto de las FKs (ver la migracion
      * add_nota_manual_to_chk_notif_fk). Mandar manual_version_id aca haria
      * fallar el INSERT.
      */
-    private function notificarNotaAlFranquiciante(int $manualId, User $autor, ManualNote $nota): void
+    private function notificarNotaNueva(int $manualId, User $autor, ManualNote $nota): void
     {
         if (empty($autor->empresa_id)) {
             return;
         }
 
-        $destinatarios = User::where('empresa_id', $autor->empresa_id)
-                             ->where('rol', 'franquiciante')
-                             ->where('activo', 1)
-                             ->whereNull('deleted_at')
-                             ->get();
+        $franquiciantes = User::where('empresa_id', $autor->empresa_id)
+                              ->where('rol', 'franquiciante')
+                              ->where('activo', 1)
+                              ->whereNull('deleted_at')
+                              ->get();
 
-        if ($destinatarios->isEmpty()) {
+        // Sin filtro por empresa: el super_admin tiene empresa_id NULL, asi
+        // que filtrar por tenant lo dejaria siempre afuera.
+        $superAdmins = User::where('rol', 'super_admin')
+                           ->where('activo', 1)
+                           ->whereNull('deleted_at')
+                           ->get();
+
+        if ($franquiciantes->isEmpty() && $superAdmins->isEmpty()) {
             return;
         }
 
-        $titulo = Manual::whereKey($manualId)->value('titulo') ?: 'un manual';
-        $quien  = trim("{$autor->nombre} {$autor->apellido}") ?: 'Un socio comercial';
+        $titulo  = Manual::whereKey($manualId)->value('titulo') ?: 'un manual';
+        $quien   = trim("{$autor->nombre} {$autor->apellido}") ?: 'Un socio comercial';
+        $empresa = trim((string) ($autor->empresa?->nombre ?? ''));
 
         // El texto se recorta: contenido admite 5000 caracteres y esto entra
         // en el cuerpo del mail. El hilo completo se lee en la pantalla.
@@ -198,36 +217,62 @@ class ManualNoteController extends Controller
             $extracto .= '…';
         }
 
-        // El titulo nombra a quien escribio: es lo primero que se lee en el
-        // badge y es el asunto del mail, y "alguien dejo una nota" obliga a
-        // abrir para saber de quien.
-        //
         // notifications.titulo es varchar(200) y se recorta el TITULO DEL
         // MANUAL, no la cadena entera: si se cortara al final, un nombre
         // largo dejaria "Juan Sebastián Ferná…" sin decir nunca en que
         // manual. De los dos datos, el prescindible es el manual.
-        $prefijo = "{$quien} dejó una nota en: ";
-        $espacio = 200 - mb_strlen($prefijo);
-        $tituloNotif = $espacio > 0
-            ? $prefijo . mb_substr($titulo, 0, $espacio)
-            : $prefijo;
+        $componerTitulo = function (string $prefijo) use ($titulo): string {
+            $espacio  = 200 - mb_strlen($prefijo);
+            $completo = $espacio > 0
+                ? $prefijo . mb_substr($titulo, 0, $espacio)
+                : $prefijo;
 
-        // Red final: si el nombre solo pasara los 200, la columna rechazaria
-        // el INSERT y la nota se quedaria sin avisar a nadie.
-        $tituloNotif = mb_substr($tituloNotif, 0, 200);
+            // Red final: si el prefijo solo pasara los 200, la columna
+            // rechazaria el INSERT y la nota se quedaria sin avisar a nadie.
+            return mb_substr($completo, 0, 200);
+        };
 
-        foreach ($destinatarios as $destinatario) {
-            $n = new Notification([
-                'tipo'      => 'nota_manual',
-                'manual_id' => $manualId,
-                'titulo'    => $tituloNotif,
-                // El cuerpo ya no repite el nombre: lo dice el titulo.
-                'mensaje'   => "«{$extracto}»",
-                'leida'     => 0,
-            ]);
-            // V2-H-020: user_id esta fuera de $fillable, setter directo.
-            $n->user_id = $destinatario->id;
-            $n->save();
+        // El titulo nombra a quien escribio: es lo primero que se lee en el
+        // badge y es el asunto del mail, y "alguien dejo una nota" obliga a
+        // abrir para saber de quien.
+        $tituloFranq = $componerTitulo("{$quien} dejó una nota en: ");
+
+        // Si la empresa no tiene nombre cargado, el super_admin recibe el
+        // titulo comun en vez de un parentesis vacio.
+        $tituloSuper = $empresa !== ''
+            ? $componerTitulo("{$quien} ({$empresa}) dejó una nota en: ")
+            : $tituloFranq;
+
+        // El cuerpo no repite el nombre: lo dice el titulo. La empresa si se
+        // repite para el super_admin, porque el titulo puede haberse recortado
+        // y el mail se lee fuera de contexto.
+        //
+        // En UNA sola linea a proposito: la plantilla del mail imprime el
+        // mensaje dentro de un <p> sin nl2br, asi que un \n se colapsaria a
+        // un espacio y quedaria peor que el guion.
+        $mensajeFranq = "«{$extracto}»";
+        $mensajeSuper = $empresa !== ''
+            ? "Empresa: {$empresa} — «{$extracto}»"
+            : $mensajeFranq;
+
+        $envios = [
+            [$franquiciantes, $tituloFranq, $mensajeFranq],
+            [$superAdmins,    $tituloSuper, $mensajeSuper],
+        ];
+
+        foreach ($envios as [$destinatarios, $tituloNotif, $mensajeNotif]) {
+            foreach ($destinatarios as $destinatario) {
+                $n = new Notification([
+                    'tipo'      => 'nota_manual',
+                    'manual_id' => $manualId,
+                    'titulo'    => $tituloNotif,
+                    'mensaje'   => $mensajeNotif,
+                    'leida'     => 0,
+                ]);
+                // V2-H-020: user_id esta fuera de $fillable, setter directo.
+                $n->user_id = $destinatario->id;
+                $n->save();
+            }
         }
     }
 
