@@ -665,6 +665,26 @@ siempre tiene vencimiento; una no-demo nunca). Constantes en `Empresa`:
 - `EmpresaController::update()` ignora plan, precios y `facturable` de una
   demo, para que "Editar" no la deje a medio convertir.
 
+**Aviso de vencimiento a los super_admin** (`demos:avisar-vencimiento`). Mail a
+todos los super_admin activos cuando una demo vence en 7 días y el día anterior,
+con los datos de contacto del prospecto y cuánto usó la prueba. Corre todos los
+días a las 9:00 de Argentina (`routes/console.php`). Es **la primera tarea
+programada del proyecto**: ver el cron en §10.
+
+- **"Mañana" se cuenta por fecha de Argentina, no por 24 horas.** Con una
+  corrida diaria, contar horas manda el aviso "del día anterior" el mismo día
+  del corte.
+- **Umbral + registro, no fecha exacta:** busca demos que vencen en 7 días *o
+  menos* y todavía no avisadas (`demo_aviso_7d_at`, `demo_aviso_1d_at`). Si el
+  cron no corre un día, el aviso sale en la próxima corrida y no se repite. Si
+  ya corresponde el de mañana, no manda además el de 7 días atrasado.
+- **Marca después de mandar**, y solo si salió al menos un mail: si falla el
+  envío queda sin marcar y se reintenta. Por eso usa `send()` y no la cola —
+  encolado, lo marcaría aunque el worker fallara después.
+- Saltea demos dadas de baja o suspendidas.
+- `php artisan demos:avisar-vencimiento --dry-run` muestra qué mandaría, sin
+  mandar ni marcar. Sirve para verificar en producción sin efectos.
+
 ⚠️ **Deploy: la migración va ANTES del código, sin excepción.** `layout/auth.php`
 consulta `e.es_demo` en **cada página**: si el código sube sin la columna,
 todas las pantallas devuelven error, no solo las de empresas.
@@ -1161,6 +1181,11 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
 - [ ] Ningún `.bak` / `.orig` / `.old` en `public/`
 - [ ] CSP: `worker-src 'self'` + `challenges.cloudflare.com` antes de pasarla a
       enforce (§9)
+- [ ] **Cron del scheduler** en el crontab de **www-data** (`sudo crontab -u www-data -e`):
+      `* * * * * cd /var/www/franchising-manager && php artisan schedule:run >> /dev/null 2>&1`
+      Sin esto las tareas programadas no corren nunca y **no hay ningún error
+      visible**. En el de root no: dejaría la caché con dueño root (§11).
+      Verificar con `sudo -u www-data php artisan schedule:list`.
 - [ ] `php artisan config:cache`
 - [ ] `systemctl reload php8.3-fpm` — el opcache no se limpia solo
 
