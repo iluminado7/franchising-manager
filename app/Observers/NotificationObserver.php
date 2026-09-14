@@ -86,6 +86,12 @@ class NotificationObserver
             if ($franquicia && !$franquicia->activa) {
                 return;
             }
+
+            // Demo vencida: mismo criterio que una empresa suspendida. No
+            // pueden entrar, asi que un mail que los invita a hacerlo sobra.
+            if ($user->empresa && $user->empresa->demoVencida()) {
+                return;
+            }
         }
 
         $nombre = trim("{$user->nombre} {$user->apellido}") ?: 'usuario';

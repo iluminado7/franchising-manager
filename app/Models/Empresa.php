@@ -28,6 +28,38 @@ class Empresa extends Model
         'facturable'                   => 'boolean',
         'precio_custom_por_franquicia' => 'decimal:2',
         'precio_custom_global'         => 'decimal:2',
+        'es_demo'                      => 'boolean',
+        // Este cast SI es seguro, a diferencia de las fechas que escribe MySQL
+        // (README §9): demo_vence_at la escribe PHP en UTC, asi que leerla
+        // como UTC es correcto en los dos entornos.
+        'demo_vence_at'                => 'datetime',
+    ];
+
+    // demo_vencida viaja en el JSON para que la pantalla no dependa del reloj
+    // del navegador para decidir si una prueba termino.
+    protected $appends = ['demo_vencida'];
+
+    // ── Empresa demo ─────────────────────────────────────────────────
+    //
+    // es_demo y demo_vence_at NO estan en $fillable, y asi tienen que quedar:
+    // con mass assignment se podria extender una prueba mandando el campo en
+    // un request. Se asignan con setter directo desde
+    // EmpresaController::store(), unico lugar que las escribe.
+
+    // Duracion de la prueba. No se extiende: la empresa pasa a cliente solo
+    // cuando contrata (flujo que todavia no existe).
+    public const DEMO_DIAS = 30;
+
+    // Tope de usuarios por rol de una empresa demo. Cuentan los NO eliminados,
+    // activos o inactivos: si contaran solo los activos, desactivar a uno
+    // liberaria un lugar y el tope no limitaria nada.
+    //
+    // Un rol que no figure aca tiene tope 0 en una demo (falla cerrado): si se
+    // agrega un rol nuevo, su tope se decide a proposito.
+    public const DEMO_TOPES = [
+        'franquiciante' => 1,
+        'franquiciado'  => 5,
+        'empleado'      => 5,
     ];
 
     // ── Relaciones ───────────────────────────────────────────────────
@@ -119,6 +151,20 @@ class Empresa extends Model
             ?? $this->plan?->precio_global;
     }
 
+    // ¿Termino la prueba? Una demo sin fecha se trata como vencida: el CHECK
+    // chk_empresa_demo impide ese estado, pero si apareciera, es mejor cortar
+    // el acceso que regalar una prueba eterna.
+    public function demoVencida(): bool
+    {
+        return (bool) $this->es_demo
+            && ($this->demo_vence_at === null || $this->demo_vence_at->isPast());
+    }
+
+    public function getDemoVencidaAttribute(): bool
+    {
+        return $this->demoVencida();
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────
 
     public function scopeActivas($query)
@@ -138,9 +184,14 @@ class Empresa extends Model
         return $this->belongsTo(User::class, 'deleted_by');
     }
 
-    // Para jobs de facturación / suspensión por impago: nunca deben tocar a la exenta.
+    // Para jobs de facturación / suspensión por impago: nunca deben tocar a la
+    // exenta, ni a una empresa demo. La demo no puede marcarse como exenta
+    // (uq_unica_exenta admite una sola: Cerrajería Leonardo), así que queda con
+    // facturable = 1, y este filtro es lo único que evita facturarle a quien
+    // está probando la plataforma.
     public function scopeFacturables($query)
     {
-        return $query->where('facturable', 1);
+        return $query->where('facturable', 1)
+                     ->where('es_demo', 0);
     }
 }

@@ -25,6 +25,13 @@ class EnsureActiveTenant
             if ($empresaSuspendida || $franquiciaSuspendida) {
                 abort(403, 'Tu empresa o sucursal fue suspendida.');
             }
+
+            // Prueba vencida: se corta igual que una suspension. Sin esto, una
+            // sesion abierta al momento de vencer seguiria usando la API hasta
+            // que expire el token (8 horas).
+            if ($user->empresa && $user->empresa->demoVencida()) {
+                abort(403, 'El período de prueba de tu empresa finalizó.');
+            }
         }
 
         return $next($request);

@@ -628,6 +628,47 @@ cuando se lo está borrando contradice la operación.
 Si la purga sale de un pedido legal de supresión, eso es una supresión
 **incompleta** y hay que decirlo, no asumir que alcanza.
 
+### Empresas demo
+
+Prueba gratuita para ofrecer la plataforma a otras empresas. La crea el
+super_admin tildando **"Empresa demo"** en `empresas.php`. **No es un rol**: es
+una empresa marcada, con usuarios de los roles de siempre. Un rol nuevo habría
+que decidirlo en los ~136 chequeos de rol del código, y además no mostraría el
+producto: el prospecto necesita ver las dos caras, franquiciante y socio.
+
+Columnas `empresas.es_demo` + `demo_vence_at`, con `chk_empresa_demo` (una demo
+siempre tiene vencimiento; una no-demo nunca). Constantes en `Empresa`:
+`DEMO_DIAS = 30` y `DEMO_TOPES` (1 franquiciante, 5 socios, 5 empleados).
+
+- **El vencimiento lo calcula el servidor y NO se extiende.** Pasar a cliente
+  es un flujo que todavía no existe (pendiente, con validación en ARCA).
+  `es_demo` y `demo_vence_at` están **fuera de `$fillable`** (§6): con mass
+  assignment un request podría extender la prueba.
+- **Al vencer se corta el acceso en TRES lugares**, y los tres hacen falta:
+  login (`AuthController`, mensaje específico), API (`EnsureActiveTenant`) y
+  páginas (`layout/auth.php`). Vencer **no revoca tokens** —a diferencia de
+  suspender—, así que sin el chequeo de `auth.php` una sesión abierta seguiría
+  viendo las pantallas con la API fallando. El `NotificationObserver` tampoco
+  manda mails a una demo vencida. Los datos se conservan hasta que un
+  super_admin dé de baja la empresa.
+- **`auth.php` compara contra `UTC_TIMESTAMP()`, no `NOW()`.** La fecha la
+  escribe PHP en UTC, y `NOW()` es la hora de MySQL, que en XAMPP es la de
+  Buenos Aires (§9). Por la misma razón el cast `datetime` de `demo_vence_at`
+  **sí** es seguro, a diferencia del resto de las fechas del proyecto.
+- **El tope cuenta los no eliminados, activos o inactivos.** Si contara solo
+  los activos, desactivar a uno liberaría un lugar. Se valida en `store()` y
+  `restore()` —los únicos caminos que suman un lugar— dentro de una transacción
+  con `lockForUpdate()` sobre la empresa, para que dos altas simultáneas no
+  entren con el mismo lugar libre. `update()` no puede cambiar rol ni empresa.
+- **Se excluyen de la facturación en `Empresa::scopeFacturables()`.** No pueden
+  marcarse como exentas: `uq_unica_exenta` admite una sola.
+- `EmpresaController::update()` ignora plan, precios y `facturable` de una
+  demo, para que "Editar" no la deje a medio convertir.
+
+⚠️ **Deploy: la migración va ANTES del código, sin excepción.** `layout/auth.php`
+consulta `e.es_demo` en **cada página**: si el código sube sin la columna,
+todas las pantallas devuelven error, no solo las de empresas.
+
 ### CUIT / CUIL
 
 `users.dni` pasó a `users.cuit`. **Una sola columna para los dos**: CUIT y CUIL

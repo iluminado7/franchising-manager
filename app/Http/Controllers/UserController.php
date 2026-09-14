@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Empresa;
 use App\Rules\Cuit;
 use App\Models\SuperAdmin;
 use App\Models\SystemAdmin;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
@@ -166,32 +168,43 @@ class UserController extends Controller
         // v2.3: nombre/apellido/dni ahora viven en users (antes en cada perfil).
         // H-015: los campos privilegiados (rol/empresa_id/password_hash) se
         // setean con setter directo porque están fuera del $fillable.
-        $user = new User();
-        // Campos no-privilegiados (via mass assignment).
-        $user->fill([
-            'email'    => $data['email'],
-            'nombre'   => $data['nombre'],
-            'apellido' => $data['apellido'],
-            'cuit'     => $data['cuit']    ?? null,
-            'celular'  => $data['celular'] ?? null,
-        ]);
-        // Campos privilegiados (setter directo — protegidos de mass assignment).
-        $user->empresa_id    = $empresaId;
-        $user->rol           = $data['rol'];
-        $user->password_hash = Hash::make($data['password']);
-        $user->activo        = 1; // por default, activo al crear
-        $user->save();
+        // Tope de empresa demo. El chequeo y el alta van en la MISMA
+        // transaccion, con la fila de la empresa bloqueada: si no, dos altas
+        // simultaneas contarian el mismo lugar libre y entrarian las dos.
+        // Si el tope esta lleno, la ValidationException sale como 422 y la
+        // pantalla muestra el mensaje en el formulario.
+        $user = DB::transaction(function () use ($data, $empresaId, $franquiciaIdNueva) {
+            $this->exigirLugarEnDemo($empresaId, $data['rol']);
 
-        // v2.3: las tablas de perfil quedan como marcadores de rol.
-        // FranchiseStaff conserva además el vínculo con la franquicia.
-        match($data['rol']) {
-            'super_admin'   => SuperAdmin::create(['user_id' => $user->id]),
-            'franquiciante' => SystemAdmin::create(['user_id' => $user->id]),
-            default         => FranchiseStaff::create([
-                'user_id'       => $user->id,
-                'franquicia_id' => $franquiciaIdNueva,
-            ]),
-        };
+            $user = new User();
+            // Campos no-privilegiados (via mass assignment).
+            $user->fill([
+                'email'    => $data['email'],
+                'nombre'   => $data['nombre'],
+                'apellido' => $data['apellido'],
+                'cuit'     => $data['cuit']    ?? null,
+                'celular'  => $data['celular'] ?? null,
+            ]);
+            // Campos privilegiados (setter directo — protegidos de mass assignment).
+            $user->empresa_id    = $empresaId;
+            $user->rol           = $data['rol'];
+            $user->password_hash = Hash::make($data['password']);
+            $user->activo        = 1; // por default, activo al crear
+            $user->save();
+
+            // v2.3: las tablas de perfil quedan como marcadores de rol.
+            // FranchiseStaff conserva además el vínculo con la franquicia.
+            match($data['rol']) {
+                'super_admin'   => SuperAdmin::create(['user_id' => $user->id]),
+                'franquiciante' => SystemAdmin::create(['user_id' => $user->id]),
+                default         => FranchiseStaff::create([
+                    'user_id'       => $user->id,
+                    'franquicia_id' => $franquiciaIdNueva,
+                ]),
+            };
+
+            return $user;
+        });
 
         ActivityLog::registrar(
             userId:      $actor->id,
@@ -240,6 +253,64 @@ class UserController extends Controller
                  ->setAttribute('mail_enviado', $mailEnviado),
             201
         );
+    }
+
+    /**
+     * Tope de usuarios de una empresa demo (Empresa::DEMO_TOPES).
+     *
+     * Lanza ValidationException si la empresa es demo y el rol ya llego a su
+     * tope. Para cualquier otra empresa no hace nada.
+     *
+     * TIENE que llamarse dentro de una transaccion: bloquea la fila de la
+     * empresa con lockForUpdate() para que dos altas simultaneas (doble clic,
+     * dos pestañas) no cuenten el mismo lugar libre. Fuera de una transaccion
+     * el bloqueo se libera en el acto y no protege nada.
+     *
+     * Cuenta los usuarios NO eliminados, activos o inactivos. Por eso
+     * toggleActivo() no lo necesita: reactivar a alguien no ocupa un lugar
+     * nuevo, ya lo ocupaba. Los caminos que si suman un lugar son dos: el
+     * alta (store) y la restauracion (restore). update() no permite cambiar el
+     * rol ni la empresa, asi que por ahi no se saltea.
+     */
+    private function exigirLugarEnDemo(?int $empresaId, string $rol): void
+    {
+        if (!$empresaId) {
+            return;
+        }
+
+        $empresa = Empresa::whereKey($empresaId)->lockForUpdate()->first();
+        if (!$empresa || !$empresa->es_demo) {
+            return;
+        }
+
+        $tope = Empresa::DEMO_TOPES[$rol] ?? 0;
+
+        $ocupados = User::where('empresa_id', $empresaId)
+                        ->where('rol', $rol)
+                        ->whereNull('deleted_at')
+                        ->count();
+
+        if ($ocupados < $tope) {
+            return;
+        }
+
+        if ($tope === 0) {
+            $mensaje = 'La empresa está en período de prueba y no admite usuarios con ese rol.';
+        } else {
+            $quienes = match ($rol) {
+                'franquiciante' => $tope === 1 ? '1 franquiciante'   : "{$tope} franquiciantes",
+                'franquiciado'  => $tope === 1 ? '1 socio comercial' : "{$tope} socios comerciales",
+                'empleado'      => $tope === 1 ? '1 empleado'        : "{$tope} empleados",
+                default         => "{$tope} usuarios con ese rol",
+            };
+            // Los inactivos tambien ocupan lugar: el mensaje lo dice, porque
+            // si no, desactivar a alguien y ver que igual no deja crear parece
+            // un error.
+            $mensaje = "La empresa está en período de prueba y admite hasta {$quienes} "
+                     . '(los inactivos también cuentan). Para sumar uno, eliminá otro.';
+        }
+
+        throw ValidationException::withMessages(['rol' => [$mensaje]]);
     }
 
     // PUT /api/usuarios/{id}
@@ -483,9 +554,16 @@ class UserController extends Controller
 
         // H-015: deleted_by/deleted_at están fuera del $fillable, se setean con
         // setter directo.
-        $user->deleted_by = null;
-        $user->deleted_at = null;
-        $user->save();
+        //
+        // Restaurar vuelve a ocupar un lugar: en una empresa demo pasa por el
+        // mismo tope que el alta, dentro de la transaccion que lo bloquea.
+        DB::transaction(function () use ($user) {
+            $this->exigirLugarEnDemo($user->empresa_id, $user->rol);
+
+            $user->deleted_by = null;
+            $user->deleted_at = null;
+            $user->save();
+        });
 
         ActivityLog::registrar(
             userId:      $actor->id,

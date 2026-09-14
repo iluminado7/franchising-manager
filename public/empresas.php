@@ -96,6 +96,19 @@ include 'layout/head.php';
         <label>CUIT *</label>
         <input type="text" id="form-cuit" placeholder="30-12345678-9" maxlength="15">
       </div>
+
+      <!-- Empresa demo: el check es solo para el alta. Al editar una demo se
+           muestra el aviso de vencimiento en su lugar. -->
+      <label id="wrap-es-demo" style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="form-es-demo" onchange="onChangeDemo()" style="margin-top:3px;accent-color:var(--dorado)">
+        <span style="font-size:13px;color:var(--blanco);line-height:1.5">
+          Empresa demo
+          <span style="display:block;font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">
+            Prueba gratuita de 30 días, sin plan ni facturación. Hasta 1 franquiciante, 5 socios comerciales y 5 empleados. Al vencer se corta el acceso y se conservan los datos. No se puede extender.
+          </span>
+        </span>
+      </label>
+      <div id="demo-aviso" style="display:none;margin-bottom:14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
       <div id="wrap-ultimo-periodo" style="display:none;margin-bottom:14px">
       <div class="form-group" style="margin-bottom:0">
         <label>Último período facturado</label>
@@ -104,7 +117,8 @@ include 'layout/head.php';
         </div>
       </div>
     </div>
-      <!-- Sección: Plan y precios -->
+      <!-- Sección: Plan y precios. Se oculta entera para una empresa demo -->
+      <div id="wrap-facturacion">
       <div class="seccion-titulo" style="margin-top:8px">Plan y facturación</div>
 
       <div class="form-group">
@@ -151,6 +165,8 @@ include 'layout/head.php';
         </div>
         <div id="sim-detalle" style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif"></div>
       </div>
+
+      </div><!-- /wrap-facturacion -->
 
       <!-- Sección: Emails -->
       <div class="seccion-titulo" style="margin-top:8px">
@@ -395,6 +411,24 @@ function poblarSelectPlanes() {
 }
 
 // ── RENDER TABLA ──────────────────────────────────────────────
+// Columna "Plan" de una empresa demo: no tiene plan, tiene vencimiento.
+// Si venció o no lo decide el servidor (demo_vencida); los días restantes
+// son solo informativos.
+function demoHtml(e) {
+  const vence = e.demo_vence_at ? new Date(e.demo_vence_at) : null;
+  const fecha = vence ? vence.toLocaleDateString('es-AR') : '—';
+  let detalle;
+  if (e.demo_vencida || !vence) {
+    detalle = `Venció el ${fecha}`;
+  } else {
+    const dias = Math.max(0, Math.ceil((vence - Date.now()) / 86400000));
+    detalle = `Vence el ${fecha} · ${dias === 1 ? 'queda 1 día' : `quedan ${dias} días`}`;
+  }
+  return `
+        <span class="estado-pill ${e.demo_vencida ? 'estado-pendiente' : 'estado-solo-digital'}">${e.demo_vencida ? 'Demo vencida' : 'Demo'}</span>
+        <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif;margin-top:4px">${detalle}</div>`;
+}
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   document.getElementById('tabla-titulo').textContent = `${lista.length} resultado(s)`;
@@ -453,9 +487,9 @@ function renderTabla(lista) {
         <div style="font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif">${esc(e.razon_social)}</div>
       </td>
       <td style="font-family:'Roboto',sans-serif;font-size:12px">${esc(e.cuit)}</td>
-      <td>
+      <td>${e.es_demo ? demoHtml(e) : `
         <div style="font-size:13px;font-weight:500">${esc(planNombre)}</div>
-        <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif">${precioHtml}</div>
+        <div style="font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif">${precioHtml}</div>`}
       </td>
       <td style="font-family:'Roboto',sans-serif;font-size:13px;text-align:center">
         <span style="color:var(--blanco);font-weight:500">${activas}</span>
@@ -463,8 +497,8 @@ function renderTabla(lista) {
       </td>
       <td style="font-size:12px">${emailsHtml}</td>
       <td>
-        <span class="estado-pill ${e.activa ? 'estado-completo' : 'estado-pendiente'}">
-          ${e.activa ? 'Activa' : 'Suspendida'}
+        <span class="estado-pill ${e.activa && !e.demo_vencida ? 'estado-completo' : 'estado-pendiente'}">
+          ${!e.activa ? 'Suspendida' : (e.demo_vencida ? 'Prueba vencida' : 'Activa')}
         </span>
       </td>
       <td>
@@ -591,6 +625,21 @@ async function abrirModalEditar(id) {
   document.getElementById('ultimo-periodo').textContent = 'Cargando...';
   onChangePlan();
 
+  // El check de demo es solo para el alta: una empresa no pasa a ser demo
+  // después, y dejar de serlo es convertirla en cliente (flujo que todavía no
+  // existe).
+  document.getElementById('wrap-es-demo').style.display = 'none';
+  if (e.es_demo) {
+    document.getElementById('wrap-facturacion').style.display    = 'none';
+    document.getElementById('wrap-ultimo-periodo').style.display = 'none';
+    const aviso = document.getElementById('demo-aviso');
+    const fecha = e.demo_vence_at ? new Date(e.demo_vence_at).toLocaleDateString('es-AR') : '—';
+    aviso.textContent = e.demo_vencida
+      ? `Empresa demo. La prueba venció el ${fecha}: el acceso está cortado y los datos se conservan.`
+      : `Empresa demo. La prueba vence el ${fecha} y no se puede extender.`;
+    aviso.style.display = 'block';
+  }
+
   // Cargar emails existentes
   try {
     const emails = await apiFetch('GET', `/empresas/${id}/emails`);
@@ -635,6 +684,16 @@ function limpiarForm() {
   document.getElementById('wrap-precio-franquicia').style.display = 'none';
   document.getElementById('wrap-precio-global').style.display     = 'none';
   document.getElementById('simulador').style.display     = 'none';
+  document.getElementById('form-es-demo').checked        = false;
+  document.getElementById('wrap-es-demo').style.display  = 'flex';
+  document.getElementById('wrap-facturacion').style.display = '';
+  document.getElementById('demo-aviso').style.display    = 'none';
+}
+
+// Una empresa demo no tiene plan: se oculta toda la sección de facturación.
+function onChangeDemo() {
+  const esDemo = document.getElementById('form-es-demo').checked;
+  document.getElementById('wrap-facturacion').style.display = esDemo ? 'none' : '';
 }
 
 // ── PLAN: mostrar campos y simulador ──────────────────────────
@@ -727,6 +786,14 @@ function obtenerEmailsForm() {
 }
 
 // ── GUARDAR ───────────────────────────────────────────────────
+// ¿El formulario es de una empresa demo? Al crear lo dice el check; al editar,
+// la propia empresa (el check está oculto y no se puede cambiar).
+function esEmpresaDemoEnForm() {
+  const id = document.getElementById('form-id').value;
+  if (!id) return document.getElementById('form-es-demo').checked;
+  return !!todasLasEmpresas.find(x => x.id === parseInt(id, 10))?.es_demo;
+}
+
 // guardar() ahora solo valida y abre confirmación si es edición
 async function guardar() {
   const id     = document.getElementById('form-id').value;
@@ -740,7 +807,7 @@ async function guardar() {
   if (!nombre) { mostrarFormError('El nombre es obligatorio.'); return; }
   if (!razon)  { mostrarFormError('La razón social es obligatoria.'); return; }
   if (!cuit)   { mostrarFormError('El CUIT es obligatorio.'); return; }
-  if (!planId) { mostrarFormError('El plan es obligatorio.'); return; }
+  if (!planId && !esEmpresaDemoEnForm()) { mostrarFormError('El plan es obligatorio.'); return; }
 
   // Si es edición → confirmar, si es nuevo → guardar directo
   if (id) {
@@ -772,14 +839,17 @@ async function ejecutarGuardar() {
   btn.textContent = 'Guardando...';
 
   try {
-    const body = {
-      nombre,
-      razon_social:                 razon,
-      cuit,
-      plan_id:                      parseInt(planId),
-      precio_custom_por_franquicia: precioF ? parseFloat(precioF) : null,
-      precio_custom_global:         precioG ? parseFloat(precioG) : null,
-    };
+    const body = { nombre, razon_social: razon, cuit };
+
+    // Una demo no manda plan ni precios (el backend igual los descarta).
+    // es_demo solo al crear: una empresa existente no cambia de condición.
+    if (esEmpresaDemoEnForm()) {
+      if (!id) body.es_demo = true;
+    } else {
+      body.plan_id                      = parseInt(planId);
+      body.precio_custom_por_franquicia = precioF ? parseFloat(precioF) : null;
+      body.precio_custom_global         = precioG ? parseFloat(precioG) : null;
+    }
 
     let empresaId = id;
 

@@ -66,6 +66,7 @@ include 'layout/head.php';
             <option value="login_fallido_cuenta_suspendida">Login fallido — cuenta suspendida</option>
             <option value="login_fallido_empresa_suspendida">Login fallido — empresa suspendida</option>
             <option value="login_fallido_franquicia_suspendida">Login fallido — sucursal suspendida</option>
+            <option value="login_fallido_demo_vencida">Login fallido — prueba vencida</option>
             <option value="password_actualizada_fallo">Cambio de contraseña fallido</option>
             <option value="email_actualizado_fallo">Cambio de email fallido</option>
             <option value="usuario_desactivado">Usuario desactivado</option>
@@ -822,6 +823,7 @@ const ACCION_MAP = {
   login_fallido_cuenta_suspendida:     ['accion-sistema', 'Login fallido — cuenta suspendida'],
   login_fallido_empresa_suspendida:    ['accion-sistema', 'Login fallido — empresa suspendida'],
   login_fallido_franquicia_suspendida: ['accion-sistema', 'Login fallido — sucursal suspendida'],
+  login_fallido_demo_vencida:          ['accion-sistema', 'Login fallido — prueba vencida'],
   password_actualizada_fallo:          ['accion-sistema', 'Cambio de contraseña fallido'],
   email_actualizado_fallo:             ['accion-sistema', 'Cambio de email fallido'],
   usuario_desactivado: ['accion-sistema', 'Usuario desactivado'],

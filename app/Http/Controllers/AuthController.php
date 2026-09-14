@@ -83,6 +83,19 @@ class AuthController extends Controller
                     'email' => ['Tu empresa o sucursal fue suspendida. Contactá al administrador.'],
                 ]);
             }
+
+            // Prueba vencida. Va DESPUES de la suspension: si la empresa ademas
+            // esta suspendida, ese es el motivo que corresponde informar.
+            //
+            // El mensaje es especifico por la misma razon que el de arriba: la
+            // cuenta esta bien, y quien prueba la plataforma tiene que saber que
+            // lo que termino es la prueba.
+            if ($user->empresa && $user->empresa->demoVencida()) {
+                $this->logLoginFallido($request, $user->id, $user->empresa_id, 'login_fallido_demo_vencida');
+                throw ValidationException::withMessages([
+                    'email' => ['El período de prueba de tu empresa finalizó. Contactanos para contratar el servicio.'],
+                ]);
+            }
         }
 
         // Cargar perfil según rol — ahora incluye super_admin

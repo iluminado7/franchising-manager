@@ -60,9 +60,17 @@ function verificarSesion(?string $rol_requerido = null): void
     }
 
     $stmt = $pdo->prepare("
-        SELECT u.id, u.rol, u.activo, u.empresa_id
+        SELECT u.id, u.rol, u.activo, u.empresa_id,
+               -- Prueba vencida. UTC_TIMESTAMP() y NO NOW(): demo_vence_at la
+               -- escribe PHP en UTC, y NOW() es la hora del servidor MySQL,
+               -- que en XAMPP es la de Buenos Aires (README, seccion 9).
+               -- Una demo sin fecha cuenta como vencida: falla cerrado.
+               (e.es_demo = 1
+                 AND (e.demo_vence_at IS NULL OR e.demo_vence_at <= UTC_TIMESTAMP())
+               ) AS demo_vencida
         FROM personal_access_tokens pat
         JOIN users u ON u.id = pat.tokenable_id
+        LEFT JOIN empresas e ON e.id = u.empresa_id
         WHERE pat.id = ?
           AND pat.token = ?
           AND (pat.expires_at IS NULL OR pat.expires_at > NOW())
@@ -75,6 +83,16 @@ function verificarSesion(?string $rol_requerido = null): void
 
     if (!$usuario) {
         _redirigirLogin();
+    }
+
+    // Empresa demo con la prueba vencida. La API ya la bloquea
+    // (EnsureActiveTenant), pero esta pagina valida la sesion por su cuenta:
+    // sin este chequeo, quien tenga la sesion abierta seguiria viendo las
+    // pantallas con todas sus llamadas a la API fallando. A diferencia de una
+    // suspension, vencer no revoca los tokens, asi que no se puede contar con
+    // eso.
+    if (!empty($usuario['demo_vencida'])) {
+        _redirigirLogin('demo_vencida');
     }
 
     // super_admin tiene acceso a todo — nunca se bloquea por rol
@@ -247,7 +265,10 @@ function verificarAceptacionesPendientes(PDO $pdo, array $usuario): void
     exit;
 }
 
-function _redirigirLogin(): never
+// $motivo viaja como ?motivo= para que login.html explique por que se cerro la
+// sesion. Siempre es un valor fijo que elige el codigo, nunca texto libre:
+// login.html solo muestra mensajes propios para los motivos que conoce.
+function _redirigirLogin(?string $motivo = null): never
 {
     setcookie('auth_token', '', [
         'expires'  => time() - 3600,
@@ -255,6 +276,7 @@ function _redirigirLogin(): never
         'httponly' => true,
         'samesite' => 'Strict',
     ]);
-    header('Location: ' . BASE_URL_PHP . '/login.html');
+    $query = $motivo !== null ? '?motivo=' . rawurlencode($motivo) : '';
+    header('Location: ' . BASE_URL_PHP . '/login.html' . $query);
     exit;
 }

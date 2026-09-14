@@ -55,6 +55,7 @@ class EmpresaController extends Controller
             'precio_custom_por_franquicia' => 'nullable|numeric|min:0',
             'precio_custom_global'         => 'nullable|numeric|min:0',
             'facturable'                   => 'sometimes|boolean',
+            'es_demo'                      => 'sometimes|boolean',
         ]);
 
         // Solo super_admin puede crear una empresa exenta.
@@ -62,13 +63,37 @@ class EmpresaController extends Controller
             unset($data['facturable']);
         }
 
+        // es_demo no esta en $fillable: se saca de $data y se asigna abajo con
+        // setter directo. Solo super_admin: la ruta ya lo exige, y se repite
+        // por defensa en profundidad, igual que con facturable.
+        $esDemo = $esSuperAdmin && !empty($data['es_demo']);
+        unset($data['es_demo']);
+
+        // Una demo no tiene plan ni precios: pasar a cliente es un flujo aparte
+        // que todavia no existe. Queda con facturable = 1 porque no puede ser
+        // exenta (uq_unica_exenta admite una sola); lo que la saca de la
+        // facturacion es Empresa::scopeFacturables().
+        if ($esDemo) {
+            $data['facturable']                   = true;
+            $data['plan_id']                      = null;
+            $data['precio_custom_por_franquicia'] = null;
+            $data['precio_custom_global']         = null;
+        }
+
         $data = $this->normalizarFacturacion($data);
 
-        $empresa = Empresa::create($data);
+        $empresa = new Empresa($data);
+        if ($esDemo) {
+            $empresa->es_demo = true;
+            // Siempre del servidor, nunca del request: el vencimiento no se
+            // extiende.
+            $empresa->demo_vence_at = now()->addDays(Empresa::DEMO_DIAS);
+        }
+        $empresa->save();
 
         ActivityLog::registrar(
             userId:      $request->user()->id,
-            accion:      'empresa_creada',
+            accion:      $esDemo ? 'empresa_demo_creada' : 'empresa_creada',
             ip:          $request->ip(),
             empresaId:   $empresa->id,
             entidadTipo: 'empresas',
@@ -101,6 +126,19 @@ class EmpresaController extends Controller
         // Solo super_admin puede cambiar el estado de exención.
         if (!$esSuperAdmin) {
             unset($data['facturable']);
+        }
+
+        // Una demo no recibe plan ni cambia su facturacion desde aca:
+        // convertirla en cliente es un flujo aparte (pendiente, con validacion
+        // en ARCA). Sin este filtro, asignarle un plan desde "Editar" la
+        // dejaria a medio convertir: todavia demo, pero con plan.
+        if ($empresa->es_demo) {
+            unset(
+                $data['facturable'],
+                $data['plan_id'],
+                $data['precio_custom_por_franquicia'],
+                $data['precio_custom_global']
+            );
         }
 
         // Estado final de facturable (el del payload si vino, si no el actual)

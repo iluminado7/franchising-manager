@@ -125,7 +125,10 @@
 // error, no solo cuando el captcha falla.
 let tsToken = null;
 
-function onTurnstileOk(token)  { tsToken = token; mostrarError(''); }
+// Al resolverse el captcha se limpia el error, pero NO el aviso de sesion
+// cerrada: Turnstile suele resolverse solo en un segundo, y el aviso
+// desapareceria antes de poder leerlo.
+function onTurnstileOk(token)  { tsToken = token; mostrarError(avisoSesion); }
 function onTurnstileExpired()  { tsToken = null; }
 function onTurnstileError()    { tsToken = null; }
 
@@ -190,6 +193,22 @@ function mostrarError(msg) {
   el.textContent   = msg;
   el.style.display = msg ? 'block' : 'none';
 }
+
+// Sesion cerrada por el servidor con un motivo (layout/auth.php). El parametro
+// viene en la URL y cualquiera puede escribirlo: nunca se muestra su valor,
+// solo un texto fijo para los motivos conocidos. hasOwnProperty y no
+// MENSAJES[motivo] a secas, para que '?motivo=__proto__' no devuelva un objeto.
+var avisoSesion = '';
+(() => {
+  const MENSAJES = {
+    demo_vencida: 'El período de prueba de tu empresa finalizó. Contactanos para contratar el servicio.',
+  };
+  const motivo = new URLSearchParams(window.location.search).get('motivo');
+  if (motivo && Object.prototype.hasOwnProperty.call(MENSAJES, motivo)) {
+    avisoSesion = MENSAJES[motivo];
+    mostrarError(avisoSesion);
+  }
+})();
 
 function togglePassword() {
   const input  = document.getElementById('inp-password');

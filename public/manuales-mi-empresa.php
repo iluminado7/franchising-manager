@@ -783,7 +783,7 @@ function renderTabla(lista) {
           </button>` : ''}
           <button class="accion-btn" style="color:var(--gris5)" onclick="verNotas(${m.id}, '${esc(m.titulo)}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Escribir notas
+            Ver notas
           </button>
           ${m.estado !== 'archivado' ? `
           <button class="accion-btn" style="color:var(--error)" onclick="abrirModalArchivar(${m.id}, '${esc(m.titulo)}')">
