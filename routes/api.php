@@ -139,6 +139,9 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::get('/empresas/{id}/dashboard',    [EmpresaController::class, 'dashboard']);
         Route::delete('/empresas/{id}',           [EmpresaController::class, 'destroy']);
         Route::post('/empresas/{id}/restore',     [EmpresaController::class, 'restore']);
+        // Irreversible. El controlador re-verifica esSuperAdmin() y exige que
+        // la empresa ya este dada de baja.
+        Route::post('/empresas/{id}/borrar-definitivo', [EmpresaController::class, 'borrarDefinitivo']);
 
         // Emails de empresa
         Route::get('/empresas/{empresaId}/emails',         [EmpresaEmailController::class, 'index']);

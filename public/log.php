@@ -824,6 +824,7 @@ const ACCION_MAP = {
   login_fallido_empresa_suspendida:    ['accion-sistema', 'Login fallido — empresa suspendida'],
   login_fallido_franquicia_suspendida: ['accion-sistema', 'Login fallido — sucursal suspendida'],
   login_fallido_demo_vencida:          ['accion-sistema', 'Login fallido — prueba vencida'],
+  empresa_borrada_definitivamente:     ['accion-sistema', 'Empresa borrada definitivamente'],
   password_actualizada_fallo:          ['accion-sistema', 'Cambio de contraseña fallido'],
   email_actualizado_fallo:             ['accion-sistema', 'Cambio de email fallido'],
   usuario_desactivado: ['accion-sistema', 'Usuario desactivado'],

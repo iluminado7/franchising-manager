@@ -689,6 +689,51 @@ programada del proyecto**: ver el cron en §10.
 consulta `e.es_demo` en **cada página**: si el código sube sin la columna,
 todas las pantallas devuelven error, no solo las de empresas.
 
+### Borrado definitivo de empresa
+
+`POST /api/empresas/{id}/borrar-definitivo`, solo super_admin (doble guard,
+ruta + controlador). En `empresas.php` aparece como **"Borrar definitivamente"**
+sobre empresas **ya dadas de baja**: obliga a pasar antes por la baja, que es
+reversible. Irreversible.
+
+**Qué se puede borrar:**
+
+- **Demo:** todo.
+- **Real:** solo si nunca se le facturó y no tiene lecturas ni firmas (una
+  empresa cargada por error).
+- **Nunca**, ni siquiera una demo, si tiene facturas, o si algo suyo lo usa otra
+  empresa: un manual que creó su franquiciante y está asignado a otra, lecturas
+  o firmas ajenas sobre sus manuales, contenido de otra empresa publicado por
+  sus usuarios, asignaciones hechas en otra empresa. El 409 dice cuál.
+
+⚠️ **No es un `DELETE` de la empresa.** La base lo aceptaría, y
+`users.empresa_id` es `SET NULL`: sus usuarios quedarían con empresa NULL, la
+marca del super_admin (§3). Se borra tabla por tabla de las hojas hacia la
+empresa, en una transacción. Las FK `RESTRICT` hacia `users` fuerzan ese orden:
+si falta un paso, MySQL rechaza y todo se revierte.
+
+- **Los impedimentos se calculan DENTRO de la transacción**, con la fila de la
+  empresa bloqueada. Un chequeo previo quedaría viejo al momento de borrar.
+- **Los manuales de la plataforma asignados a la empresa NO se borran**: solo se
+  desasignan. Se borran los que creó un usuario de la empresa.
+- **Borra el `activity_logs` de sus usuarios**, pese a que es inmutable por
+  diseño: `user_id` es `RESTRICT`. Las acciones de los super_admin sobre la
+  empresa se conservan, con `empresa_id` NULL. El propio borrado queda
+  registrado (`empresa_borrada_definitivamente`, con nombre y CUIT) **dentro de
+  la transacción y sin try/catch**, como la purga de usuarios.
+- **Archivos:** las rutas se juntan antes de borrar las filas y se borran
+  **después** del commit. Al revés, un rollback dejaría filas apuntando a
+  archivos inexistentes. Si alguno falla, queda huérfano, se loguea y la
+  respuesta lo informa.
+- Los tokens (`personal_access_tokens`) se borran a mano: son polimórficos y no
+  tienen FK. `error_logs` se desvincula (`user_id`/`empresa_id` a NULL).
+
+**El modal es propio**, no el genérico de suspender. La baja reusaba el genérico
+y le cambiaba el botón: al cancelarla, el botón quedaba apuntando a la baja y el
+siguiente "Suspender" daba de baja la empresa anterior. Eso se corrigió
+(`abrirModalToggle()` rearma el botón), pero un error así en una acción
+irreversible no tiene vuelta atrás.
+
 ### CUIT / CUIL
 
 `users.dni` pasó a `users.cuit`. **Una sola columna para los dos**: CUIT y CUIL

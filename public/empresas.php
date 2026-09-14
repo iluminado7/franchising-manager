@@ -195,6 +195,38 @@ include 'layout/head.php';
 </div>
 
 <!-- ── MODAL SUSPENDER / ACTIVAR ─────────────────────────────── -->
+<!-- Borrado definitivo: modal PROPIO, no el generico de toggle. Reusar el
+     generico (como hace la baja) deja su boton apuntando a la ultima accion,
+     y aca esa ultima accion es irreversible. -->
+<div class="modal-overlay" id="modal-borrar-def">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h3>Borrar definitivamente</h3>
+      <button class="modal-close" onclick="cerrarBorrarDefinitivo()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;margin:0 0 12px">
+        Vas a borrar <strong id="borrar-def-nombre" style="color:var(--blanco)"></strong> y todo lo suyo:
+        usuarios, sucursales, manuales que crearon, documentos, lecturas, firmas, registro de actividad y archivos.
+      </p>
+      <p style="font-size:13px;color:var(--error);line-height:1.6;font-family:'Roboto',sans-serif;margin:0 0 12px">
+        <strong>No se puede deshacer.</strong> A diferencia de la baja, no hay forma de restaurarla.
+      </p>
+      <p style="font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin:0">
+        Una empresa real solo se puede borrar si nunca se le facturó y no tiene lecturas ni firmas.
+        Si algo de la empresa lo usa otra, tampoco: el sistema te va a decir qué.
+      </p>
+      <div class="form-error" id="borrar-def-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarBorrarDefinitivo()">Cancelar</button>
+      <button class="btn" id="btn-borrar-def" style="background:var(--error);color:#fff" onclick="confirmarBorrarDefinitivo()">Borrar definitivamente</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-toggle" onclick="if(event.target===this)cerrarModalToggle()">
   <div class="modal-box" style="max-width:400px">
     <div class="modal-header">
@@ -507,6 +539,10 @@ function renderTabla(lista) {
           <button class="accion-btn" style="color:var(--exito)" onclick="restaurarEmpresa(${e.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Restaurar
+          </button>
+          <button class="accion-btn" style="color:var(--error)" onclick="abrirBorrarDefinitivo(${e.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            Borrar definitivamente
           </button>` : `
           <button class="accion-btn" style="color:var(--dorado)"
             onclick="window.location.href='franquicias.php?empresa_id=${e.id}'">
@@ -914,6 +950,12 @@ function abrirModalToggle(id, activa) {
   const btn = document.getElementById('btn-toggle-confirmar');
   btn.className   = `btn ${activa ? 'btn-danger' : 'btn-success'}`;
   btn.textContent = activa ? 'Suspender' : 'Activar';
+  // abrirBajaEmpresa() reusa este modal y le cambia onclick y colores. Si la
+  // baja se cancelaba, quedaban puestos, y el siguiente "Suspender" daba de
+  // baja la empresa anterior. Se rearma siempre al abrir.
+  btn.onclick          = confirmarToggle;
+  btn.style.background = '';
+  btn.style.color      = '';
   document.getElementById('toggle-error').style.display = 'none';
   document.getElementById('modal-toggle').classList.add('open');
 }
@@ -923,6 +965,7 @@ function cerrarModalToggle() {
   const btn = document.getElementById('btn-toggle-confirmar');
   btn.disabled = false;   // re-habilitar SIEMPRE al cerrar
   pendingToggle = null;
+  pendingBaja   = null;   // la baja comparte este modal: cancelar la desarma
 }
 
 async function confirmarToggle() {
@@ -987,6 +1030,45 @@ async function confirmarBaja() {
     document.getElementById('toggle-error').textContent  = e.data?.message || 'Error.';
     document.getElementById('toggle-error').style.display = 'block';
     b.disabled = false; b.textContent = 'Dar de baja';
+  }
+}
+
+// ── BORRADO DEFINITIVO ────────────────────────────────────────
+// El id vive en esta variable y se limpia al cerrar: el modal no puede quedar
+// armado con la empresa de un intento anterior.
+let pendingBorradoDef = null;
+
+function abrirBorrarDefinitivo(id) {
+  const e = todasLasEmpresas.find(x => x.id === id);
+  if (!e) return;
+  pendingBorradoDef = id;
+  document.getElementById('borrar-def-nombre').textContent  = e.nombre;
+  document.getElementById('borrar-def-error').style.display = 'none';
+  const b = document.getElementById('btn-borrar-def');
+  b.disabled = false; b.textContent = 'Borrar definitivamente';
+  document.getElementById('modal-borrar-def').classList.add('open');
+}
+
+function cerrarBorrarDefinitivo() {
+  document.getElementById('modal-borrar-def').classList.remove('open');
+  pendingBorradoDef = null;
+}
+
+async function confirmarBorrarDefinitivo() {
+  if (!pendingBorradoDef) return;
+  const b = document.getElementById('btn-borrar-def');
+  b.disabled = true; b.textContent = 'Borrando...';
+  try {
+    const r = await apiFetch('POST', `/empresas/${pendingBorradoDef}/borrar-definitivo`);
+    cerrarBorrarDefinitivo();
+    mostrarToast(r.message || 'Empresa borrada definitivamente.', r.no_borrados ? 'error' : 'exito');
+    await cargarDatos();
+  } catch (e) {
+    // 409 con el motivo: se queda en el modal para que se pueda leer.
+    const err = document.getElementById('borrar-def-error');
+    err.textContent   = e.data?.message || 'No se pudo borrar la empresa.';
+    err.style.display = 'block';
+    b.disabled = false; b.textContent = 'Borrar definitivamente';
   }
 }
 
