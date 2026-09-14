@@ -54,6 +54,28 @@ class User extends Authenticatable
         'password_hash',
     ];
 
+    // Datos personales que NO viajan cuando un usuario aparece como autor de
+    // algo que ve otro rol: el autor de una nota, quien subio un documento.
+    // Sin esto, un socio comercial recibia email, CUIT, DNI y celular del
+    // franquiciante o del super_admin que publico algo.
+    //
+    // NO van en $hidden: usuarios.php, perfil.php y los mails los necesitan.
+    // Se aplican con soloDatosPublicos() sobre lo ya cargado.
+    //
+    // foto_url se oculta sin perder el avatar: avatar_url es un accessor que
+    // lee el atributo, y makeHidden() solo afecta la serializacion.
+    public const CAMPOS_PRIVADOS = [
+        'email', 'cuit', 'dni_legacy', 'celular', 'foto_url',
+        'empresa_id', 'activo',
+        'created_at', 'updated_at', 'deleted_by', 'deleted_at',
+        'anonimizado_at', 'anonimizado_por',
+    ];
+
+    public function soloDatosPublicos(): static
+    {
+        return $this->makeHidden(self::CAMPOS_PRIVADOS);
+    }
+
     protected $casts = [
         'activo'         => 'boolean',
         'deleted_at'     => 'datetime',

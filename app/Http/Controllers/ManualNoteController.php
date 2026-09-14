@@ -40,6 +40,18 @@ class ManualNoteController extends Controller
     {
         $user = $request->user();
 
+        // Acceso EFECTIVO al manual, como store(). Sin este chequeo, cualquiera
+        // con sesion podia pedir las notas de un manual de OTRA empresa
+        // enumerando ids: el feedback quedaba filtrado por empresa mas abajo,
+        // pero las notas de publicacion (release notes) no, y salian enteras,
+        // con su autor. El manual en si ya devolvia 403; sus notas no.
+        if (!ManualAccessService::usuarioTieneAccesoAlManual($user, $manualId)) {
+            return response()->json(['error' => 'Sin acceso a este manual.'], 403);
+        }
+
+        // Datos personales del autor: solo el super_admin los recibe.
+        $ocultarDatos = !$user->esSuperAdmin();
+
         // ── 1) Feedback (manual_notes) según visibilidad por rol ────────────
         $query = ManualNote::with(self::RELACIONES)
                            ->where('manual_id', $manualId);
@@ -55,7 +67,10 @@ class ManualNoteController extends Controller
             abort(403, 'Sin acceso a las notas.');
         }
 
-        $feedback = $query->get()->map(function ($n) {
+        $feedback = $query->get()->map(function ($n) use ($ocultarDatos) {
+            if ($ocultarDatos) {
+                $n->autor?->soloDatosPublicos();
+            }
             // Convertimos a array y agregamos el tipo para uniformar con release notes.
             $arr = $n->toArray();
             $arr['tipo'] = 'feedback';
@@ -69,7 +84,7 @@ class ManualNoteController extends Controller
                                  ->where('nota_publicacion', '!=', '')
                                  ->orderBy('version_number')
                                  ->get()
-                                 ->map(function ($v) {
+                                 ->map(function ($v) use ($ocultarDatos) {
                                      return [
                                          'tipo'              => 'release',
                                          'id'                => 'rel_' . $v->id,
@@ -77,7 +92,9 @@ class ManualNoteController extends Controller
                                          'manual_version_id' => $v->id,
                                          'contenido'         => $v->nota_publicacion,
                                          'created_at'        => $v->publicado_at,
-                                         'autor'             => $v->publicadoPor,
+                                         'autor'             => $ocultarDatos
+                                             ? $v->publicadoPor?->soloDatosPublicos()
+                                             : $v->publicadoPor,
                                          'version'           => [
                                              'id'             => $v->id,
                                              'version_number' => $v->version_number,
@@ -160,7 +177,10 @@ class ManualNoteController extends Controller
             userAgent:   $request->userAgent()
         );
 
-        return response()->json($nota->load(self::RELACIONES), 201);
+        // store() nunca lo llama un super_admin (la ruta lo excluye).
+        $nota->load(self::RELACIONES)->autor?->soloDatosPublicos();
+
+        return response()->json($nota, 201);
     }
 
     /**
@@ -328,6 +348,11 @@ class ManualNoteController extends Controller
             userAgent:   $request->userAgent()
         );
 
-        return response()->json($nota->load(self::RELACIONES));
+        $nota->load(self::RELACIONES);
+        if (!$user->esSuperAdmin()) {
+            $nota->autor?->soloDatosPublicos();
+        }
+
+        return response()->json($nota);
     }
 }

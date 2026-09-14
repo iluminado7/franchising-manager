@@ -879,8 +879,7 @@ del server block (ver §11 para el porqué): `X-Content-Type-Options: nosniff`,
 archivo servido con el `Content-Type` equivocado puede terminar interpretado como
 HTML y ejecutarse en el propio origen.
 
-Pendiente: **HSTS** (es lo único que separa el A+ en SSL Labs) y **CSP**, ambos
-en §9.
+Más **HSTS** desde el 14/09/2026 (ver §9). Pendiente: **CSP**, también en §9.
 
 ---
 
@@ -1007,9 +1006,21 @@ Una CSP sin `'unsafe-inline'` en `script-src` rompe la aplicación entera. Y
 **con** `'unsafe-inline'` la CSP pierde casi todo su valor contra XSS, que es
 justamente de lo que protegería.
 
-CSP útil = refactor de todos los handlers inline a `addEventListener`. Es trabajo
-real, no una línea de nginx. Mientras tanto va en
-`Content-Security-Policy-Report-Only`, que reporta sin romper.
+CSP útil = refactor de todos los handlers inline a `addEventListener` (585
+`on*="..."` y 18 `<script>` inline al 14/09/2026). Es trabajo real, no una línea
+de nginx.
+
+⚠️ **Hoy no hay NINGUNA CSP, ni siquiera en modo reporte.** Este README decía que
+iba en `Content-Security-Policy-Report-Only`, y era falso: se verificó con
+`curl -sI` contra producción. La clase `app/Http/Middleware/SecurityHeaders.php`
+arma esa cabecera (y HSTS), pero **no está registrada en ningún lado** y nunca
+se ejecuta. Es código muerto que hace creer que existe. Además, sus valores
+chocan con los de nginx (`X-Frame-Options: DENY` contra `SAMEORIGIN`): si alguien
+la registra, duplica cabeceras con valores distintos. Las cabeceras de seguridad
+viven en nginx; la CSP, cuando se haga, también tiene que ir ahí.
+
+El endpoint `/api/csp-report` existe y está listo para recibir reportes, pero hoy
+no le llega nada.
 
 Cuando se escriba, tiene que incluir sí o sí:
 - `worker-src 'self'` — lo necesita pdf.js
@@ -1080,17 +1091,21 @@ prueba cuándo un socio aceptó una versión.
   explícitos, así que una vez cargados no se pueden vaciar desde el modal.
   `franquicia_id` sí se puede porque usa `array_key_exists`. Es el mismo caso que
   §11 documenta y quedó repetido en los otros dos campos.
-- ⚠️ **`ManualNoteController::porManual()` no verifica acceso al manual.** El
-  bloque de release notes filtra solo por `manual_id`, sin `empresa_id` ni
-  `ManualAccessService`. Un socio comercial puede leer las `nota_publicacion` de
-  **manuales de otras empresas** enumerando ids, con el autor incluido. El
-  feedback ajeno sí está tapado (`where('user_id', $user->id)`). Es la misma
-  familia que H-001 y H-009; el arreglo es el mismo guard que ya usa `store()`.
-- **El `autor` de cada nota se serializa entero.** `User` solo tiene
-  `password_hash` en `$hidden`, así que viajan email, CUIT, `dni_legacy`, celular
-  y rol del autor. Al recortarlo, **no** usar `with('autor:id,nombre,...')`: el
-  accessor `avatar_url` devuelve `null` y el avatar desaparece sin dar error. Va
-  con `makeHidden([...])` sobre la relación ya cargada.
+- ~~**`ManualNoteController::porManual()` no verifica acceso al manual.**~~
+  **Resuelto el 14/09/2026.** Un socio podía leer las notas de publicación de
+  manuales de **otras empresas** enumerando ids, con el autor. El manual daba 403,
+  sus notas no. Ahora usa `ManualAccessService`, igual que `store()`.
+  Después del arreglo se barrieron **todas** las rutas GET de la API con ids de
+  otra empresa, como socio, franquiciante y empleado: ninguna devolvió datos.
+  Las descargas de firmas y las facturas se probaron aparte (403).
+- ~~**El `autor` de cada nota se serializa entero.**~~ **Resuelto el 14/09/2026**,
+  también para quien sube un documento. Para quien no es super_admin, el usuario
+  viaja sin email, CUIT, DNI ni celular: `User::CAMPOS_PRIVADOS` +
+  `soloDatosPublicos()`, aplicado con `makeHidden()` sobre lo ya cargado. **No
+  recortar con `with('autor:id,nombre,...')`**: el accessor `avatar_url` devuelve
+  `null` y el avatar desaparece sin error. Con `makeHidden()` el avatar se
+  conserva (verificado). Si una respuesta nueva expone un usuario a otro rol,
+  usar el mismo helper.
 - **El contador de categorías todavía cuenta usuarios suspendidos** (`activo = 0`).
   Se excluyeron los eliminados; los suspendidos quedaron a propósito, pendiente de
   decisión.
@@ -1116,11 +1131,18 @@ prueba cuándo un socio aceptó una versión.
   `categorias.php`, `documentos.php`...). Mismo caso que el lightbox de avatares:
   conviene moverla a `layout.js`, comparando las copias antes de unificar por si
   divergieron.
-- **HSTS no está puesto.** Es lo único que separa el A (actual) del A+ en SSL
-  Labs. La redirección HTTP→HTTPS ya funciona (301), pero queda la primera
-  petición interceptable. Se agrega al snippet de headers y **se escala**:
-  `max-age=300`, verificar un par de días, después subir a un año. Un `max-age`
-  largo mal puesto no se puede revertir para quien ya lo cacheó.
+- **HSTS activo desde el 14/09/2026, con `max-age=300` (5 minutos).** Está en
+  `/etc/nginx/snippets/security-headers.conf` y se verificó en las cuatro clases
+  de ruta (PHP, estáticos, pdfjs y API). **Falta subirlo a un año** (paso
+  pendiente, a partir del 16-17/09 si no hubo problemas):
+  `sudo sed -i 's/max-age=300/max-age=31536000/' /etc/nginx/snippets/security-headers.conf`,
+  después `nginx -t` y reload. Un `max-age` largo no se puede revertir para quien
+  ya lo cacheó.
+  ⚠️ **Con HSTS activo, un certificado vencido deja a todos afuera, sin opción de
+  "continuar de todos modos".** La renovación la hace `certbot.timer` (dos veces
+  por día; verificado con `systemctl list-timers` y `certbot renew --dry-run`).
+  El certificado vencía el 21/10/2026: alrededor del 21/09 debería verse renovado
+  en `sudo certbot certificates`.
   `includeSubDomains` aplica al host que envía el header y sus subdominios —
   desde `businesspartner.goharv.com.ar` **no** afecta a `goharv.com.ar` ni al
   sitio institucional.

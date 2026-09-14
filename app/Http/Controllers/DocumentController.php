@@ -91,6 +91,13 @@ class DocumentController extends Controller
                                   ->get();
         }
 
+        // Quien subio cada documento viaja sin datos personales para quien no
+        // es super_admin: la pantalla solo muestra el nombre, y un socio
+        // recibia el email, CUIT y celular del franquiciante o del super_admin.
+        if (!$user->esSuperAdmin()) {
+            $documentos->each(fn ($d) => $d->subidoPor?->soloDatosPublicos());
+        }
+
         return response()->json($documentos);
     }
 
