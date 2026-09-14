@@ -226,9 +226,20 @@ include 'layout/head.php';
       <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:9px;padding:14px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Asignar manual</div>
         <div style="display:flex;gap:8px;align-items:flex-start">
-          <select id="sel-manual-asignar" class="form-select" style="flex:1">
-            <option value="">Seleccioná un manual publicado</option>
-          </select>
+          <!-- Buscador-select. El id elegido va al input oculto sel-manual-asignar. -->
+          <div class="combo-asignar" data-combo="manual" style="position:relative;flex:1;min-width:0">
+            <input type="text" id="inp-manual-asignar" class="form-select combo-asignar-input" placeholder="Buscar manual publicado..."
+                   autocomplete="off" spellcheck="false" style="padding-left:32px;padding-right:32px"
+                   oninput="filtrarComboAsignar('manual', true)" onfocus="filtrarComboAsignar('manual', false)"
+                   onkeydown="teclaComboAsignar('manual', event)">
+            <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--gris4);pointer-events:none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <button type="button" id="clr-manual-asignar" onclick="limpiarComboAsignar('manual', true)" title="Borrar búsqueda"
+                    style="display:none;position:absolute;right:9px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="opc-manual-asignar" class="combo-opciones combo-asignar-opciones"></div>
+          </div>
+          <input type="hidden" id="sel-manual-asignar" value="">
           <button class="btn btn-primary btn-sm" onclick="asignarManual()" style="white-space:nowrap;flex-shrink:0">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Asignar
@@ -272,9 +283,20 @@ include 'layout/head.php';
       <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:9px;padding:14px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Asignar documento</div>
         <div style="display:flex;gap:8px;align-items:flex-start">
-          <select id="sel-doc-asignar" class="form-select" style="flex:1">
-            <option value="">Seleccioná un documento</option>
-          </select>
+          <!-- Buscador-select. El id elegido va al input oculto sel-doc-asignar. -->
+          <div class="combo-asignar" data-combo="doc" style="position:relative;flex:1;min-width:0">
+            <input type="text" id="inp-doc-asignar" class="form-select combo-asignar-input" placeholder="Buscar documento..."
+                   autocomplete="off" spellcheck="false" style="padding-left:32px;padding-right:32px"
+                   oninput="filtrarComboAsignar('doc', true)" onfocus="filtrarComboAsignar('doc', false)"
+                   onkeydown="teclaComboAsignar('doc', event)">
+            <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--gris4);pointer-events:none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <button type="button" id="clr-doc-asignar" onclick="limpiarComboAsignar('doc', true)" title="Borrar búsqueda"
+                    style="display:none;position:absolute;right:9px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gris4);cursor:pointer;padding:2px;line-height:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="opc-doc-asignar" class="combo-opciones combo-asignar-opciones"></div>
+          </div>
+          <input type="hidden" id="sel-doc-asignar" value="">
           <button class="btn btn-primary btn-sm" onclick="asignarDocEmpleado()" style="white-space:nowrap;flex-shrink:0">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Asignar
@@ -436,6 +458,13 @@ include 'layout/head.php';
 .combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
+/* Buscador-select de asignación a empleados */
+.combo-asignar-input { outline:none; }
+.combo-asignar-input:focus { border-color:var(--dorado); }
+.combo-asignar-input::placeholder { color:var(--gris3); }
+.combo-asignar-opciones { z-index:600; }
+.combo-asignar-opciones .combo-opcion.activa { background:var(--gris2);color:var(--blanco); }
+.combo-opcion-detalle { font-size:11px;color:var(--gris4);margin-top:2px;text-transform:capitalize; }
 
 /* Chips de categorías en la tabla */
 /* ── Avatar en la celda Nombre ────────────────────────────── */
@@ -1629,9 +1658,222 @@ async function abrirModalManuales(empleadoId, empleadoNombre) {
 }
 
 function cerrarModalManuales() {
+  cerrarComboAsignar('manual');
   document.getElementById('modal-manuales').classList.remove('open');
   empleadoSeleccionado = null;
 }
+
+// ── QUÉ SE LE PUEDE ASIGNAR A UN EMPLEADO ────────────────────
+//
+// El buscador tiene que ofrecer SOLO lo que el servidor va a aceptar. Las
+// reglas son las del backend, copiadas acá para no mostrar opciones que
+// después rebotan con 422:
+//   manuales:   ManualAssignmentController::asignar() — el manual tiene que
+//               estar asignado a la empresa del empleado.
+//   documentos: DocumentAssignmentController::validarAsignacionUsuario() —
+//               misma empresa y, si el documento está acotado a una sucursal,
+//               la sucursal del empleado.
+//
+// El servidor sigue siendo la protección real: esto es para que la pantalla no
+// ofrezca lo que no se puede usar.
+
+// empresa y sucursal del empleado del modal abierto. Si no se encuentra, todo
+// en null: los filtros de abajo no dejan pasar nada (falla cerrado).
+function datosEmpleadoAsignar() {
+  const u = todosLosUsuarios.find(x => x.id === empleadoSeleccionado?.id);
+  return {
+    empresa_id:    u?.empresa_id ?? null,
+    franquicia_id: u?.franchise_staff?.franquicia_id ?? null,
+  };
+}
+
+function manualDisponibleParaEmpleado(m, emp) {
+  // /manuales le devuelve al super_admin TODOS los manuales del sistema, con
+  // empresas_asignadas. Al franquiciante y al socio les llegan solo los de su
+  // empresa y sin ese campo: para ellos ya viene filtrado desde el servidor.
+  if (miRol !== 'super_admin') return true;
+  if (emp.empresa_id === null) return false;
+  // empresas_asignadas y no empresa_id: un manual puede estar en varias
+  // empresas, y empresa_id trae solo la primera.
+  return (m.empresas_asignadas || []).some(e => e.id === emp.empresa_id);
+}
+
+function documentoDisponibleParaEmpleado(d, emp) {
+  if (emp.empresa_id === null || d.empresa_id !== emp.empresa_id) return false;
+  return d.franquicia_id == null || d.franquicia_id === emp.franquicia_id;
+}
+
+// ── BUSCADOR-SELECT DE ASIGNACIÓN (manuales y documentos del empleado) ──
+//
+// Reemplaza al <select>: con decenas de manuales, una lista desplegable no se
+// puede recorrer. El id elegido va a un input OCULTO que conserva el id del
+// select viejo (sel-manual-asignar / sel-doc-asignar): asignarManual() y
+// asignarDocEmpleado() lo leen igual que antes.
+//
+// La lista va con position:fixed, calculada desde el input. El modal tiene
+// overflow-y:auto: con position:absolute, cuando hay pocos asignados la lista
+// quedaba cortada por el borde del modal.
+const COMBOS_ASIGNAR = {
+  manual: { items: [], activo: -1, visibles: [], vacio: 'No hay más manuales publicados para asignar.' },
+  doc:    { items: [], activo: -1, visibles: [], vacio: 'No hay más documentos para asignar.' },
+};
+
+// Sin mayúsculas ni tildes: "politica" encuentra "Política".
+function normalizarBusqueda(s) {
+  return String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function elComboAsignar(clave, parte) {
+  const ids = { input: `inp-${clave}-asignar`, lista: `opc-${clave}-asignar`, limpiar: `clr-${clave}-asignar`,
+                oculto: clave === 'manual' ? 'sel-manual-asignar' : 'sel-doc-asignar' };
+  return document.getElementById(ids[parte]);
+}
+
+// items: [{ id, titulo, detalle? }]. Los ya asignados no vienen.
+function cargarComboAsignar(clave, items) {
+  COMBOS_ASIGNAR[clave].items = items;
+  limpiarComboAsignar(clave, false);
+}
+
+// desdeInput = true cuando el usuario escribe: la elección anterior se desarma.
+// Si no, el campo podría decir un manual y "Asignar" mandar otro.
+function filtrarComboAsignar(clave, desdeInput) {
+  const c      = COMBOS_ASIGNAR[clave];
+  const input  = elComboAsignar(clave, 'input');
+  const oculto = elComboAsignar(clave, 'oculto');
+
+  if (desdeInput) oculto.value = '';
+  elComboAsignar(clave, 'limpiar').style.display = input.value ? 'block' : 'none';
+
+  // Con algo ya elegido, al volver a entrar al campo se ven todas las
+  // opciones, no solo la elegida.
+  const texto = oculto.value ? '' : normalizarBusqueda(input.value);
+  c.visibles = c.items.filter(i => normalizarBusqueda(i.titulo).includes(texto)
+                               || normalizarBusqueda(i.detalle).includes(texto));
+  c.activo   = c.visibles.length && texto ? 0 : -1;
+  pintarComboAsignar(clave, texto);
+}
+
+function pintarComboAsignar(clave, texto) {
+  const c     = COMBOS_ASIGNAR[clave];
+  const lista = elComboAsignar(clave, 'lista');
+
+  if (!c.items.length) {
+    lista.innerHTML = `<div class="combo-vacio">${c.vacio}</div>`;
+  } else if (!c.visibles.length) {
+    lista.innerHTML = `<div class="combo-vacio">Sin coincidencias para “${esc(texto)}”.</div>`;
+  } else {
+    lista.innerHTML = c.visibles.map((i, k) => `
+      <div class="combo-opcion${k === c.activo ? ' activa' : ''}" data-id="${i.id}">
+        <div>${esc(i.titulo)}</div>
+        ${i.detalle ? `<div class="combo-opcion-detalle">${esc(i.detalle)}</div>` : ''}
+      </div>`).join('');
+  }
+
+  ubicarComboAsignar(clave);
+  lista.style.display = 'block';
+
+  // Mantener visible la opción activa moviendo SOLO el scroll de la lista.
+  // scrollIntoView() también puede mover el scroll del modal.
+  const activa = lista.querySelector('.combo-opcion.activa');
+  if (activa) {
+    const arriba = activa.offsetTop, abajo = arriba + activa.offsetHeight;
+    if (arriba < lista.scrollTop) lista.scrollTop = arriba;
+    else if (abajo > lista.scrollTop + lista.clientHeight) lista.scrollTop = abajo - lista.clientHeight;
+  }
+}
+
+// Posición fija, pegada al input, y alto limitado al espacio que queda hacia
+// abajo para que nunca se salga de la pantalla.
+function ubicarComboAsignar(clave) {
+  const lista = elComboAsignar(clave, 'lista');
+  const r     = elComboAsignar(clave, 'input').getBoundingClientRect();
+  lista.style.position  = 'fixed';
+  lista.style.left      = `${r.left}px`;
+  lista.style.top       = `${r.bottom + 4}px`;
+  lista.style.width     = `${r.width}px`;
+  lista.style.right     = 'auto';
+  lista.style.maxHeight = `${Math.max(120, Math.min(280, window.innerHeight - r.bottom - 16))}px`;
+}
+
+function seleccionarComboAsignar(clave, id) {
+  const item = COMBOS_ASIGNAR[clave].items.find(i => i.id === id);
+  if (!item) return;
+  elComboAsignar(clave, 'oculto').value = String(item.id);
+  elComboAsignar(clave, 'input').value  = item.titulo;
+  elComboAsignar(clave, 'limpiar').style.display = 'block';
+  cerrarComboAsignar(clave);
+  const err = document.getElementById(clave === 'manual' ? 'asignar-error' : 'docs-emp-error');
+  if (err) err.style.display = 'none';
+}
+
+function limpiarComboAsignar(clave, enfocar) {
+  elComboAsignar(clave, 'oculto').value = '';
+  elComboAsignar(clave, 'input').value  = '';
+  elComboAsignar(clave, 'limpiar').style.display = 'none';
+  cerrarComboAsignar(clave);
+  if (enfocar) elComboAsignar(clave, 'input').focus();
+}
+
+function cerrarComboAsignar(clave) {
+  const lista = elComboAsignar(clave, 'lista');
+  if (lista) lista.style.display = 'none';
+  COMBOS_ASIGNAR[clave].activo = -1;
+}
+
+// Flechas para moverse, Enter para elegir, Escape para cerrar.
+function teclaComboAsignar(clave, ev) {
+  const c       = COMBOS_ASIGNAR[clave];
+  const abierta = elComboAsignar(clave, 'lista').style.display === 'block';
+
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    if (!abierta) { filtrarComboAsignar(clave, false); return; }
+    if (!c.visibles.length) return;
+    const paso = ev.key === 'ArrowDown' ? 1 : -1;
+    c.activo = (c.activo + paso + c.visibles.length) % c.visibles.length;
+    pintarComboAsignar(clave, normalizarBusqueda(elComboAsignar(clave, 'input').value));
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (abierta && c.activo >= 0 && c.visibles[c.activo]) {
+      seleccionarComboAsignar(clave, c.visibles[c.activo].id);
+    } else if (abierta && c.visibles.length === 1) {
+      seleccionarComboAsignar(clave, c.visibles[0].id);
+    }
+  } else if (ev.key === 'Escape' && abierta) {
+    // Sin esto, Escape no hace nada: el modal no se cierra con teclado.
+    ev.preventDefault();
+    cerrarComboAsignar(clave);
+  }
+}
+
+// mousedown y no click: con click, el input pierde el foco antes y la lista
+// se cierra antes de registrar la elección.
+document.addEventListener('mousedown', ev => {
+  const opcion = ev.target.closest('.combo-asignar-opciones .combo-opcion[data-id]');
+  if (opcion) {
+    ev.preventDefault();
+    const clave = opcion.closest('.combo-asignar').dataset.combo;
+    seleccionarComboAsignar(clave, Number(opcion.dataset.id));
+    return;
+  }
+  document.querySelectorAll('.combo-asignar').forEach(w => {
+    if (!w.contains(ev.target)) cerrarComboAsignar(w.dataset.combo);
+  });
+});
+
+// La lista es fija: si el modal scrollea o la ventana cambia de tamaño, se
+// reacomoda para seguir pegada al input. NO se cierra: en el celular, abrir el
+// teclado dispara un resize justo al tocar el campo, y la lista se cerraría
+// en el mismo instante en que se abre.
+// capture: true para enterarse del scroll del propio modal, que no burbujea.
+['scroll', 'resize'].forEach(tipo => window.addEventListener(tipo, ev => {
+  if (ev.target && ev.target.closest && ev.target.closest('.combo-asignar-opciones')) return;
+  Object.keys(COMBOS_ASIGNAR).forEach(clave => {
+    const lista = elComboAsignar(clave, 'lista');
+    if (lista && lista.style.display === 'block') ubicarComboAsignar(clave);
+  });
+}, true));
 
 // ── DOCUMENTOS DE UN EMPLEADO ─────────────────────────────────
 //
@@ -1657,6 +1899,7 @@ async function abrirModalDocsEmpleado(empleadoId, empleadoNombre) {
 }
 
 function cerrarModalDocsEmpleado() {
+  cerrarComboAsignar('doc');
   document.getElementById('modal-docs-empleado').classList.remove('open');
   empleadoSeleccionado = null;
 }
@@ -1673,16 +1916,13 @@ async function cargarDocsEmpleado() {
     const asignados = await apiFetch('GET', `/empleados/${empleadoSeleccionado.id}/documentos`);
     const idsAsignados = asignados.map(a => a.document_id);
 
-    // El select ofrece los NO asignados todavía.
-    const sel = document.getElementById('sel-doc-asignar');
-    sel.innerHTML = '<option value="">Seleccioná un documento</option>';
-    docsEmpresaCache
+    // El buscador ofrece los NO asignados todavía, y solo los que el servidor
+    // acepta para este empleado (su empresa y, si aplica, su sucursal).
+    const empDoc = datosEmpleadoAsignar();
+    cargarComboAsignar('doc', docsEmpresaCache
       .filter(d => !idsAsignados.includes(d.id) && !d.deleted_at)
-      .forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.id; opt.textContent = d.titulo;
-        sel.appendChild(opt);
-      });
+      .filter(d => documentoDisponibleParaEmpleado(d, empDoc))
+      .map(d => ({ id: d.id, titulo: d.titulo, detalle: d.tipo || '' })));
 
     if (!asignados.length) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">No tiene documentos asignados todavía.</div>`;
@@ -1747,16 +1987,13 @@ async function cargarManualAsignados() {
     const asignaciones = await apiFetch('GET', `/empleados/${empleadoSeleccionado.id}/asignaciones`);
     const idsAsignados = asignaciones.map(a => a.manual_id);
 
-    // Poblar select con manuales NO asignados todavía
-    const sel = document.getElementById('sel-manual-asignar');
-    sel.innerHTML = '<option value="">Seleccioná un manual publicado</option>';
-    todosLosManuales
+    // El buscador ofrece los manuales NO asignados todavía, y solo los de la
+    // empresa del empleado.
+    const empManual = datosEmpleadoAsignar();
+    cargarComboAsignar('manual', todosLosManuales
       .filter(m => !idsAsignados.includes(m.id))
-      .forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id; opt.textContent = m.titulo;
-        sel.appendChild(opt);
-      });
+      .filter(m => manualDisponibleParaEmpleado(m, empManual))
+      .map(m => ({ id: m.id, titulo: m.titulo, detalle: m.categoria || '' })));
 
     if (!asignaciones.length) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">No tiene manuales asignados todavía.</div>`;
@@ -1800,7 +2037,10 @@ async function asignarManual() {
     mostrarToast('Manual asignado correctamente.', 'exito');
     await cargarManualAsignados();
   } catch (e) {
-    errEl.textContent = e.data?.message || 'Error al asignar el manual.';
+    // El backend manda el motivo en "error" (422 de empresa, 403 de acceso) y
+    // en "message" el 409 de ya asignado. Leyendo solo message, los rechazos
+    // se veían como un "Error" sin explicación.
+    errEl.textContent = e.data?.error || e.data?.message || 'Error al asignar el manual.';
     errEl.style.display = 'block';
   }
 }

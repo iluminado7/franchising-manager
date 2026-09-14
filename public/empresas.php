@@ -216,7 +216,6 @@ include 'layout/head.php';
       </p>
       <p style="font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin:0">
         Una empresa real solo se puede borrar si nunca se le facturó y no tiene lecturas ni firmas.
-        Si algo de la empresa lo usa otra, tampoco: el sistema te va a decir qué.
       </p>
       <div class="form-error" id="borrar-def-error"></div>
     </div>
