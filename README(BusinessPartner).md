@@ -685,6 +685,34 @@ programada del proyecto**: ver el cron en §10.
 - `php artisan demos:avisar-vencimiento --dry-run` muestra qué mandaría, sin
   mandar ni marcar. Sirve para verificar en producción sin efectos.
 
+**Cupo de almacenamiento** (`App\Services\CupoDemo`, `Empresa::DEMO_CUPO_BYTES` =
+500 MB). Una demo se le da a alguien de afuera con permisos de franquiciante:
+sin cupo, puede subir PDFs de 50 MB sin límite y el costo lo paga la plataforma.
+
+- **Se imputa a quien sube** (`publicado_por` / `subido_por`), no a quien creó
+  el manual. Por creador, el franquiciante de la demo podría subir versiones de
+  un manual de la plataforma asignado a su empresa sin que contaran. Lo que sube
+  un super_admin nunca cuenta.
+- **Cuenta:** PDFs de manuales, el HTML de las versiones (con imágenes en base64
+  pesa varios MB), imágenes, documentos y firmas. Lo eliminado **también
+  cuenta**: el soft-delete no borra el archivo. Las fotos de perfil, no.
+- Se verifica en los 7 lugares donde se guarda contenido: PDF de manual,
+  publicar, guardar borrador, imagen, alta de documento, nueva versión y firma.
+  Siempre **antes** de subir al storage. El borrador se pisa: se descuenta lo
+  que ocupaba. Una firma resubida también.
+- **Al resubir una firma en una demo se borra el PDF anterior.** Antes quedaba
+  huérfano, y con el cupo midiendo la base, resubir en bucle era espacio que no
+  contaba. En una empresa real NO se borra: es el escaneo de una firma
+  manuscrita.
+- Sin bloqueo: dos subidas simultáneas pueden pasar el cupo por, como mucho, el
+  tamaño de una. Bloquear la empresa mientras sube un archivo de 50 MB frenaría a
+  todos sus usuarios.
+- `physical_signatures.archivo_tamano` es nueva y nullable: las firmas
+  anteriores cuentan 0.
+
+**Recuperar contraseña con la demo vencida:** mail explicando que la prueba
+terminó, **sin enlace**, igual que empresa o sucursal suspendida.
+
 ⚠️ **Deploy: la migración va ANTES del código, sin excepción.** `layout/auth.php`
 consulta `e.es_demo` en **cada página**: si el código sube sin la columna,
 todas las pantallas devuelven error, no solo las de empresas.

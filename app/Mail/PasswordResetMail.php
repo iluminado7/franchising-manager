@@ -70,6 +70,7 @@ class PasswordResetMail extends Mailable
             'cuenta_suspendida'     => 'Tu cuenta está suspendida',
             'empresa_suspendida'    => 'Tu empresa está suspendida',
             'franquicia_suspendida' => 'Tu sucursal está suspendida',
+            'demo_vencida'          => 'El período de prueba finalizó',
             default                 => 'Recuperación de contraseña',
         };
     }
@@ -97,6 +98,12 @@ class PasswordResetMail extends Mailable
                 'Pediste restablecer tu contraseña, pero tu sucursal está suspendida. '
                 . 'El acceso depende de que se reactive la '
                 . 'sucursal. Contactá al administrador.',
+
+            'demo_vencida' =>
+                'Pediste restablecer tu contraseña, pero el período de prueba de tu '
+                . 'empresa finalizó, así que por ahora no se puede ingresar a la '
+                . 'plataforma. Tu contraseña no cambió y los datos se conservan. '
+                . 'Para seguir usándola, contactanos.',
 
             default => 'Recibimos un pedido relacionado con tu contraseña.',
         };

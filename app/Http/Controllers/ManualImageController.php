@@ -10,6 +10,7 @@ use App\Services\ManualAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use App\Services\CupoDemo;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -86,6 +87,10 @@ class ManualImageController extends Controller
                 'deduplicado' => true,
             ]);
         }
+
+        // Cupo de la demo. Despues de la deduplicacion: una imagen repetida no
+        // ocupa espacio nuevo y no tiene por que rebotar.
+        CupoDemo::exigirEspacio($actor, (int) $size);
 
         // Nombre del archivo en storage: {hash}.{ext}. Predecible para debug
         // pero no expone info del usuario. Path incluye manual_id para

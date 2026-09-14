@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Services\CupoDemo;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PhysicalSignatureController extends Controller
@@ -62,6 +63,16 @@ class PhysicalSignatureController extends Controller
         $archivo = $request->file('archivo');
         $hash    = hash_file('sha256', $archivo->getRealPath());
 
+        // Firma que se va a reemplazar, si el socio ya tenia una para esta
+        // version (updateOrCreate de abajo pisa la fila).
+        $anterior = PhysicalSignature::where('manual_version_id', $version->id)
+                                     ->where('user_id', $socio->id)
+                                     ->first();
+
+        // Cupo de la demo. Si se reemplaza una firma, su tamaño se descuenta:
+        // la fila vieja deja de existir.
+        CupoDemo::exigirEspacio($actor, (int) $archivo->getSize(), (int) ($anterior->archivo_tamano ?? 0));
+
         // Disco por configuracion (local en dev, s3 en prod). Hardcodear 'local'
         // dejaria las firmas en el filesystem de la instancia: efimero en Cloud y
         // no compartido entre instancias. Son PDFs con firmas manuscritas que
@@ -84,10 +95,29 @@ class PhysicalSignatureController extends Controller
                 'subido_por'    => $actor->id,
                 'archivo_path'  => $path,
                 'archivo_hash'  => $hash,
+                'archivo_tamano' => (int) $archivo->getSize(),
                 'notas'         => $request->notas,
                 'updated_at'    => now(),
             ]
         );
+
+        // En una DEMO, el PDF de la firma reemplazada se borra del storage. Sin
+        // esto quedaba huerfano, y como el cupo mide la base, resubir la firma
+        // en bucle era espacio que no contaba nunca.
+        //
+        // En una empresa real NO se toca: es el escaneo de una firma manuscrita,
+        // y decidir si se conserva como historial no es de este cambio.
+        if ($anterior && $anterior->archivo_path && $anterior->archivo_path !== $path
+            && CupoDemo::empresaDemoDe($actor)) {
+            try {
+                Storage::disk($disk)->delete($anterior->archivo_path);
+            } catch (\Throwable $e) {
+                Log::warning('Firma fisica: no se pudo borrar el PDF reemplazado.', [
+                    'firma_id' => $firma->id,
+                    'error'    => $e->getMessage(),
+                ]);
+            }
+        }
 
         try {
             ActivityLog::registrar(

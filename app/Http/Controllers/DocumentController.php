@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Services\CupoDemo;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
@@ -129,6 +130,9 @@ class DocumentController extends Controller
 
         $archivo = $request->file('archivo');
         $hash    = hash_file('sha256', $archivo->getRealPath());
+
+        // Cupo de la demo, antes de subir al storage.
+        CupoDemo::exigirEspacio($user, (int) $archivo->getSize());
 
         $disk = config('filesystems.default');
         $path = Storage::disk($disk)->putFile('documentos', $archivo);
@@ -261,6 +265,10 @@ class DocumentController extends Controller
 
         $archivo = $request->file('archivo');
         $hash    = hash_file('sha256', $archivo->getRealPath());
+
+        // Cupo de la demo: las versiones anteriores siguen guardadas y cuentan.
+        CupoDemo::exigirEspacio($user, (int) $archivo->getSize());
+
         $disk    = config('filesystems.default');
         $path    = Storage::disk($disk)->putFile('documentos', $archivo);
 

@@ -62,6 +62,11 @@ class Empresa extends Model
         'empleado'      => 5,
     ];
 
+    // Espacio de almacenamiento de una empresa demo: PDFs, documentos,
+    // imagenes, firmas y el HTML de los manuales que suben sus usuarios.
+    // La regla y lo que cuenta estan en App\Services\CupoDemo.
+    public const DEMO_CUPO_BYTES = 500 * 1024 * 1024;
+
     // ── Relaciones ───────────────────────────────────────────────────
 
     public function plan(): BelongsTo

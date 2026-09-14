@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
+use App\Services\CupoDemo;
 
 class ManualController extends Controller
 {
@@ -377,6 +378,11 @@ class ManualController extends Controller
             ], 409);
         }
 
+        // Cupo de la demo. El borrador se pisa: lo que ocupaba se descuenta.
+        CupoDemo::exigirEspacioBorrador($user, $manual->id, strlen($html)
+            + strlen((string) $request->encabezado_html)
+            + strlen((string) $request->pie_pagina_html));
+
         // Header/footer viven en 'manuals' (no en 'manual_versions') porque
         // son identidad del manual, no versionables. Setter directo para no
         // depender del $fillable del modelo Manual.
@@ -474,6 +480,12 @@ class ManualController extends Controller
                 'error' => 'Este manual es un PDF: se publica subiendo el archivo, no desde el editor.',
             ], 409);
         }
+
+        // Cupo de la demo. Cada version publicada queda guardada, y el HTML
+        // importado desde Word trae las imagenes embebidas: pesa.
+        CupoDemo::exigirEspacio($user, strlen($html)
+            + strlen((string) $request->encabezado_html)
+            + strlen((string) $request->pie_pagina_html));
 
         // Header/footer: se guardan a nivel manual (identidad, no versionable).
         // Se sanitizan con el mismo HTMLPurifier que contenido_html.
@@ -919,6 +931,9 @@ class ManualController extends Controller
 
         $archivo = $request->file('archivo');
         $hash    = hash_file('sha256', $archivo->getRealPath());
+
+        // Cupo de la demo, ANTES de subir al storage: si no entra, no se sube.
+        CupoDemo::exigirEspacio($user, (int) $archivo->getSize());
 
         // La ruta se deriva SIEMPRE del manual_id + hash. El nombre que mando el
         // cliente nunca toca el filesystem (podria traer ../ o caracteres raros):

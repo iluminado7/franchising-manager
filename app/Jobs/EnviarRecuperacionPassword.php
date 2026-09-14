@@ -85,6 +85,11 @@ class EnviarRecuperacionPassword implements ShouldQueue
         } elseif (!$user->esSuperAdmin()) {
             if ($user->empresa && !$user->empresa->activa) {
                 $bloqueo = 'empresa_suspendida';
+            } elseif ($user->empresa && $user->empresa->demoVencida()) {
+                // Mismo criterio que AuthController::login(): la cuenta existe
+                // pero no puede entrar. Un enlace que termina en "tu prueba
+                // finalizo" al intentar ingresar es peor que decirlo ahora.
+                $bloqueo = 'demo_vencida';
             } else {
                 $franquicia = optional($user->franchiseStaff)->franquicia;
                 if ($franquicia && !$franquicia->activa) {

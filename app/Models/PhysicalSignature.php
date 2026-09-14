@@ -21,6 +21,9 @@ class PhysicalSignature extends Model
         // El frontend descarga vía el endpoint autenticado /firmas-fisicas/{id}/descargar.
         'archivo_path',
         'archivo_hash',
+        // Lo calcula el servidor al subir (nunca viene del request). Lo usa el
+        // cupo de almacenamiento de las demo.
+        'archivo_tamano',
         'notas',
     ];
 
