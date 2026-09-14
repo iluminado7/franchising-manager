@@ -16,7 +16,11 @@ use Illuminate\Http\JsonResponse;
 class ManualNoteController extends Controller
 {
     // Relaciones que se cargan para mostrar cada nota (incluye autor + franquicia del autor).
-    private const RELACIONES = ['empresa', 'version', 'autor.franchiseStaff.franquicia'];
+    //
+    // La empresa, solo id y nombre: estas respuestas las recibe el socio
+    // comercial, y con la relacion entera le llegaban el plan y los precios de
+    // su empresa.
+    private const RELACIONES = ['empresa:id,nombre', 'version', 'autor.franchiseStaff.franquicia'];
 
     // GET /api/manuales/{manualId}/notas
     // Devuelve un hilo unificado que combina:

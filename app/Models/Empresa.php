@@ -67,6 +67,11 @@ class Empresa extends Model
     // La regla y lo que cuenta estan en App\Services\CupoDemo.
     public const DEMO_CUPO_BYTES = 500 * 1024 * 1024;
 
+    // Mails por dia hacia los usuarios de una empresa demo. Publicar un manual a
+    // sus 5 socios y 5 empleados son 10: una demo real no se acerca. Lo que
+    // corta es el abuso. Ver App\Services\LimiteMailsDemo.
+    public const DEMO_MAILS_POR_DIA = 100;
+
     // ── Relaciones ───────────────────────────────────────────────────
 
     public function plan(): BelongsTo

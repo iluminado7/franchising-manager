@@ -176,7 +176,9 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
 
         // Usuarios — CRUD (el franquiciado NO crea/elimina usuarios)
         Route::get('/usuarios',                     [UserController::class, 'index']);
-        Route::post('/usuarios',                    [UserController::class, 'store']);
+        // throttle:altas-usuario -> AppServiceProvider. Cada alta manda un mail.
+        Route::post('/usuarios',                    [UserController::class, 'store'])
+             ->middleware('throttle:altas-usuario');
         Route::put('/usuarios/{id}',                [UserController::class, 'update']);
         Route::post('/usuarios/{id}/toggle-activo', [UserController::class, 'toggleActivo']);
         Route::delete('/usuarios/{id}',             [UserController::class, 'destroy']);

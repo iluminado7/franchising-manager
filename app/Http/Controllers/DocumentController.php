@@ -19,6 +19,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class DocumentController extends Controller
 {
     // GET /api/documentos
+    // La empresa viaja solo con id y nombre para quien no es super_admin. Con
+    // la relacion entera, un socio comercial recibia el plan y los precios
+    // que su franquiciante negocio con la plataforma. Las pantallas no usan
+    // nada mas que el nombre.
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -27,7 +31,7 @@ class DocumentController extends Controller
         $includeDeleted = (bool) $request->query('include_deleted', false);
 
         if ($user->esFranquiciante()) {
-            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'categorias:id,name'])
+            $documentos = Document::with(['franquicia', 'empresa:id,nombre', 'versionActiva', 'subidoPor', 'categorias:id,name'])
                                   ->where('empresa_id', $user->empresa_id)
                                   ->noEliminados()
                                   ->orderBy('created_at', 'desc')
@@ -54,7 +58,7 @@ class DocumentController extends Controller
             $empresaId    = $user->empresa_id;
             $userId       = $user->id;
 
-            $documentos = Document::with(['franquicia', 'empresa', 'versionActiva', 'subidoPor', 'categorias:id,name'])
+            $documentos = Document::with(['franquicia', 'empresa:id,nombre', 'versionActiva', 'subidoPor', 'categorias:id,name'])
                                   ->where('empresa_id', $empresaId)
                                   ->where(function ($q) use ($franquiciaId) {
                                       $q->whereNull('franquicia_id')

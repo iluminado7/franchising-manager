@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Services\LimiteMailsDemo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -61,6 +64,34 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(10)->by('login_ip:' . $request->ip()),
                 Limit::perMinute(5)->by('login_email:' . $email),
             ];
+        });
+
+        // Altas de usuarios (POST /usuarios). Cada alta manda un mail con
+        // credenciales a la direccion que se cargue. Sin limite, un script
+        // puede crear y eliminar usuarios en bucle y mandar cientos de mails
+        // desde el dominio.
+        //
+        // Por USUARIO que da de alta, no por IP: quien lo hace ya esta
+        // autenticado. Generoso a proposito: un cliente real cargando su red
+        // de a una no llega; un script si.
+        RateLimiter::for('altas-usuario', function (Request $request) {
+            $quien = 'altas_usuario:' . ($request->user()?->id ?? $request->ip());
+            $respuesta = fn () => response()->json([
+                'message' => 'Demasiadas altas de usuarios seguidas. Esperá unos minutos y volvé a intentar.',
+            ], 429);
+
+            return [
+                Limit::perMinute(10)->by($quien . ':min')->response($respuesta),
+                Limit::perHour(100)->by($quien . ':hora')->response($respuesta),
+            ];
+        });
+
+        // Tope diario de mails hacia usuarios de empresas demo. Engancha a TODO
+        // mail que sale (encolado o no): devolver false cancela el envio. Ver
+        // App\Services\LimiteMailsDemo, incluido por que va registrado aca y
+        // no como clase en app/Listeners.
+        Event::listen(MessageSending::class, function (MessageSending $evento) {
+            return LimiteMailsDemo::permitir($evento) ? null : false;
         });
     }
 }

@@ -231,14 +231,18 @@ class UserController extends Controller
         // una persona con cuenta y sin saberlo.
         $mailEnviado = false;
         try {
-            Mail::to($user->email)->send(new AltaUsuarioMail(
+            $enviado = Mail::to($user->email)->send(new AltaUsuarioMail(
                 nombre:      $user->nombreCompleto(),
                 email:       $user->email,
                 password:    $data['password'],
                 urlLogin:    rtrim(config('app.url'), '/') . '/login.html',
                 rolEtiqueta: $this->etiquetaRol($user->rol),
             ));
-            $mailEnviado = true;
+            // send() devuelve null si el mail se cancelo antes de salir (por
+            // ejemplo, el tope diario de una demo): no lanza excepcion. Sin
+            // mirar el retorno, la pantalla diria "credenciales enviadas"
+            // cuando no salio nada.
+            $mailEnviado = $enviado !== null;
         } catch (\Throwable $e) {
             // Sin el mensaje del throwable: puede arrastrar el cuerpo del
             // correo, y ahi va la contrasena.

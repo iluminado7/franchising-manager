@@ -710,6 +710,35 @@ sin cupo, puede subir PDFs de 50 MB sin límite y el costo lo paga la plataforma
 - `physical_signatures.archivo_tamano` es nueva y nullable: las firmas
   anteriores cuentan 0.
 
+**Tope de mails** (`App\Services\LimiteMailsDemo`, `Empresa::DEMO_MAILS_POR_DIA`
+= 100 por día). El franquiciante de una demo puede cargar usuarios con cualquier
+email, cambiárselo a sus socios y disparar mails (alta, asignaciones iniciales,
+notificaciones) con títulos que escribe él. Sin tope, sirve para mandar spam
+desde el dominio, y si Resend lo marca, dejan de llegar también los mails de los
+clientes reales.
+
+- **Está en `MessageSending`, no en cada disparador.** Pasa por todo mail que
+  sale, encolado o no, y devolver `false` lo cancela. Cerrar los disparadores de
+  a uno deja abiertos los que se agreguen después.
+- **Registrado en `AppServiceProvider`, NO en `app/Listeners`:** Laravel
+  descubre esa carpeta solo, y un registro manual adicional contaría cada mail
+  dos veces.
+- Cuenta por la empresa demo del **destinatario**, en ventanas de 24 h, en el
+  cache (`CACHE_STORE=database`: lo comparten el worker y PHP-FPM). A super_admin
+  y empresas normales no los toca.
+- ⚠️ **Un mail cancelado no lanza excepción: `send()` devuelve `null`.**
+  `UserController::store()` informa `mail_enviado` según ese retorno. Cualquier
+  código nuevo que necesite saber si un mail salió tiene que mirarlo igual.
+
+**Throttle de altas** (`throttle:altas-usuario`, para cualquier empresa): 10 por
+minuto y 100 por hora por usuario que da de alta. Frena un script, no a un
+cliente que carga su red de a una.
+
+**Empresa expuesta a socios:** `/documentos` (ramas que no son super_admin) y las
+notas de manuales cargan `empresa:id,nombre`. Antes viajaba la fila entera: un
+socio veía el plan y los precios que su franquiciante negoció. El franquiciante
+sigue viendo los de su empresa en `perfil.php`, vía `/me`, que no se tocó.
+
 **Recuperar contraseña con la demo vencida:** mail explicando que la prueba
 terminó, **sin enlace**, igual que empresa o sucursal suspendida.
 
