@@ -399,6 +399,31 @@ aceptación. Los pills de estado cambiaron de significado, no solo de nombre:
 El nombre de la sección sigue siendo "Aceptaciones" por ahora. Los nombres de
 clase CSS (`estado-solo-digital`, `badge-aceptado`) no se tocaron: son internos.
 
+### Recordatorio de lectura a socios comerciales
+
+`manuales:recordar-lectura`, todos los días a las 9:00 de Argentina
+(`routes/console.php`; necesita el cron, §10). Un mail por socio con
+**"Aún te falta leer:"** y la lista. A propósito **no menciona cuánto tiempo
+pasó**: es un recordatorio, no un reproche.
+
+- **Qué entra:** manuales que el socio ve (`ManualAccessService`), cuya **versión
+  vigente** no leyó, disponibles hace **7 días o más**. "Disponible desde" es la
+  fecha más tardía entre la asignación a la empresa, el primer acceso del socio
+  (individual, o por categoría: lo último entre el manual entrando a la
+  categoría y el socio entrando a ella) y la publicación de la versión vigente.
+- **Una sola vez por versión** (tabla `recordatorios_lectura`). Si se publica
+  una versión nueva, esa se puede recordar, a los 7 días, aclarando la versión.
+  Los días siguientes solo se escribe si hay algo **nuevo**, y el mail lista solo
+  eso.
+- **Solo rol `franquiciado`.** No les llega a cuentas inactivas, empresas
+  suspendidas o dadas de baja, demos vencidas ni sucursales suspendidas.
+- **Se registra después de enviar:** si `send()` devuelve `null` (tope de mails
+  de una demo) o falla, no se registra y se reintenta al día siguiente. Por eso
+  usa `send()` y no la cola.
+- Pausa de 600 ms entre mails: Resend limita las requests por segundo, y la
+  primera corrida manda de golpe todo lo acumulado.
+- `--dry-run` muestra a quién le llegaría y qué, sin mandar ni registrar.
+
 ### Categorías
 
 Los contadores de `categorias.php` (`manuales_asignados_count`,

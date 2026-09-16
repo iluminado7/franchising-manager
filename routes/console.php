@@ -26,3 +26,12 @@ Schedule::command('demos:avisar-vencimiento')
     ->dailyAt('09:00')
     ->timezone('America/Argentina/Buenos_Aires')
     ->withoutOverlapping();
+
+// Recordatorio a los socios comerciales de los manuales que todavía no leyeron
+// (7 días o más disponibles, una sola vez por versión). Misma hora que el aviso
+// de las demos: las dos tareas corren una detrás de la otra en la misma pasada
+// de schedule:run.
+Schedule::command('manuales:recordar-lectura')
+    ->dailyAt('09:00')
+    ->timezone('America/Argentina/Buenos_Aires')
+    ->withoutOverlapping();
