@@ -1291,7 +1291,7 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
 - [ ] `FILESYSTEM_DISK=s3` + bucket **privado**
 - [ ] `CACHE_STORE=database` (el rate limiter necesita contador compartido)
 - [ ] Worker de colas corriendo — lo administra **supervisor**, no systemd:
-      `sudo supervisorctl status businesspartner-worker`
+      `sudo supervisorctl status businesspartner-worker:*`
 - [ ] `upload_max_filesize` y `post_max_size` ≥ 50M
 - [ ] `mkdir storage/app/mpdf-tmp`
 - [ ] `public/js/pdfjs/` desplegado (1,75 MB, no debe estar en `.gitignore`)
@@ -1312,6 +1312,7 @@ DB_DEPLOY_USERNAME=manuales_deploy DB_DEPLOY_PASSWORD=xxx \
       Verificar con `sudo -u www-data php artisan schedule:list`.
 - [ ] `php artisan config:cache`
 - [ ] `systemctl reload php8.3-fpm` — el opcache no se limpia solo
+- [ ] `sudo -u www-data php artisan queue:restart` — el worker no toma el código nuevo solo
 
 **Sin el worker de colas los mails no salen nunca, y no hay ningún error
 visible.** Es el fallo más silencioso de la lista.
@@ -1320,10 +1321,25 @@ visible.** Es el fallo más silencioso de la lista.
 
 Programa `businesspartner-worker`, configuración en `/etc/supervisor/conf.d/`.
 
+⚠️ **Es un GRUPO:** el proceso real se llama
+`businesspartner-worker:businesspartner-worker_00`. Pedirlo por el nombre corto
+(`supervisorctl status businesspartner-worker`) devuelve
+`ERROR (no such process)` aunque el worker esté corriendo, y parece que no
+existe. Al grupo se lo nombra con `:*`:
+
 ```bash
 sudo supervisorctl status
-sudo supervisorctl restart businesspartner-worker
+sudo supervisorctl status businesspartner-worker:*
+sudo supervisorctl restart businesspartner-worker:*
 ```
+
+**Después de un deploy, reiniciar el worker** con
+`sudo -u www-data php artisan queue:restart`: deja terminar el trabajo en curso
+y supervisor lo relanza con el código nuevo. Sin esto, el worker sigue con el
+código viejo en memoria: los mails encolados salen con la lógica anterior (en
+particular, sin el tope diario de las demos, que se registra al arrancar). Se
+verifica con el `uptime` de `supervisorctl status`, que tiene que ser de pocos
+segundos o minutos.
 
 Buscarlo con `systemctl status laravel-worker` **no lo encuentra**, y eso lleva a
 concluir que no está supervisado y a crear una unidad de systemd duplicada. Ya

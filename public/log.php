@@ -777,7 +777,18 @@ function cerrarDetalle() {
 }
 
 // ── EXPORTAR CSV ──────────────────────────────────────────────
+//
+// Pensado para Excel en español (Argentina), que es con lo que se abre:
+//
+//   - Separador ";" y no ",". Con configuración regional en español, Excel
+//     usa la coma como separador decimal y el punto y coma entre columnas: un
+//     CSV con comas se abría con toda la fila metida en la columna A.
+//   - Saltos de línea \r\n, los de Windows.
+//   - BOM (\uFEFF) para que Excel lea UTF-8 y no rompa las tildes. Por eso NO
+//     se usa la línea "sep=;" al principio: Excel la respeta, pero entonces
+//     ignora el BOM y las tildes salen mal.
 function exportarCSV() {
+  const SEP      = ';';
   const cabecera = ['Fecha', 'Usuario', 'Email', 'Rol', 'Accion', 'Entidad', 'IP'];
   const filas    = logsFiltrados.map(l => {
     const nombre = nombreUsuario(l.user, l.user_id);
@@ -789,10 +800,10 @@ function exportarCSV() {
       l.accion,
       l.entidad_tipo ? `${l.entidad_tipo}#${l.entidad_id}` : '',
       l.ip_address,
-    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    ].map(celdaCSV).join(SEP);
   });
 
-  const csv  = [cabecera.join(','), ...filas].join('\n');
+  const csv  = [cabecera.map(celdaCSV).join(SEP), ...filas].join('\r\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -800,6 +811,19 @@ function exportarCSV() {
   a.download = `log_actividad_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// Una celda del CSV: entre comillas, con las comillas internas duplicadas.
+//
+// INYECCIÓN DE FÓRMULAS: Excel interpreta como fórmula un valor que empieza con
+// = + - @ (o tabulación / retorno). El nombre de un usuario lo escribe un
+// franquiciante: alguien llamado =HYPERLINK("http://sitio-falso";"Ver") aparecía
+// como un link clickeable en el Excel del super_admin. Con un apóstrofo delante,
+// Excel lo muestra como texto. Es la mitigación que recomienda OWASP.
+function celdaCSV(valor) {
+  let s = String(valor ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────

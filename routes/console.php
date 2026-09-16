@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
 
 // ── TAREAS PROGRAMADAS ─────────────────────────────────────────────
 //
-// ⚠️ NADA DE ESTO CORRE SIN EL CRON. En el servidor tiene que existir, en el
+// NADA DE ESTO CORRE SIN EL CRON. En el servidor tiene que existir, en el
 // crontab de www-data (no de root: ver README §10):
 //
 //     * * * * * cd /var/www/franchising-manager && php artisan schedule:run >> /dev/null 2>&1
