@@ -27,11 +27,6 @@ Schedule::command('demos:avisar-vencimiento')
     ->timezone('America/Argentina/Buenos_Aires')
     ->withoutOverlapping();
 
-// Recordatorio a los socios comerciales de los manuales que todavía no leyeron
-// (7 días o más disponibles, una sola vez por versión). Misma hora que el aviso
-// de las demos: las dos tareas corren una detrás de la otra en la misma pasada
-// de schedule:run.
-Schedule::command('manuales:recordar-lectura')
-    ->dailyAt('09:00')
-    ->timezone('America/Argentina/Buenos_Aires')
-    ->withoutOverlapping();
+// El recordatorio de lectura a socios comerciales (manuales:recordar-lectura)
+// NO está programado a propósito: desde el 17/09/2026 se corre a mano, cuando
+// se decide mandarlo. Ver el docblock del comando y el README.

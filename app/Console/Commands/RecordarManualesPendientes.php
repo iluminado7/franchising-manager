@@ -13,8 +13,18 @@ use Illuminate\Support\Facades\Mail;
 
 /**
  * Recordatorio por mail a los socios comerciales (rol franquiciado) de los
- * manuales que todavía no leyeron. Corre todos los días a las 9:00 de
- * Argentina (routes/console.php).
+ * manuales que todavía no leyeron.
+ *
+ * ── SE CORRE A MANO ───────────────────────────────────────────────────────
+ *
+ * NO está programado (routes/console.php): desde el 17/09/2026 se decidió
+ * mandarlo solo cuando se pide. Desde el servidor:
+ *
+ *     sudo -u www-data php artisan manuales:recordar-lectura --dry-run   # ver a quién y qué
+ *     sudo -u www-data php artisan manuales:recordar-lectura             # mandarlo
+ *
+ * Para volver a automatizarlo alcanza con un Schedule::command() en
+ * routes/console.php: la lógica no depende de cada cuánto corra.
  *
  * ── QUÉ SE RECUERDA ───────────────────────────────────────────────────────
  *
@@ -24,8 +34,8 @@ use Illuminate\Support\Facades\Mail;
  *   - hace 7 días o más que lo tiene disponible (ver visibleDesde());
  *   - esa versión todavía no se le recordó (tabla recordatorios_lectura).
  *
- * UNA SOLA VEZ POR VERSIÓN: la tarea corre todos los días, pero cada versión
- * de cada manual se le recuerda a cada socio una sola vez. Si se publica una
+ * UNA SOLA VEZ POR VERSIÓN: se corra cuando se corra, cada versión de cada
+ * manual se le recuerda a cada socio una sola vez. Si se publica una
  * versión nueva, esa sí se puede recordar, a los 7 días de publicada.
  *
  * UN MAIL POR SOCIO con todos sus pendientes de ese día, no uno por manual.
@@ -40,17 +50,14 @@ use Illuminate\Support\Facades\Mail;
  *
  * Se registra solo si send() devolvió un mensaje. Devuelve null si el envío se
  * canceló (por ejemplo, el tope diario de mails de una demo, LimiteMailsDemo),
- * y lanza excepción si falló. En los dos casos no se registra y se reintenta
- * al día siguiente. Un recordatorio de más es mejor que uno perdido.
+ * y lanza excepción si falló. En los dos casos no se registra, y en la próxima
+ * corrida vuelve a salir. Un recordatorio de más es mejor que uno perdido.
  *
  * ── RESEND ────────────────────────────────────────────────────────────────
  *
  * Los mails salen de a uno, con una pausa corta entre cada uno: Resend limita
  * las requests por segundo, y la primera corrida manda de golpe a todos los
  * socios con pendientes acumulados.
- *
- * Sin el cron de schedule:run esto no corre nunca, y no hay error visible
- * (README §10).
  */
 class RecordarManualesPendientes extends Command
 {
@@ -121,7 +128,7 @@ class RecordarManualesPendientes extends Command
 
             if ($mensaje === null) {
                 // Cancelado antes de salir (tope de mails de una demo).
-                $this->warn("user {$socio->id}: envío cancelado, se reintenta mañana.");
+                $this->warn("user {$socio->id}: envío cancelado, sale en la próxima corrida.");
                 continue;
             }
 

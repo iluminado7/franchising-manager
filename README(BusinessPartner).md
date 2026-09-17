@@ -401,8 +401,10 @@ clase CSS (`estado-solo-digital`, `badge-aceptado`) no se tocaron: son internos.
 
 ### Recordatorio de lectura a socios comerciales
 
-`manuales:recordar-lectura`, todos los días a las 9:00 de Argentina
-(`routes/console.php`; necesita el cron, §10). Un mail por socio con
+`manuales:recordar-lectura`, **se corre a mano** (desde el 17/09/2026 no está
+programado; la primera corrida automática fue ese día a las 9:00). Desde el
+servidor: `sudo -u www-data php artisan manuales:recordar-lectura --dry-run` para
+ver a quién le llegaría, y sin `--dry-run` para mandarlo. Un mail por socio con
 **"Aún te falta leer:"** y la lista. A propósito **no menciona cuánto tiempo
 pasó**: es un recordatorio, no un reproche.
 
@@ -413,8 +415,8 @@ pasó**: es un recordatorio, no un reproche.
   categoría y el socio entrando a ella) y la publicación de la versión vigente.
 - **Una sola vez por versión** (tabla `recordatorios_lectura`). Si se publica
   una versión nueva, esa se puede recordar, a los 7 días, aclarando la versión.
-  Los días siguientes solo se escribe si hay algo **nuevo**, y el mail lista solo
-  eso.
+  Cada corrida solo le escribe a un socio si hay algo **nuevo** (no recordado),
+  y el mail lista solo eso.
 - **Solo rol `franquiciado`.** No les llega a cuentas inactivas, empresas
   suspendidas o dadas de baja, demos vencidas ni sucursales suspendidas.
 - **Se registra después de enviar:** si `send()` devuelve `null` (tope de mails
