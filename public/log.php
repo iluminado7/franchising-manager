@@ -58,10 +58,12 @@ include 'layout/head.php';
             <option value="logout">Logout</option>
             <option value="password_actualizada">Contraseña actualizada</option>
             <option value="email_actualizado">Email actualizado</option>
+            <option value="password_reset_solicitado">Recuperación de contraseña solicitada</option>
+            <option value="password_reset_completado">Contraseña restablecida</option>
           </optgroup>
 
           <optgroup label="Seguridad">
-            <option value="login_fallido_password_incorrecta">Login fallido — contraseña incorrecta</option>
+            <option value="login_fallido_password_incorrecta">Login fallido — contraseña</option>
             <option value="login_fallido_email_inexistente">Login fallido — email inexistente</option>
             <option value="login_fallido_cuenta_suspendida">Login fallido — cuenta suspendida</option>
             <option value="login_fallido_empresa_suspendida">Login fallido — empresa suspendida</option>
@@ -69,7 +71,14 @@ include 'layout/head.php';
             <option value="login_fallido_demo_vencida">Login fallido — prueba vencida</option>
             <option value="password_actualizada_fallo">Cambio de contraseña fallido</option>
             <option value="email_actualizado_fallo">Cambio de email fallido</option>
+            <option value="password_reset_bloqueado">Recuperación bloqueada</option>
+            <option value="password_reseteada_admin">Contraseña reseteada por un admin</option>
+            <option value="acceso_anomalo_pdf">Acceso anómalo a un PDF</option>
+            <option value="manual_pdf_acceso_directo">Acceso directo al PDF</option>
             <option value="usuario_desactivado">Usuario desactivado</option>
+            <option value="usuario_purgado">Datos personales purgados</option>
+            <option value="usuario_borrado_definitivamente">Usuario borrado definitivamente</option>
+            <option value="empresa_borrada_definitivamente">Empresa borrada definitivamente</option>
             <option value="config_modificada">Config modificada</option>
           </optgroup>
 
@@ -78,25 +87,66 @@ include 'layout/head.php';
             <option value="manual_editado">Manual editado</option>
             <option value="manual_publicado">Manual publicado</option>
             <option value="version_publicada_franquiciante">Versión publicada (franquiciante)</option>
+            <option value="version_historica_consultada">Versión histórica consultada</option>
             <option value="manual_archivado">Manual archivado</option>
+            <option value="manual_restaurado">Manual restaurado</option>
+            <option value="manual_eliminado">Manual eliminado</option>
             <option value="manual_abierto">Manual abierto</option>
             <option value="manual_pdf_abierto">Manual PDF abierto</option>
-            <option value="manual_aceptado">Manual aceptado</option>
+            <option value="manual_aceptado">Manual leído</option>
             <option value="manual_asignado">Manual asignado</option>
             <option value="manual_desasignado">Manual desasignado</option>
             <option value="manual_asignado_categoria">Manual asignado por categoría</option>
+            <option value="manual_desasignado_categoria">Manual desasignado de categoría</option>
+            <option value="manual_asignado_empresa">Manual asignado a empresa</option>
+            <option value="manual_imagen_subida">Imagen de manual subida</option>
+            <option value="manuales_reordenados">Manuales reordenados</option>
+            <option value="nota_manual_enviada">Nota enviada</option>
+            <option value="nota_manual_estado">Estado de nota cambiado</option>
+          </optgroup>
+
+          <optgroup label="Documentos y archivos">
+            <option value="documento_subido">Documento subido</option>
+            <option value="documento_editado">Documento editado</option>
+            <option value="documento_eliminado">Documento eliminado</option>
+            <option value="documento_restaurado">Documento restaurado</option>
+            <option value="nueva_version_documento">Nueva versión de documento</option>
+            <option value="version_documento_eliminada">Versión de documento eliminada</option>
+            <option value="version_documento_restaurada">Versión de documento restaurada</option>
+            <option value="documento_asignado_usuario">Documento asignado a usuario</option>
+            <option value="documento_desasignado_usuario">Documento desasignado de usuario</option>
+            <option value="documento_asignado_categoria">Documento asignado por categoría</option>
+            <option value="documento_desasignado_categoria">Documento desasignado de categoría</option>
+            <option value="firma_fisica_subida">Firma física subida</option>
+            <option value="firma_fisica_descargada">Firma física descargada</option>
+            <option value="archivo_subido">Archivo subido</option>
           </optgroup>
 
           <optgroup label="Usuarios y estructura">
             <option value="usuario_creado">Usuario creado</option>
-            <option value="franquicia_creada">Franquicia creada</option>
+            <option value="usuario_activado">Usuario activado</option>
+            <option value="usuario_eliminado">Usuario eliminado</option>
+            <option value="usuario_restaurado">Usuario restaurado</option>
+            <option value="cuit_actualizado">CUIT/CUIL actualizado</option>
             <option value="categoria_creada">Categoría creada</option>
+            <option value="categoria_editada">Categoría editada</option>
+            <option value="categoria_eliminada">Categoría eliminada</option>
+            <option value="categoria_asignada_usuario">Categoría asignada a usuario</option>
+            <option value="categoria_quitada_usuario">Categoría quitada a usuario</option>
+            <option value="franquicia_creada">Sucursal creada</option>
+            <option value="franquicia_eliminada">Sucursal eliminada</option>
+            <option value="franquicia_restaurada">Sucursal restaurada</option>
+            <option value="franquicia_suspendida_tokens_revocados">Sucursal suspendida</option>
           </optgroup>
 
-          <optgroup label="Archivos">
-            <option value="documento_subido">Documento subido</option>
-            <option value="firma_fisica_subida">Firma física subida</option>
-            <option value="archivo_subido">Archivo subido</option>
+          <optgroup label="Empresas y facturación">
+            <option value="empresa_creada">Empresa creada</option>
+            <option value="empresa_demo_creada">Empresa demo creada</option>
+            <option value="empresa_suspendida">Empresa suspendida</option>
+            <option value="empresa_eliminada">Empresa dada de baja</option>
+            <option value="empresa_restaurada">Empresa restaurada</option>
+            <option value="plan_modificado">Plan modificado</option>
+            <option value="invoice_generada">Factura generada</option>
           </optgroup>
         </select>
 
@@ -835,47 +885,95 @@ function celdaCSV(valor) {
 // Para ver que esta escribiendo la base hoy:
 //   SELECT accion, COUNT(*) FROM activity_logs GROUP BY accion ORDER BY 2 DESC;
 const ACCION_MAP = {
-  // Autenticacion
-  login:               ['accion-auth',    'Login'],
-  logout:              ['accion-auth',    'Logout'],
-  password_actualizada:['accion-auth',    'Contraseña actualizada'],
-  email_actualizado:   ['accion-auth',    'Email actualizado'],
+  // Autenticación
+  login:                                  ['accion-auth', 'Login'],
+  logout:                                 ['accion-auth', 'Logout'],
+  password_actualizada:                   ['accion-auth', 'Contraseña actualizada'],
+  email_actualizado:                      ['accion-auth', 'Email actualizado'],
+  password_reset_solicitado:              ['accion-auth', 'Recuperación de contraseña solicitada'],
+  password_reset_completado:              ['accion-auth', 'Contraseña restablecida'],
 
-  // Seguridad — en rojo a proposito: son las que se miran cuando algo pasa
-  login_fallido_password_incorrecta:   ['accion-sistema', 'Login fallido — contraseña'],
-  login_fallido_email_inexistente:     ['accion-sistema', 'Login fallido — email inexistente'],
-  login_fallido_cuenta_suspendida:     ['accion-sistema', 'Login fallido — cuenta suspendida'],
-  login_fallido_empresa_suspendida:    ['accion-sistema', 'Login fallido — empresa suspendida'],
-  login_fallido_franquicia_suspendida: ['accion-sistema', 'Login fallido — sucursal suspendida'],
-  login_fallido_demo_vencida:          ['accion-sistema', 'Login fallido — prueba vencida'],
-  empresa_borrada_definitivamente:     ['accion-sistema', 'Empresa borrada definitivamente'],
-  password_actualizada_fallo:          ['accion-sistema', 'Cambio de contraseña fallido'],
-  email_actualizado_fallo:             ['accion-sistema', 'Cambio de email fallido'],
-  usuario_desactivado: ['accion-sistema', 'Usuario desactivado'],
-  config_modificada:   ['accion-sistema', 'Config modificada'],
+  // Seguridad
+  login_fallido_password_incorrecta:      ['accion-sistema', 'Login fallido — contraseña'],
+  login_fallido_email_inexistente:        ['accion-sistema', 'Login fallido — email inexistente'],
+  login_fallido_cuenta_suspendida:        ['accion-sistema', 'Login fallido — cuenta suspendida'],
+  login_fallido_empresa_suspendida:       ['accion-sistema', 'Login fallido — empresa suspendida'],
+  login_fallido_franquicia_suspendida:    ['accion-sistema', 'Login fallido — sucursal suspendida'],
+  login_fallido_demo_vencida:             ['accion-sistema', 'Login fallido — prueba vencida'],
+  password_actualizada_fallo:             ['accion-sistema', 'Cambio de contraseña fallido'],
+  email_actualizado_fallo:                ['accion-sistema', 'Cambio de email fallido'],
+  password_reset_bloqueado:               ['accion-sistema', 'Recuperación bloqueada'],
+  password_reseteada_admin:               ['accion-sistema', 'Contraseña reseteada por un admin'],
+  acceso_anomalo_pdf:                     ['accion-sistema', 'Acceso anómalo a un PDF'],
+  manual_pdf_acceso_directo:              ['accion-sistema', 'Acceso directo al PDF'],
+  usuario_desactivado:                    ['accion-sistema', 'Usuario desactivado'],
+  usuario_purgado:                        ['accion-sistema', 'Datos personales purgados'],
+  usuario_borrado_definitivamente:        ['accion-sistema', 'Usuario borrado definitivamente'],
+  empresa_borrada_definitivamente:        ['accion-sistema', 'Empresa borrada definitivamente'],
+  config_modificada:                      ['accion-sistema', 'Config modificada'],
 
   // Manuales
-  manual_creado:       ['accion-manual',  'Manual creado'],
-  manual_editado:      ['accion-manual',  'Manual editado'],
-  manual_publicado:    ['accion-manual',  'Manual publicado'],
-  version_publicada_franquiciante: ['accion-manual', 'Versión publicada (franquiciante)'],
-  manual_archivado:    ['accion-manual',  'Manual archivado'],
-  manual_abierto:      ['accion-manual',  'Manual abierto'],
-  manual_pdf_abierto:  ['accion-manual',  'Manual PDF abierto'],
-  manual_aceptado:     ['accion-manual',  'Manual aceptado'],
-  manual_asignado:     ['accion-manual',  'Manual asignado'],
-  manual_desasignado:  ['accion-manual',  'Manual desasignado'],
-  manual_asignado_categoria: ['accion-manual', 'Manual asignado por categoría'],
+  manual_creado:                          ['accion-manual', 'Manual creado'],
+  manual_editado:                         ['accion-manual', 'Manual editado'],
+  manual_publicado:                       ['accion-manual', 'Manual publicado'],
+  version_publicada_franquiciante:        ['accion-manual', 'Versión publicada (franquiciante)'],
+  version_historica_consultada:           ['accion-manual', 'Versión histórica consultada'],
+  manual_archivado:                       ['accion-manual', 'Manual archivado'],
+  manual_restaurado:                      ['accion-manual', 'Manual restaurado'],
+  manual_eliminado:                       ['accion-manual', 'Manual eliminado'],
+  manual_abierto:                         ['accion-manual', 'Manual abierto'],
+  manual_pdf_abierto:                     ['accion-manual', 'Manual PDF abierto'],
+  manual_aceptado:                        ['accion-manual', 'Manual leído'],
+  manual_asignado:                        ['accion-manual', 'Manual asignado'],
+  manual_desasignado:                     ['accion-manual', 'Manual desasignado'],
+  manual_asignado_categoria:              ['accion-manual', 'Manual asignado por categoría'],
+  manual_desasignado_categoria:           ['accion-manual', 'Manual desasignado de categoría'],
+  manual_asignado_empresa:                ['accion-manual', 'Manual asignado a empresa'],
+  manual_imagen_subida:                   ['accion-manual', 'Imagen de manual subida'],
+  manuales_reordenados:                   ['accion-manual', 'Manuales reordenados'],
+  nota_manual_enviada:                    ['accion-manual', 'Nota enviada'],
+  nota_manual_estado:                     ['accion-manual', 'Estado de nota cambiado'],
+
+  // Documentos y archivos
+  documento_subido:                       ['accion-archivo', 'Documento subido'],
+  documento_editado:                      ['accion-archivo', 'Documento editado'],
+  documento_eliminado:                    ['accion-archivo', 'Documento eliminado'],
+  documento_restaurado:                   ['accion-archivo', 'Documento restaurado'],
+  nueva_version_documento:                ['accion-archivo', 'Nueva versión de documento'],
+  version_documento_eliminada:            ['accion-archivo', 'Versión de documento eliminada'],
+  version_documento_restaurada:           ['accion-archivo', 'Versión de documento restaurada'],
+  documento_asignado_usuario:             ['accion-archivo', 'Documento asignado a usuario'],
+  documento_desasignado_usuario:          ['accion-archivo', 'Documento desasignado de usuario'],
+  documento_asignado_categoria:           ['accion-archivo', 'Documento asignado por categoría'],
+  documento_desasignado_categoria:        ['accion-archivo', 'Documento desasignado de categoría'],
+  firma_fisica_subida:                    ['accion-archivo', 'Firma física subida'],
+  firma_fisica_descargada:                ['accion-archivo', 'Firma física descargada'],
+  archivo_subido:                         ['accion-archivo', 'Archivo subido'],
 
   // Usuarios y estructura
-  usuario_creado:      ['accion-usuario', 'Usuario creado'],
-  franquicia_creada:   ['accion-usuario', 'Franquicia creada'],
-  categoria_creada:    ['accion-usuario', 'Categoría creada'],
+  usuario_creado:                         ['accion-usuario', 'Usuario creado'],
+  usuario_activado:                       ['accion-usuario', 'Usuario activado'],
+  usuario_eliminado:                      ['accion-usuario', 'Usuario eliminado'],
+  usuario_restaurado:                     ['accion-usuario', 'Usuario restaurado'],
+  cuit_actualizado:                       ['accion-usuario', 'CUIT/CUIL actualizado'],
+  categoria_creada:                       ['accion-usuario', 'Categoría creada'],
+  categoria_editada:                      ['accion-usuario', 'Categoría editada'],
+  categoria_eliminada:                    ['accion-usuario', 'Categoría eliminada'],
+  categoria_asignada_usuario:             ['accion-usuario', 'Categoría asignada a usuario'],
+  categoria_quitada_usuario:              ['accion-usuario', 'Categoría quitada a usuario'],
+  franquicia_creada:                      ['accion-usuario', 'Sucursal creada'],
+  franquicia_eliminada:                   ['accion-usuario', 'Sucursal eliminada'],
+  franquicia_restaurada:                  ['accion-usuario', 'Sucursal restaurada'],
+  franquicia_suspendida_tokens_revocados: ['accion-usuario', 'Sucursal suspendida'],
 
-  // Archivos
-  documento_subido:    ['accion-archivo', 'Documento subido'],
-  firma_fisica_subida: ['accion-archivo', 'Firma física subida'],
-  archivo_subido:      ['accion-archivo', 'Archivo subido'],
+  // Empresas y facturación
+  empresa_creada:                         ['accion-usuario', 'Empresa creada'],
+  empresa_demo_creada:                    ['accion-usuario', 'Empresa demo creada'],
+  empresa_suspendida:                     ['accion-usuario', 'Empresa suspendida'],
+  empresa_eliminada:                      ['accion-usuario', 'Empresa dada de baja'],
+  empresa_restaurada:                     ['accion-usuario', 'Empresa restaurada'],
+  plan_modificado:                        ['accion-usuario', 'Plan modificado'],
+  invoice_generada:                       ['accion-usuario', 'Factura generada'],
 };
 
 function accionPill(accion) {
