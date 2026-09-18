@@ -27,6 +27,13 @@ Schedule::command('demos:avisar-vencimiento')
     ->timezone('America/Argentina/Buenos_Aires')
     ->withoutOverlapping();
 
-// El recordatorio de lectura a socios comerciales (manuales:recordar-lectura)
-// NO está programado a propósito: desde el 17/09/2026 se corre a mano, cuando
-// se decide mandarlo. Ver el docblock del comando y el README.
+// Recordatorio a los socios comerciales de los manuales que todavía no leyeron:
+// los JUEVES a las 9:00 de Argentina, insistiendo cada semana hasta que lean
+// (decisión del 18/09/2026).
+//
+// weeklyOn(4, ...) es jueves: 0 = domingo. Si se cambia el día, cambiar también
+// el comentario del comando, que es lo que lee el que viene después.
+Schedule::command('manuales:recordar-lectura')
+    ->weeklyOn(4, '09:00')
+    ->timezone('America/Argentina/Buenos_Aires')
+    ->withoutOverlapping();

@@ -15,16 +15,18 @@ use Illuminate\Support\Facades\Mail;
  * Recordatorio por mail a los socios comerciales (rol franquiciado) de los
  * manuales que todavía no leyeron.
  *
- * ── SE CORRE A MANO ───────────────────────────────────────────────────────
+ * ── CUÁNDO CORRE ──────────────────────────────────────────────────────────
  *
- * NO está programado (routes/console.php): desde el 17/09/2026 se decidió
- * mandarlo solo cuando se pide. Desde el servidor:
+ * Programado los JUEVES a las 9:00 de Argentina (routes/console.php). Sin el
+ * cron de schedule:run no corre nunca y no hay error visible (README §10).
+ *
+ * También se puede correr a mano en cualquier momento:
  *
  *     sudo -u www-data php artisan manuales:recordar-lectura --dry-run   # ver a quién y qué
  *     sudo -u www-data php artisan manuales:recordar-lectura             # mandarlo
  *
- * Para volver a automatizarlo alcanza con un Schedule::command() en
- * routes/console.php: la lógica no depende de cada cuánto corra.
+ * Correrlo de más no molesta a nadie: una misma versión no se recuerda dos
+ * veces en menos de DIAS_ENTRE_INSISTENCIAS días (ver abajo).
  *
  * ── QUÉ SE RECUERDA ───────────────────────────────────────────────────────
  *
@@ -32,11 +34,18 @@ use Illuminate\Support\Facades\Mail;
  *   - el socio lo ve (ManualAccessService, la fuente de verdad de quién ve qué);
  *   - no leyó su versión VIGENTE (no hay fila en acceptances para esa versión);
  *   - hace 7 días o más que lo tiene disponible (ver visibleDesde());
- *   - esa versión todavía no se le recordó (tabla recordatorios_lectura).
+ *   - no se le recordó esa versión en los últimos DIAS_ENTRE_INSISTENCIAS días.
  *
- * UNA SOLA VEZ POR VERSIÓN: se corra cuando se corra, cada versión de cada
- * manual se le recuerda a cada socio una sola vez. Si se publica una
- * versión nueva, esa sí se puede recordar, a los 7 días de publicada.
+ * SE INSISTE HASTA QUE LEA (decisión del 18/09/2026). Cada jueves, a cada socio
+ * le llega la lista de TODO lo que le sigue faltando, incluido lo que ya se le
+ * recordó antes. Lo que leyó durante la semana desaparece solo de la lista,
+ * porque deja de estar pendiente. La insistencia no tiene tope: se corta
+ * cuando el socio lee.
+ *
+ * recordatorios_lectura pasó a ser el historial: enviado_at es el ÚLTIMO
+ * recordatorio de esa versión y veces cuántos se mandaron. Ya no sirve para
+ * excluir; lo único que excluye es DIAS_ENTRE_INSISTENCIAS, que evita que dos
+ * corridas seguidas (por ejemplo, una a mano el mismo día) manden dos mails.
  *
  * UN MAIL POR SOCIO con todos sus pendientes de ese día, no uno por manual.
  *
@@ -66,7 +75,15 @@ class RecordarManualesPendientes extends Command
 
     protected $description = 'Recuerda por mail a los socios comerciales los manuales que todavía no leyeron.';
 
+    // Días que un manual tiene que estar disponible sin leer antes del primer
+    // recordatorio.
     private const DIAS = 7;
+
+    // Mínimo entre dos recordatorios de la MISMA versión al MISMO socio. Seis y
+    // no siete: con la corrida semanal los envíos quedan separados por 7 días
+    // exactos, y cualquier diferencia de minutos (el cron, una corrida a mano
+    // un rato antes) no tiene que saltear la semana.
+    private const DIAS_ENTRE_INSISTENCIAS = 6;
 
     // Resend permite pocas requests por segundo: 600 ms entre mails.
     private const PAUSA_ENTRE_MAILS_US = 600000;
@@ -132,12 +149,26 @@ class RecordarManualesPendientes extends Command
                 continue;
             }
 
+            // Una fila por socio y versión: se actualiza la fecha del último
+            // recordatorio y se suma uno al contador. Así queda registrado
+            // cuántas veces hizo falta insistir antes de que leyera.
             $ahora = now();
-            DB::table('recordatorios_lectura')->insertOrIgnore(array_map(fn ($p) => [
-                'user_id'           => $socio->id,
-                'manual_version_id' => $p['version_id'],
-                'enviado_at'        => $ahora,
-            ], $pendientes));
+            foreach ($pendientes as $p) {
+                $fila = DB::table('recordatorios_lectura')
+                          ->where('user_id', $socio->id)
+                          ->where('manual_version_id', $p['version_id']);
+
+                if ($fila->exists()) {
+                    $fila->update(['enviado_at' => $ahora, 'veces' => DB::raw('veces + 1')]);
+                } else {
+                    DB::table('recordatorios_lectura')->insert([
+                        'user_id'           => $socio->id,
+                        'manual_version_id' => $p['version_id'],
+                        'enviado_at'        => $ahora,
+                        'veces'             => 1,
+                    ]);
+                }
+            }
 
             $enviados++;
             $this->info("user {$socio->id}: recordatorio con " . count($pendientes) . ' manual(es).');
@@ -171,10 +202,14 @@ class RecordarManualesPendientes extends Command
      */
     private function pendientes(User $socio, Carbon $limite): array
     {
+        // Versiones que YA se le recordaron hace poco: no se insiste dos veces
+        // en la misma semana. Lo recordado hace más tiempo vuelve a entrar.
+        //
         // intval: in_array estricto de abajo no puede depender de si el driver
         // devuelve los ids como int o como string.
-        $yaRecordadas = array_map('intval', DB::table('recordatorios_lectura')
+        $recordadasReciente = array_map('intval', DB::table('recordatorios_lectura')
                           ->where('user_id', $socio->id)
+                          ->where('enviado_at', '>', now()->subDays(self::DIAS_ENTRE_INSISTENCIAS))
                           ->pluck('manual_version_id')
                           ->all());
 
@@ -187,7 +222,7 @@ class RecordarManualesPendientes extends Command
             if (!$version || $manual->mi_aceptacion) {
                 continue;
             }
-            if (in_array((int) $version->id, $yaRecordadas, true)) {
+            if (in_array((int) $version->id, $recordadasReciente, true)) {
                 continue;
             }
 

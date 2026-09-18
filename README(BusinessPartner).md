@@ -401,10 +401,13 @@ clase CSS (`estado-solo-digital`, `badge-aceptado`) no se tocaron: son internos.
 
 ### Recordatorio de lectura a socios comerciales
 
-`manuales:recordar-lectura`, **se corre a mano** (desde el 17/09/2026 no está
-programado; la primera corrida automática fue ese día a las 9:00). Desde el
-servidor: `sudo -u www-data php artisan manuales:recordar-lectura --dry-run` para
-ver a quién le llegaría, y sin `--dry-run` para mandarlo. Un mail por socio con
+`manuales:recordar-lectura`, **los jueves a las 9:00 de Argentina**
+(`routes/console.php`; necesita el cron, §10). **Insiste cada semana hasta que
+el socio lea** (decisión del 18/09/2026): cada jueves le llega la lista de todo
+lo que le sigue faltando, y lo que leyó durante la semana desaparece solo. Sin
+tope de insistencias. También se puede correr a mano:
+`sudo -u www-data php artisan manuales:recordar-lectura --dry-run` para ver a
+quién le llegaría, y sin `--dry-run` para mandarlo. Un mail por socio con
 **"Aún te falta leer:"** y la lista. A propósito **no menciona cuánto tiempo
 pasó**: es un recordatorio, no un reproche.
 
@@ -413,10 +416,12 @@ pasó**: es un recordatorio, no un reproche.
   fecha más tardía entre la asignación a la empresa, el primer acceso del socio
   (individual, o por categoría: lo último entre el manual entrando a la
   categoría y el socio entrando a ella) y la publicación de la versión vigente.
-- **Una sola vez por versión** (tabla `recordatorios_lectura`). Si se publica
-  una versión nueva, esa se puede recordar, a los 7 días, aclarando la versión.
-  Cada corrida solo le escribe a un socio si hay algo **nuevo** (no recordado),
-  y el mail lista solo eso.
+- **Insiste hasta que lea.** `recordatorios_lectura` es el historial:
+  `enviado_at` es el último recordatorio de esa versión y `veces` cuántos se
+  mandaron. No sirve para excluir: lo único que excluye es no repetir la misma
+  versión dentro de los **6 días** (`DIAS_ENTRE_INSISTENCIAS`), para que una
+  corrida a mano el mismo día no mande dos mails. Si se publica una versión
+  nueva, se recuerda a los 7 días, aclarando la versión.
 - **Solo rol `franquiciado`.** No les llega a cuentas inactivas, empresas
   suspendidas o dadas de baja, demos vencidas ni sucursales suspendidas.
 - **Se registra después de enviar:** si `send()` devuelve `null` (tope de mails
