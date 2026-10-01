@@ -36,6 +36,22 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
         $middleware->prepend(\App\Http\Middleware\CookieToBearer::class);
+
+        // Un pedido sin sesion se responde con 401, nunca con una redireccion.
+        //
+        // Por defecto Laravel manda al invitado a route('login'), y esta app NO
+        // tiene ninguna ruta con ese nombre: el login es login.html, un archivo
+        // suelto que sirve nginx. Con un cliente que no avisa que espera JSON
+        // (curl, un escaner, un monitor de uptime), buscar esa ruta lanzaba
+        // RouteNotFoundException. El render de abajo ya la convertia en 401, asi
+        // que la respuesta era correcta, pero la excepcion quedaba registrada en
+        // error_logs como si fuera un bug nuestro y ensuciaba la pantalla de
+        // errores del super_admin.
+        //
+        // Devolviendo null no se intenta ninguna redireccion: sale
+        // AuthenticationException, que ya responde 401 y esta excluida del
+        // registro de errores por ser comportamiento normal.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
@@ -53,6 +69,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json(['error' => $msg], 403);
         });
         $exceptions->render(function (\Symfony\Component\Routing\Exception\RouteNotFoundException $e, Request $request) {
+            // Red de seguridad: desde que redirectGuestsTo() devuelve null
+            // (ver withMiddleware), esto no deberia dispararse. Se deja por si
+            // otro camino intenta redirigir al login que no existe.
             if (str_contains($e->getMessage(), 'Route [login] not defined')) {
                 return response()->json(['message' => 'No autenticado.'], 401);
             }

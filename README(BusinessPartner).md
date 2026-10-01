@@ -1498,12 +1498,27 @@ memoria sigue con la config vieja y el sitio sigue en pie— pero el error del
 reload es mucho menos claro que el del `-t`, y te manda a buscar al lugar
 equivocado. El `-t` te dice archivo y línea.
 
-**Un pedido sin autenticar a `/api/*` devolvía 500, no 401** → Laravel intenta
-redirigir a la ruta llamada `login`, que en un backend headless no existe, y eso
-revienta como `RouteNotFoundException`. Resuelto con un `render()` en
-`bootstrap/app.php` que lo convierte en 401. **Este bug llevaba tiempo invisible
-y lo encontró la tabla `error_logs` antes de tener pantalla**: sin ella, cada
-sesión vencida generaba un 500 que nadie veía.
+**Un pedido sin autenticar a `/api/*` devolvía 500, no 401** → Laravel manda al
+invitado a la ruta llamada `login`, que en un backend headless no existe, y eso
+revienta como `RouteNotFoundException`. **Este bug llevaba tiempo invisible y lo
+encontró la tabla `error_logs` antes de tener pantalla**: sin ella, cada sesión
+vencida generaba un 500 que nadie veía.
+
+Se resolvió en dos capas, y las dos siguen:
+
+- `$middleware->redirectGuestsTo(fn () => null)` (01/10/2026): sin redirección no
+  hay excepción. Sale `AuthenticationException`, que responde 401 y está
+  excluida del registro de errores.
+- El `render()` de `RouteNotFoundException` que ya convertía ese caso en 401
+  queda como red de seguridad, por si otro camino intenta redirigir al login.
+
+⚠️ **Solo pasa con clientes que NO avisan que esperan JSON** (`curl`, escáneres,
+monitores de uptime): el navegador manda `Accept: application/json` y Laravel ni
+intenta redirigir. Por eso la primera capa no se nota navegando, y por eso las
+dos ocurrencias registradas en producción resultaron ser **las propias
+verificaciones de despliegue con `curl -sI .../api/me`**. Si aparece de nuevo,
+mirar el User-Agent y la IP antes de suponer un ataque: `error_logs` guarda las
+dos.
 
 **Una columna nullable en la base no alcanza si la firma del método declara el
 tipo estricto** → `activity_logs.user_id` pasó a nullable, pero
