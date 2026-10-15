@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use App\Services\CupoDemo;
+use App\Services\OnlyOffice;
 
 class ManualController extends Controller
 {
@@ -131,7 +132,14 @@ class ManualController extends Controller
         // Manual PDF: enlace opaco y temporal para que ESTE usuario lea el
         // archivo. lectura.php lo usa como src del visor, asi la URL del visor no
         // lleva ningun ID y ademas caduca.
-        if ($manual->tipo === 'pdf') {
+        //
+        // La condicion NO es solo tipo === 'pdf'. Un manual editado en Word es
+        // de tipo 'editable', pero lo que se publica de el es un PDF: su
+        // version activa tiene archivo_path. Sin esta segunda rama, el socio
+        // abria el visor de PDF (lectura.php ya decide por archivo_path) pero
+        // sin token, y caia en la ruta por id — que funciona, pero expone el
+        // id del manual en la URL y no caduca.
+        if ($manual->tipo === 'pdf' || $manual->versionActiva->first()?->esPdf()) {
             $manual->archivo_token = $this->tokenArchivo($manual, $user);
         }
 
@@ -633,6 +641,198 @@ class ManualController extends Controller
         return response()->json([
             'message' => 'Manual publicado correctamente.',
             'manual'  => $manual->fresh('versionActiva'),
+        ]);
+    }
+
+    /**
+     * POST /api/manuales/{id}/publicar-word
+     *
+     * Publica un manual que se edita en Word: convierte el .docx de trabajo a
+     * PDF y crea con ese PDF la version nueva.
+     *
+     * ── POR QUE SE PUBLICA UN PDF Y NO EL .docx ──────────────────────────
+     *
+     * El .docx es el ORIGINAL EDITABLE; lo que lee y acepta el socio comercial
+     * es un PDF. Tres motivos, en orden de importancia:
+     *
+     *   1. Un .docx se abre en Word y se modifica. Lo que el socio firma tiene
+     *      que ser inalterable, porque su hash es la prueba de QUE acepto.
+     *   2. El visor de lectura.php y la marca de agua por usuario trabajan
+     *      sobre PDF. Publicando PDF, un manual hecho en Word se lee con las
+     *      mismas protecciones que ya tienen los demas, sin tocar nada.
+     *   3. No todos tienen Word.
+     *
+     * Por eso la version queda con archivo_path (igual que un manual tipo
+     * 'pdf') y satisface chk_mv_contenido sin ningun cambio en la base.
+     *
+     * ── EL ORDEN IMPORTA ─────────────────────────────────────────────────
+     *
+     * La conversion se hace ANTES de abrir la transaccion: tarda segundos,
+     * depende de un servicio externo y puede fallar. Hacerla adentro
+     * mantendria una transaccion abierta contra la base todo ese tiempo, y si
+     * fallara dejaria el manual a medio publicar.
+     */
+    public function publicarWord(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'nota_publicacion'       => 'nullable|string|max:2000',
+            'tipo_cambio'            => 'nullable|in:mayor,menor',
+            'version_inicial_number' => 'nullable|integer|min:1|max:999',
+            'version_inicial_minor'  => 'nullable|integer|min:0|max:999',
+        ]);
+
+        $manual = Manual::findOrFail($id);
+        $user   = $request->user();
+
+        $this->authorize('gestionar', $manual);
+
+        if (!OnlyOffice::habilitado()) {
+            return response()->json([
+                'error' => 'La edicion con OnlyOffice no esta disponible.',
+            ], 503);
+        }
+
+        if (!$manual->esWord()) {
+            return response()->json([
+                'error' => 'Este manual no se edita en Word.',
+            ], 409);
+        }
+
+        $disk = config('filesystems.default');
+
+        if (!Storage::disk($disk)->exists($manual->docx_path)) {
+            return response()->json([
+                'error' => 'No se encuentra el documento de trabajo de este manual.',
+            ], 409);
+        }
+
+        // El Document Server baja el .docx por la misma ruta con token que usa
+        // el editor. No se le manda el archivo: se le da de donde tomarlo.
+        $urlDocx = config('onlyoffice.url_sistema')
+                 . '/api/onlyoffice/documento/'
+                 . OnlyOffice::tokenDocumento($manual, $user);
+
+        try {
+            // La clave de conversion incluye la del documento: si el .docx no
+            // cambio, el Document Server devuelve el PDF que ya tenia armado.
+            $pdf = OnlyOffice::convertirAPdf($urlDocx, 'pdf-' . $manual->docx_clave);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'error' => 'No se pudo convertir el documento a PDF. ' . $e->getMessage(),
+            ], 502);
+        }
+
+        $tamano = strlen($pdf);
+
+        CupoDemo::exigirEspacio($user, $tamano);
+
+        $hash    = hash('sha256', $pdf);
+        $rutaRel = "manuales/archivos/{$manual->id}/{$hash}.pdf";
+
+        if (!Storage::disk($disk)->exists($rutaRel)) {
+            Storage::disk($disk)->put($rutaRel, $pdf);
+        }
+
+        // El PDF se llama como el MANUAL, no como el .docx que se importo.
+        // Un manual tiene un solo nombre (ver Manual::nombreArchivo).
+        $nombre = $manual->nombreArchivo('pdf');
+
+        $notaPub = trim($request->nota_publicacion ?? '');
+        $notaPub = $notaPub === '' ? null : $notaPub;
+
+        $version = null;
+
+        try {
+            DB::transaction(function () use (
+                $manual, $user, $request, $notaPub, $hash, $rutaRel,
+                $nombre, $tamano, &$version
+            ) {
+                // Mismo calculo de numeracion que publicar() y
+                // publicarArchivo(). Se repite por tercera vez y ya conviene
+                // extraerlo; se deja para cuando esta etapa este cerrada, para
+                // no mezclar un refactor con una funcionalidad nueva.
+                $activaActual = ManualVersion::where('manual_id', $manual->id)
+                                             ->where('es_activa', 1)
+                                             ->first();
+
+                ManualVersion::where('manual_id', $manual->id)
+                             ->where('es_activa', 1)
+                             ->update(['es_activa' => 0]);
+
+                $ultimaVersion = ManualVersion::where('manual_id', $manual->id)
+                                              ->max('version_number') ?? 0;
+
+                if ($ultimaVersion === 0) {
+                    $nuevoNumber = (int) ($request->input('version_inicial_number') ?: 1);
+                    $nuevoMinor  = (int) ($request->input('version_inicial_minor') ?? 0);
+                } elseif ($request->tipo_cambio === 'menor' && $activaActual) {
+                    $nuevoNumber = $activaActual->version_number;
+                    $nuevoMinor  = (ManualVersion::where('manual_id', $manual->id)
+                                        ->where('version_number', $nuevoNumber)
+                                        ->max('version_minor') ?? 0) + 1;
+                } else {
+                    $nuevoNumber = $ultimaVersion + 1;
+                    $nuevoMinor  = 0;
+                }
+
+                // contenido_html NULL (satisface chk_mv_contenido) y el hash
+                // del PDF cumple los dos roles, igual que en publicarArchivo():
+                // contenido_hash y documento_hash, que es lo que la aceptacion
+                // del socio certifica.
+                $version = new ManualVersion([
+                    'manual_id'        => $manual->id,
+                    'version_number'   => $nuevoNumber,
+                    'version_minor'    => $nuevoMinor,
+                    'contenido_hash'   => $hash,
+                    'documento_hash'   => $hash,
+                    'archivo_path'     => $rutaRel,
+                    'archivo_nombre'   => $nombre,
+                    'archivo_mime'     => 'application/pdf',
+                    'archivo_tamano'   => $tamano,
+                    'publicado_por'    => $user->id,
+                    'publicado_at'     => now(),
+                    'nota_publicacion' => $notaPub,
+                ]);
+                $version->es_activa = 1;
+                $version->save();
+
+                $versionLabel = $version->version_number . '.' . $version->version_minor;
+
+                $manual->update(['estado' => 'publicado']);
+
+                $this->notificarPublicacion(
+                    $manual, $version, $user, $ultimaVersion === 0, $versionLabel
+                );
+
+                ActivityLog::registrar(
+                    userId:      $user->id,
+                    accion:      $user->esFranquiciante()
+                                     ? 'version_publicada_franquiciante'
+                                     : 'manual_publicado',
+                    ip:          $request->ip(),
+                    empresaId:   $user->empresa_id,
+                    entidadTipo: 'manual_versions',
+                    entidadId:   $version->id,
+                    detalle:     [
+                        'manual_titulo' => $manual->titulo,
+                        'version'       => $version->version_number,
+                    ],
+                    userAgent:   $request->userAgent()
+                );
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'error' => 'Esa version ya existe para este manual. Actualiza la pagina e intenta de nuevo.',
+                ], 409);
+            }
+            throw $e;
+        }
+
+        return response()->json([
+            'message' => 'Manual publicado correctamente.',
+            'version' => $version->version_number . '.' . $version->version_minor,
         ]);
     }
 

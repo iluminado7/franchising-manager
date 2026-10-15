@@ -218,4 +218,63 @@ class Manual extends Model
     {
         return $this->tipo !== 'pdf';
     }
+
+    /**
+     * Nombre de archivo derivado del TITULO del manual.
+     *
+     * Un manual tiene UN solo nombre: su titulo. El nombre del archivo no es
+     * un dato aparte que el usuario mantenga, se deriva de aca. Por eso el
+     * editor de Word muestra el titulo y renombrar ahi renombra el manual.
+     *
+     * (La columna docx_nombre guarda como se llamaba el .docx que se importo.
+     * Queda solo como rastro de lo que se subio; no se le muestra a nadie ni
+     * se usa para nombrar lo que se descarga.)
+     *
+     * Se limpia lo que un sistema de archivos no acepta. No es por seguridad
+     * —la ruta real nunca sale del titulo, se deriva del hash— sino para que
+     * el archivo que baja el usuario se pueda guardar en Windows, que rechaza
+     * \ / : * ? " < > |
+     */
+    public function nombreArchivo(string $extension): string
+    {
+        $base = preg_replace('/[\\\\\/:*?"<>|]+/u', '-', (string) $this->titulo);
+        $base = preg_replace('/[\x00-\x1F\x7F]+/u', '', (string) $base);
+        $base = preg_replace('/\s+/u', ' ', (string) $base);
+        $base = preg_replace('/-{2,}/u', '-', (string) $base);
+        // Se recortan tambien los guiones de los bordes, no solo los espacios:
+        // un titulo hecho solo de caracteres invalidos (p. ej. "///") quedaria
+        // convertido en "-" y el archivo se llamaria "-.pdf". Sacandolos, el
+        // nombre queda vacio y cae en el respaldo de abajo, que es lo correcto.
+        // El punto final tambien se va: Windows lo ignora y el archivo
+        // terminaria sin extension.
+        $base = trim((string) $base, " .-\t\n\r");
+        $base = mb_substr($base, 0, 150);
+
+        return ($base === '' ? 'manual-' . $this->id : $base) . '.' . $extension;
+    }
+
+    // Manual editable cuyo borrador es un .docx, editado con OnlyOffice.
+    //
+    // El discriminador es docx_path y no el enum `tipo`: el tipo sigue
+    // diciendo QUE se publica (html o archivo), y esto dice CON QUE se edita.
+    // Asi conviven los manuales viejos (borrador en HTML, editor.php) con los
+    // nuevos sin migrar nada. Ver la migracion add_docx_to_manuals.
+    public function esWord(): bool
+    {
+        return $this->esEditable() && !empty($this->docx_path);
+    }
+
+    /**
+     * Expuesto al frontend para que sepa que editor abrir: editor-word.php si
+     * es true, editor.php si no.
+     *
+     * Va como booleano y NO como la ruta: docx_path es una ruta interna del
+     * storage y no tiene por que salir del backend.
+     */
+    protected $appends = ['es_word'];
+
+    public function getEsWordAttribute(): bool
+    {
+        return $this->esWord();
+    }
 }

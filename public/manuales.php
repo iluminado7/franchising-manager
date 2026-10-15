@@ -271,7 +271,7 @@ include 'layout/head.php';
       <h3>Eliminar manual</h3>
     </div>
     <div class="modal-body">
-      <p style="color:var(--gris4);margin:12px 0 24px">¿Descartar el manual "<span id="modal-eliminar-titulo" style="color:var(--blanco);font-weight:500"></span>"? Esta acción es irreversible.</p>
+      <p style="color:var(--gris4);margin:12px 0 24px">¿Descartar el manual "<span id="modal-eliminar-titulo" style="color:var(--blanco);font-weight:500"></span>"? El manual dejara de ser visible para todos. Esta acción es irreversible.</p>
     </div> 
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
@@ -473,6 +473,20 @@ let filtroActual     = 'todos';
 let empresaFiltroId  = '';
 let modoImport       = 'scratch';
 let htmlImportado    = '';
+
+// ── OnlyOffice ────────────────────────────────────────────────
+// ¿Hay Document Server configurado? Lo decide el backend (ver
+// config/onlyoffice.php); acá solo se consulta.
+//
+// Mientras sea false, "Importar Word" se comporta EXACTAMENTE como siempre:
+// Mammoth convierte el .docx a HTML en el navegador y se abre el editor
+// propio. Nada de lo que sigue cambia el camino viejo, lo pone en una rama
+// aparte. Es lo que permite desplegar esto sin tener un Document Server.
+let onlyofficeOk = false;
+
+// El .docx elegido, sin convertir. Solo se usa en la rama de OnlyOffice: el
+// archivo se sube tal cual al crear el manual.
+let archivoDocxSeleccionado = null;
 let pendingArchivar  = null;
 let pendingEliminar = null;
 
@@ -494,6 +508,17 @@ async function init() {
     const me = await apiFetch('GET', '/me');
     miUserId = me.id;
     miRol    = me.rol || '';
+
+    // ¿Está disponible la edición en Word? Si falla la consulta se asume que
+    // NO, y el sistema sigue con Mammoth: ante la duda, el camino que
+    // seguro funciona.
+    try {
+      const oo = await apiFetch('GET', '/onlyoffice/estado');
+      onlyofficeOk = !!oo.habilitado;
+    } catch (e) {
+      onlyofficeOk = false;
+    }
+    aplicarTextosImportacion();
 
     // Cargar empresas para filtro y modal
     const empresas = await apiFetch('GET', '/empresas');
@@ -825,7 +850,7 @@ function renderTabla(lista) {
 
       filas.push(`<tr>
         <td style="padding-left:28px">
-          <div style="color:var(--blanco);font-weight:500">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
+          <div style="color:var(--blanco);font-weight:500">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}${m.es_word ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(92,140,220,.16);color:#8FB4F0;vertical-align:middle;font-family:'Roboto',sans-serif">WORD</span>` : ''}</div>
         </td>
         <td>${esc(m.categoria) || '—'}</td>
         <td>${estadoPill(m.estado)}</td>
@@ -852,10 +877,23 @@ function renderTabla(lista) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
               Versiones
             </button>` : `
-            <button class="accion-btn" style="color:var(--dorado)" onclick="irEditor(${m.id})">
+            <button class="accion-btn" style="color:var(--dorado)" onclick="irEditor(${m.id}, ${m.es_word ? 'true' : 'false'})">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Editar
-            </button>`}
+            </button>
+            ${m.es_word ? `
+            <button class="accion-btn" style="color:var(--dorado)" onclick="abrirModalEditar(${m.id})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              Visible para
+            </button>
+            <button class="accion-btn" style="color:var(--dorado)" onclick="publicarManualWord(${m.id}, '${esc(m.titulo)}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Publicar versión
+            </button>
+            <button class="accion-btn" style="color:var(--gris5)" onclick="verVersionesPdf(${m.id}, '${esc(m.titulo)}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+              Versiones
+            </button>` : ''}`}
             ${version ? `
             <button class="accion-btn" style="color:var(--dorado)" onclick="vistaPrevia('${m.public_id || m.id}')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1042,6 +1080,12 @@ function abrirModalNuevo() {
   document.getElementById('import-ok').style.display    = 'none';
   document.getElementById('import-warn').style.display  = 'none';
   htmlImportado = '';
+  archivoDocxSeleccionado = null;
+  // El input de archivo conserva lo elegido entre aperturas del modal: sin
+  // esto, volver a elegir el MISMO .docx no dispara onchange y el usuario ve
+  // el modal en blanco creyendo que lo cargó.
+  const inpDocx = document.getElementById('file-docx');
+  if (inpDocx) inpDocx.value = '';
   seleccionarModo('scratch');
 
   // v2.3: resetear lista de categorías hasta que se elija empresa
@@ -1321,6 +1365,115 @@ async function subirPdfComoVersion(manualId, file, extra = {}) {
   return res.json();
 }
 
+// ── PUBLICAR UN MANUAL EDITADO EN WORD ────────────────────────
+//
+// Esto NO vive en el editor a propósito. Publicar no es guardar: dispara
+// mails a todos los socios asignados, congela una versión que después se
+// acepta y se firma, y obliga a decidir si el cambio es mayor o menor. Es una
+// decisión del que administra el manual, y se toma desde el listado, igual
+// que con los manuales en PDF.
+//
+// Lo que se publica es un PDF convertido del Word, no el Word. El porqué está
+// en ManualController::publicarWord().
+async function publicarManualWord(id, titulo) {
+  // ¿Es la primera publicación? Se mira el historial y no la versión activa:
+  // un manual archivado puede no tener versión activa y sí tener versiones.
+  let yaPublicado;
+  try {
+    const versiones = await apiFetch('GET', `/manuales/${id}/versiones`);
+    // version_number 0 es el borrador, no cuenta como publicación.
+    yaPublicado = versiones.some(v => v.version_number > 0);
+  } catch (e) {
+    alert('No se pudieron leer las versiones del manual. Probá de nuevo.');
+    return;
+  }
+
+  // PRIMERA PUBLICACIÓN: no se pregunta nada.
+  //
+  // Mayor y menor darían las dos v1.0, así que la pregunta no decide nada y
+  // solo obliga a elegir entre dos opciones idénticas. Un manual nuevo
+  // arranca en 1.0 y listo.
+  //
+  // (Los manuales en PDF sí preguntan con qué versión arrancan, porque suelen
+  // venir de afuera del sistema con una numeración ya existente. Un manual
+  // escrito en Word acá nace acá: no tiene historia previa que respetar.)
+  let tipo = null;
+  if (yaPublicado) {
+    // Primero la numeración: es LA decisión. El confirm de después solo avisa
+    // de las consecuencias. Mismo orden que en los manuales PDF.
+    tipo = await pedirTipoCambioPdf(id);
+    if (!tipo) return;
+  }
+
+  if (!confirm(
+    yaPublicado
+      ? `¿Publicar una nueva versión de "${titulo}"?\n\n` +
+        `Se va a convertir el documento de Word a PDF y se notificará por mail ` +
+        `a todos los socios asignados.`
+      : `¿Publicar "${titulo}" como v1.0?\n\n` +
+        `Se va a convertir el documento de Word a PDF y se notificará por mail ` +
+        `a todos los socios asignados.`
+  )) return;
+
+  // La conversión tarda unos segundos y depende del servidor de edición: sin
+  // un aviso en pantalla parece que no pasó nada y el usuario vuelve a hacer
+  // clic, publicando dos versiones.
+  const aviso = mostrarCargando('Convirtiendo el documento a PDF…');
+  try {
+    // Sin tipo_cambio en la primera publicación: el backend ya arranca en 1.0
+    // cuando el manual no tiene versiones (misma regla que publicar() y
+    // publicarArchivo()).
+    const r = await apiFetch('POST', `/manuales/${id}/publicar-word`,
+      tipo ? { tipo_cambio: tipo } : {});
+    aviso.cerrar();
+    alert(`Manual publicado como v${r.version}.`);
+    await cargarManuales();
+  } catch (e) {
+    aviso.cerrar();
+    alert(e?.data?.error || 'No se pudo publicar el manual.');
+  }
+}
+
+// Cartel modal de "esperá" para operaciones largas. Devuelve un objeto con
+// cerrar(): se usa con try/finally para que no quede colgado si algo falla.
+function mostrarCargando(texto) {
+  const el = document.createElement('div');
+  el.className = 'modal-overlay open';
+  el.innerHTML = `
+    <div class="modal-box" style="max-width:360px;text-align:center">
+      <div class="modal-body" style="padding:30px 24px">
+        <div style="width:28px;height:28px;margin:0 auto 16px;border:2px solid var(--gris2);
+                    border-top-color:var(--dorado);border-radius:50%;animation:ow-girar .8s linear infinite"></div>
+        <div style="font-size:13.5px;color:var(--gris5);font-family:'Roboto',sans-serif"></div>
+      </div>
+    </div>
+    <style>@keyframes ow-girar { to { transform:rotate(360deg); } }</style>`;
+  el.querySelector('.modal-body div:last-child').textContent = texto;
+  document.body.appendChild(el);
+  return { cerrar: () => el.remove() };
+}
+
+// Sube el .docx como documento de trabajo del manual. fetch crudo y no
+// apiFetch por lo mismo que subirPdfComoVersion(): hay que mandar multipart.
+async function subirDocxDelManual(manualId, file) {
+  const fd = new FormData();
+  fd.append('archivo', file, file.name || 'manual.docx');
+  const res = await fetch(`${API}/manuales/${manualId}/docx`, {
+    method: 'POST',
+    credentials: 'include',
+    body: fd,
+  });
+  if (!res.ok) {
+    let msg = 'Error al subir el documento';
+    try {
+      const d = await res.json();
+      msg = d.error || (d.errors ? Object.values(d.errors).flat().join(' ') : msg);
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 // Abre el PDF de la version activa (endpoint autenticado, no el archivo crudo).
 function verArchivoPdf(id) { window.location.href = `${API}/manuales/${id}/archivo`; }
 
@@ -1373,11 +1526,55 @@ function onDrop(e) {
   if (f) procesarDocx(f);
 }
 
+// Los textos del modo "Importar Word" cambian según el camino disponible,
+// porque lo que pasa con el archivo es distinto y el usuario tiene que
+// saberlo antes de elegir:
+//
+//   con OnlyOffice  el .docx se conserva como tal y se edita como en Word
+//   sin OnlyOffice  el .docx se convierte a HTML y se edita en el editor propio
+//
+// Se aplica una sola vez, al terminar init(), cuando ya se sabe cuál es.
+function aplicarTextosImportacion() {
+  const btn = document.getElementById('modo-btn-import');
+  const sub = btn?.querySelector('small');
+  if (sub) {
+    sub.textContent = onlyofficeOk
+      ? 'Editalo como en Word, sin perder el formato'
+      : 'Convertí tu documento a HTML editable';
+  }
+  const lbl = document.getElementById('btn-crear-label');
+  if (lbl && modoImport === 'import') lbl.textContent = 'Crear y abrir editor';
+}
+
 async function procesarDocx(file) {
   if (!file?.name.endsWith('.docx')) { mostrarNuevoError('Solo se aceptan archivos .docx'); return; }
   const okEl = document.getElementById('import-ok');
   const warnEl = document.getElementById('import-warn');
   okEl.style.display = warnEl.style.display = 'none';
+
+  // ── Camino OnlyOffice: el archivo NO se convierte ──────────────────
+  //
+  // Acá está el cambio de fondo. Antes, importar un Word significaba
+  // perderlo: Mammoth lo traducía a HTML, con lo que ese HTML pudiera
+  // representar, y el .docx original se descartaba. Columnas, saltos de
+  // página, numeración y encabezados quedaban en el camino.
+  //
+  // Ahora el .docx se guarda tal cual y se edita tal cual. No hay
+  // conversión, así que no hay nada que perder.
+  //
+  // El archivo se SUBE al crear el manual, no ahora: todavía no existe el
+  // manual al que pertenece, y subirlo antes dejaría archivos sueltos en el
+  // storage cada vez que alguien abre el modal y se arrepiente.
+  if (onlyofficeOk) {
+    archivoDocxSeleccionado = file;
+    okEl.textContent = `✓ "${file.name}" listo — ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+    okEl.style.display = 'block';
+    const tituloInp = document.getElementById('nuevo-titulo');
+    if (!tituloInp.value.trim()) tituloInp.value = file.name.replace('.docx','').replace(/_/g,' ');
+    return;
+  }
+
+  // ── Camino histórico: Mammoth convierte a HTML ─────────────────────
   try {
     const ab = await file.arrayBuffer();
     const result = await mammoth.convertToHtml({ arrayBuffer: ab }, {
@@ -1417,7 +1614,11 @@ async function crearManual() {
 
   if (!titulo)    { mostrarNuevoError('El título es obligatorio.'); return; }
   if (!empresaId) { mostrarNuevoError('Seleccioná una empresa para asociar el manual.'); return; }
-  if (modoImport === 'import' && !htmlImportado) { mostrarNuevoError('Importá un archivo .docx antes de continuar.'); return; }
+  // Lo que hace falta para seguir depende del camino: con OnlyOffice es el
+  // archivo; sin OnlyOffice, el HTML que dejó Mammoth.
+  const faltaImport = modoImport === 'import'
+    && (onlyofficeOk ? !archivoDocxSeleccionado : !htmlImportado);
+  if (faltaImport) { mostrarNuevoError('Importá un archivo .docx antes de continuar.'); return; }
   if (modoImport === 'pdf' && !archivoPdfSeleccionado) { mostrarNuevoError('Elegí el archivo PDF antes de continuar.'); return; }
 
   // Version inicial ANTES de crear nada. Si se preguntara despues de crear
@@ -1492,6 +1693,17 @@ async function crearManual() {
       return;
     }
 
+    // Manual en Word: se sube el .docx como documento de trabajo y se abre
+    // OnlyOffice. Si la subida falla, el manual queda creado sin documento y
+    // se avisa: se puede reintentar entrando a editarlo.
+    if (modoImport === 'import' && onlyofficeOk) {
+      if (labelCrear) labelCrear.textContent = 'Subiendo documento...';
+      await subirDocxDelManual(manual.id, archivoDocxSeleccionado);
+      cerrarModalNuevo();
+      window.location.href = `${BASE_PHP}/editor-word.php?id=${manual.id}`;
+      return;
+    }
+
     cerrarModalNuevo();
     const url = `${BASE_PHP}/editor.php?id=${manual.id}` + (modoImport === 'import' && htmlImportado ? `&import=1` : '');
     if (modoImport === 'import' && htmlImportado) sessionStorage.setItem(`import_html_${manual.id}`, htmlImportado);
@@ -1517,7 +1729,20 @@ function mostrarNuevoError(msg) {
 }
 
 // ── EDITOR ────────────────────────────────────────────────────
-function irEditor(id) { window.location.href = `${BASE_PHP}/editor.php?id=${id}`; }
+//
+// Cada manual abre el editor que corresponde a COMO esta guardado su
+// borrador, no a una configuracion global:
+//
+//   esWord = true   borrador en .docx  -> OnlyOffice (editor-word.php)
+//   esWord = false  borrador en HTML   -> editor propio (editor.php)
+//
+// Por eso los manuales creados antes de OnlyOffice siguen abriendo su editor
+// de siempre aunque el Document Server este encendido. No hay nada que migrar
+// y no hay forma de que un manual abra el editor equivocado.
+function irEditor(id, esWord = false) {
+  const pagina = esWord ? 'editor-word.php' : 'editor.php';
+  window.location.href = `${BASE_PHP}/${pagina}?id=${id}`;
+}
 
 // Vista previa: abre el manual en lectura.php tal como lo verá el receptor.
 //

@@ -93,6 +93,9 @@ include 'layout/head.php';
             <option value="manual_eliminado">Manual eliminado</option>
             <option value="manual_abierto">Manual abierto</option>
             <option value="manual_pdf_abierto">Manual PDF abierto</option>
+            <option value="manual_docx_importado">Word importado al manual</option>
+            <option value="manual_docx_servido">Word entregado al editor</option>
+            <option value="manual_docx_guardado">Word guardado desde el editor</option>
             <option value="manual_aceptado">Manual leído</option>
             <option value="manual_asignado">Manual asignado</option>
             <option value="manual_desasignado">Manual desasignado</option>
@@ -923,6 +926,9 @@ const ACCION_MAP = {
   manual_eliminado:                       ['accion-manual', 'Manual eliminado'],
   manual_abierto:                         ['accion-manual', 'Manual abierto'],
   manual_pdf_abierto:                     ['accion-manual', 'Manual PDF abierto'],
+  manual_docx_importado:                  ['accion-manual', 'Word importado al manual'],
+  manual_docx_servido:                    ['accion-manual', 'Word entregado al editor'],
+  manual_docx_guardado:                   ['accion-manual', 'Word guardado desde el editor'],
   manual_aceptado:                        ['accion-manual', 'Manual leído'],
   manual_asignado:                        ['accion-manual', 'Manual asignado'],
   manual_desasignado:                     ['accion-manual', 'Manual desasignado'],

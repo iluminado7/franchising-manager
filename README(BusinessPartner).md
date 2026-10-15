@@ -280,6 +280,9 @@ pasan por `$fillable` y siguen funcionando.
 
 ### Manuales editables
 Editor WYSIWYG propio (`editor.php`) con importación de Word vía Mammoth.js.
+⚠️ **Camino en salida**: los manuales nuevos importados de Word van por
+OnlyOffice (ver *Manuales en Word*, más abajo). Esto sigue vigente para los
+manuales ya existentes y como respaldo si OnlyOffice no está configurado.
 Al importar se preserva el **justificado** mediante un truco: `transformDocument`
 asigna un `styleName` sintético según `paragraph.alignment`, el `styleMap` lo
 convierte en una clase temporal, y un post-proceso la pasa a `style="text-align"`
@@ -288,6 +291,123 @@ inline — que es lo único que sobrevive a HTMLPurifier.
 Limitación conocida: Mammoth **no expone el sombreado de párrafo** (`w:shd`) ni
 los bordes, así que los fondos de color del Word original se pierden. Decisión
 tomada: el manual usa la estética del sistema, no la del Word.
+
+### Manuales en Word (OnlyOffice) — en construcción
+
+Reemplazo del circuito anterior: en vez de convertir el `.docx` a HTML con
+Mammoth (que pierde formato), el `.docx` **se conserva tal cual** y se edita en
+el navegador con OnlyOffice Document Server.
+
+**Estado: importar, editar, guardar y publicar funcionando.** Falta decidir el
+destino de `editor.php` y la infraestructura de producción.
+
+**El circuito completo**
+
+| Paso | Dónde | Qué pasa |
+|---|---|---|
+| Importar | `manuales.php` → *Importar Word* | el `.docx` se sube **sin convertir** |
+| Editar | `editor-word.php` | OnlyOffice, con el `.docx` original |
+| Guardar | botón del editor, o al cerrar | el Document Server **nos llama** y devuelve el `.docx` |
+| Publicar | `manuales.php` → *Publicar versión* | el `.docx` se convierte a **PDF** y nace la versión |
+| Leer | `lectura.php` | el visor de siempre, con marca de agua |
+
+**Un manual tiene UN solo nombre: su `titulo`.** El editor de Word muestra ese
+título y renombrar ahí dispara `onRequestRename` → `PUT /api/manuales/{id}`, o
+sea **renombra el manual**, no un archivo suelto. Todo lo que se descarga
+(`.docx` y el PDF publicado) se nombra con `Manual::nombreArchivo()`, que deriva
+del título y limpia lo que Windows no acepta (`\ / : * ? " < > |`).
+`manuals.docx_nombre` queda solo como rastro de qué archivo se importó: **no se
+muestra ni se usa para nombrar nada**.
+
+**La primera publicación no pregunta la numeración.** Mayor y menor darían las
+dos `v1.0`, así que la pregunta obligaría a elegir entre dos opciones idénticas:
+un manual de Word arranca en 1.0 y listo. A partir de la segunda sí se pregunta.
+(Los manuales en **PDF** sí preguntan con qué versión arrancan, porque suelen
+venir de afuera del sistema con una numeración previa que hay que respetar; uno
+escrito en Word nace acá y no tiene historia.)
+
+**Por qué se publica un PDF y no el `.docx`**: un `.docx` se abre en Word y se
+modifica, y lo que el socio firma tiene que ser inalterable porque su hash es la
+prueba de qué aceptó. Además, el visor y la marca de agua por usuario ya
+trabajan sobre PDF. La versión queda con `archivo_path` igual que un manual tipo
+`pdf`, así que **`chk_mv_contenido` se satisface sin tocar la base**.
+
+⚠️ `show()` emite `archivo_token` cuando `tipo === 'pdf'` **o** cuando la versión
+activa tiene `archivo_path`. La segunda rama existe por los manuales de Word, que
+son `tipo = 'editable'` pero publican PDF.
+
+**Qué editor abre cada manual.** Lo decide `manuals.docx_path`, no el enum
+`tipo`:
+
+| `docx_path` | Borrador en | Editor |
+|---|---|---|
+| `NULL` | HTML (`manual_versions` v0) | `editor.php` (el de siempre) |
+| con valor | `.docx` en el storage | `editor-word.php` (OnlyOffice) |
+
+Por eso **los manuales viejos no se migran**: cada uno abre el editor que
+corresponde a cómo está guardado. El modelo lo expone al frontend como
+`es_word`.
+
+**Se apaga solo.** `OnlyOffice::habilitado()` exige `ONLYOFFICE_URL` **y**
+`ONLYOFFICE_JWT_SECRET`. Si falta alguna, el sistema vuelve a Mammoth y el
+editor propio, sin errores. Es deliberado: **este código puede estar en
+producción sin que exista ningún Document Server**, que es lo que permite
+desplegarlo antes de decidir pagar el servidor (~USD 33/mes en una instancia
+aparte: el t3.micro de 911 MB no lo soporta).
+
+**Las tres URLs** — confundirlas es el error clásico. Ver `config/onlyoffice.php`:
+
+| Variable | Quién la usa | En local |
+|---|---|---|
+| `ONLYOFFICE_URL` | el **navegador** baja de ahí el JS del editor | `http://localhost:8080` |
+| `ONLYOFFICE_URL_INTERNA` | **Laravel** le pide conversiones | igual que la anterior |
+| `ONLYOFFICE_URL_SISTEMA` | el **Document Server** nos descarga el `.docx` | `http://host.docker.internal/...` |
+
+⚠️ En producción `ONLYOFFICE_URL` **debe ser https**: el sistema corre en HTTPS
+y el navegador bloquea cargar scripts por HTTP.
+
+⚠️ En local `ONLYOFFICE_URL_SISTEMA` **no puede ser `localhost`**: dentro del
+contenedor, `localhost` es el contenedor mismo.
+
+**`GET /api/onlyoffice/documento/{token}` está fuera de `auth:sanctum`** a
+propósito. Quien descarga es el Document Server, un servicio sin la cookie
+`auth_token`: dentro del middleware daría 401 siempre. El control de acceso es
+el token —cifrado con la `APP_KEY`, atado a manual + usuario, con vencimiento de
+minutos— y el controller **revalida la Policy** antes de entregar el archivo.
+
+**El guardado es al revés de lo que parece.** No le mandamos el documento al
+servidor: mientras se edita, el documento vive **en el Document Server** y
+nosotros no tenemos nada. Cuando el usuario guarda o cierra la pestaña, el
+Document Server hace un `POST` a `callbackUrl` y recién ahí bajamos el `.docx`.
+
+Consecuencias que hay que tener presentes:
+
+- **Si el callback falla, el trabajo se pierde.** Por eso responde `error:1` ante
+  cualquier falla (storage, red, cupo): eso hace que el Document Server
+  **reintente**. `error:0` significa "recibido y procesado".
+- El cuerpo del callback viene **firmado**; se verifica antes de guardar nada. Sin
+  esa verificación, cualquiera que descubra la URL nos haría guardar el archivo
+  que quiera como si fuera el manual.
+- Se verifica que lo descargado **empiece con `PK`** (un `.docx` es un ZIP). Una
+  página de error del Document Server se guardaría como manual y lo dejaría
+  ilegible.
+- `ONLYOFFICE_MINUTOS_CALLBACK` es **mucho más largo** (12 h) que el token de
+  descarga (10 min): el aviso de guardado puede llegar horas después de abrir el
+  editor.
+- Estados: `1` editando · `2` se cerró → **guarda** · `3`/`7` error → se registra
+  · `4` cerró sin cambios · `6` guardado explícito → **guarda**.
+
+**`document.key`**: identifica la versión para el Document Server. Mientras no
+cambie, sirve lo que tiene en caché e **ignora el storage**. Por eso vive en
+`manuals.docx_clave` y hay que renovarla en cada guardado; si queda fija, después
+de editar se sigue viendo la versión vieja.
+
+La clave compartida (`ONLYOFFICE_JWT_SECRET`) **no baja nunca al navegador**: la
+configuración del editor se firma en el backend. Quien la tenga puede hacer que
+el Document Server descargue cualquier URL que nuestro servidor alcance.
+
+`editor.php` **se conserva** aunque no se use para manuales nuevos. No se borra
+hasta que OnlyOffice lleve tiempo andando en producción.
 
 ### Manuales en PDF
 Permite subir un PDF y publicarlo sin convertirlo. **Está activo**:

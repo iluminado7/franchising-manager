@@ -7,6 +7,7 @@ use App\Http\Controllers\ErrorLogController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\ManualController;
+use App\Http\Controllers\OnlyOfficeController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ManualImageController;
 use App\Http\Controllers\AcceptanceController;
@@ -55,6 +56,35 @@ Route::get('/password/validar/{token}', [PasswordResetController::class, 'valida
 Route::post('/password/restablecer', [PasswordResetController::class, 'restablecer'])
     ->middleware('throttle:10,1');
 
+// Entrega del .docx AL DOCUMENT SERVER de OnlyOffice.
+//
+// PUBLICA A PROPOSITO, y es la unica forma de que funcione: quien descarga no
+// es el navegador del usuario sino el Document Server, un servicio que corre
+// en otra maquina y no tiene la cookie auth_token. Dentro de auth:sanctum
+// siempre daria 401 y el editor abriria vacio.
+//
+// El control de acceso es el token de la URL: cifrado con la APP_KEY, atado a
+// un manual y a un usuario, y con vencimiento de minutos. El controller ademas
+// revalida el permiso del usuario antes de entregar el archivo, por si se lo
+// revocaron mientras tanto.
+//
+// El limite es alto porque el Document Server puede pedir el mismo documento
+// varias veces seguidas al abrirlo.
+Route::get('/onlyoffice/documento/{token}', [OnlyOfficeController::class, 'servirDocumento'])
+    ->middleware('throttle:60,1');
+
+// Guardado del documento editado. La llama el Document Server, por el mismo
+// motivo que la de arriba: no tiene sesion.
+//
+// El token de la URL dice QUE manual y QUIEN lo abrio; la firma del cuerpo
+// (que el controller verifica) prueba que el aviso viene realmente del
+// Document Server y no de alguien que descubrio la direccion.
+//
+// Sin CSRF: no es un formulario del navegador. Las rutas de api.php no lo
+// llevan, pero vale dejarlo dicho porque es una POST sin sesion.
+Route::post('/onlyoffice/callback/{token}', [OnlyOfficeController::class, 'callback'])
+    ->middleware('throttle:120,1');
+
 
 // ── Rutas protegidas ──────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function () {
@@ -91,6 +121,11 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
     Route::get('/manuales/{id}/archivo', [ManualController::class, 'servirArchivo']);
 
     Route::get('/manuales/archivo/{token}', [ManualController::class, 'servirArchivoToken']);
+
+    // ¿Hay Document Server configurado? Lo pregunta el frontend para saber si
+    // ofrece el editor de Word o el camino viejo con Mammoth. Devuelve un
+    // booleano y nada mas (no expone la URL ni la clave compartida).
+    Route::get('/onlyoffice/estado', [OnlyOfficeController::class, 'estado']);
     // Feature imágenes: descarga de imagen de manual. El controller valida
     // que el usuario tenga acceso al manual antes de servir la imagen.
     Route::get('/manuales-imagenes/{id}/descargar', [ManualImageController::class, 'descargar']);
@@ -221,6 +256,14 @@ Route::middleware(['auth:sanctum', EnsureActiveTenant::class])->group(function (
         Route::get('/manuales/{id}/pdf',          [PdfController::class, 'generar']);
         Route::post('/manuales/{id}/archivar',    [ManualController::class, 'archivar']);
         Route::post('/manuales/{id}/borrador',    [ManualController::class, 'guardarBorrador']);
+
+        // Manuales en Word (OnlyOffice). Las dos exigen gestionar el manual,
+        // validado en el controller con la Policy.
+        Route::post('/manuales/{id}/docx',          [OnlyOfficeController::class, 'subirDocx']);
+        Route::get('/manuales/{id}/editor-config',  [OnlyOfficeController::class, 'configEditor']);
+        // Publicar: convierte el .docx a PDF y crea la version. Va al lado de
+        // las otras dos publicaciones (editor propio y PDF subido).
+        Route::post('/manuales/{id}/publicar-word', [ManualController::class, 'publicarWord']);
         Route::post('/manuales/{id}/desarchivar', [ManualController::class, 'desarchivar']);
 
         // Documentos — subir, editar, eliminar/restaurar
