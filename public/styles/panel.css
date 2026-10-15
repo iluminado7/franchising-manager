@@ -1,8 +1,22 @@
+/* ── PALETA ──────────────────────────────────────────────────
+   Los seis colores de la marca (los mismos de la pagina madre):
+
+     Dorado         #BFAE76    Negro   #000000    Gris texto  #555555
+     Dorado oscuro  #8A7538    Blanco  #FFFFFF    Gris suave  #F5F5F5
+
+   Los --gris1..5 NO son de la marca: son las superficies y bordes del panel.
+   La paleta de la marca esta pensada para un sitio claro y no cubre los
+   grises intermedios que necesita una interfaz oscura, asi que se conservan.
+
+   Cualquier color nuevo sale de estas variables. Escribirlo a mano rompe el
+   tema claro, que funciona redefiniendolas mas abajo. */
 :root {
-    --negro:   #0A0A0A;
-    --blanco:  #F5F3EE;
+    --negro:   #000000;
+    --blanco:  #FFFFFF;
     --dorado:  #BFAE76;
-    --dorado2: #E8C46A;
+    /* Dorado oscuro de la marca. Es el hover de lo dorado: un boton dorado
+       se oscurece al pasar el mouse, no se aclara. */
+    --dorado-oscuro: #8A7538;
     --gris1:   #1A1A1A;
     --gris2:   #2C2C2C;
     --gris3:   #444444;
@@ -11,13 +25,20 @@
     --error:   #E25C5C;
     --exito:   #5CB87A;
   }
+/* Tema claro: se da vuelta el par negro/blanco y se usan los dos grises de la
+   marca donde corresponde — gris suave como fondo de pantalla, gris texto
+   para lo secundario.
+
+   OJO con --gris2: es sobre todo color de BORDE (238 usos como borde contra
+   73 como fondo). Ponerle el gris suave de la marca dejaria los bordes
+   invisibles sobre tarjetas blancas; lleva un gris de borde propio. */
 body.tema-claro {
-  --negro:   #F5F3EE;
-  --blanco:  #1A1A1A;
+  --negro:   #F5F5F5;
+  --blanco:  #000000;
   --gris1:   #FFFFFF;
-  --gris2:   #E0DDD6;
+  --gris2:   #E5E5E5;
   --gris3:   #AAAAAA;
-  --gris4:   #666666;
+  --gris4:   #555555;
   --gris5:   #333333;
 }
 
@@ -118,8 +139,8 @@ body.tema-claro {
 
    Asi el logo sigue al tema sin ninguna regla extra:
 
-     modo oscuro   --blanco: #F5F3EE  -> logo claro
-     tema claro    --blanco: #1A1A1A  -> logo oscuro
+     modo oscuro   --blanco: #FFFFFF  -> logo claro
+     tema claro    --blanco: #000000  -> logo oscuro
      lectura.php   --blanco: #1A1A1A  -> logo oscuro
 
    Un filter: invert(1) bajo body.tema-claro NO alcanzaba: lectura.php no usa
@@ -174,7 +195,7 @@ body.tema-claro {
   text-transform: uppercase;
 }
  .rol-badge.super_admin { background: rgba(44, 146, 160, 0.26); color: var(--gris5); }
-.rol-badge.franquiciante { background: rgba(201,168,76,.15); color: var(--dorado); }
+.rol-badge.franquiciante { background: rgba(191,174,118,.15); color: var(--dorado); }
 .rol-badge.franquiciado  { background: rgba(92,184,122,.15); color: var(--exito); }
 .rol-badge.empleado      { background: rgba(136,136,136,.15); color: var(--gris5); }
 
@@ -210,7 +231,7 @@ body.tema-claro {
 
 .btn-logout {
   font-size: 13px;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   color: var(--gris4);
   background: transparent;
@@ -265,7 +286,7 @@ body.tema-claro {
 }
 
 .nav-item:hover  { background: var(--gris2); color: var(--blanco); }
-.nav-item.active { background: rgba(201,168,76,.12); color: var(--dorado); }
+.nav-item.active { background: rgba(191,174,118,.12); color: var(--dorado); }
 .nav-item svg    { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* ── CONTENIDO PRINCIPAL ─────────────────────────────────────── */
@@ -380,7 +401,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   border-radius: 7px;
   font-size: 14px;
   font-weight: 500;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   cursor: pointer;
   border: none;
   transition: opacity .2s, transform .1s;
@@ -409,7 +430,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 }
 
 .estado-completo     { background: rgba(92,184,122,.12);  color: var(--exito); }
-.estado-solo-digital { background: rgba(201,168,76,.12);  color: var(--dorado); }
+.estado-solo-digital { background: rgba(191,174,118,.12);  color: var(--dorado); }
 .estado-solo-fisico  { background: rgba(136,136,136,.12); color: var(--gris5); }
 .estado-pendiente    { background: rgba(226,92,92,.12);   color: var(--error); }
 
@@ -436,7 +457,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 /* ── SPINNER ─────────────────────────────────────────────────── */
 .spinner {
   width: 16px; height: 16px;
-  border: 2px solid rgba(201,168,76,.2);
+  border: 2px solid rgba(191,174,118,.2);
   border-top-color: var(--dorado);
   border-radius: 50%;
   animation: spin .6s linear infinite;
@@ -446,15 +467,9 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── MODO CLARO ──────────────────────────────────────────────── */
-body.tema-claro {
-  --negro:  #F0EDE6;
-  --blanco: #1A1A1A;
-  --gris1:  #FFFFFF;
-  --gris2:  #E0DDD6;
-  --gris3:  #AAAAAA;
-  --gris4:  #666666;
-  --gris5:  #333333;
-}
+/* El tema claro se define UNA sola vez, arriba del archivo, junto a :root.
+   Aca habia una segunda copia con otros valores que, por estar mas abajo,
+   le ganaba a la de arriba: editar la primera no tenia ningun efecto. */
 
 /* ══════════════════════════════════════════════════════════════
    RESPONSIVE
@@ -791,7 +806,7 @@ body.tema-claro {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .02em;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   overflow: hidden;
   user-select: none;
 }
@@ -834,7 +849,7 @@ body.tema-claro {
 
 .avatar-lb-cap {
   margin-top: 14px;
-  color: #F5F3EE;
+  color: #FFFFFF;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
 }
@@ -883,7 +898,7 @@ body.tema-claro {
   min-width: 34px;
   padding: 5px 10px;
   font-size: 12px;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   background: transparent;
   border: 1px solid var(--gris2);
   border-radius: 7px;
@@ -927,13 +942,13 @@ body.tema-claro {
   cursor: pointer;
   transition: border-color .2s, background .2s;
 }
-.vpdf-opcion:hover { border-color: var(--dorado); background: rgba(201,168,76,.06); }
+.vpdf-opcion:hover { border-color: var(--dorado); background: rgba(191,174,118,.06); }
 
 /* Estado seleccionado: lo usa el selector inline de documentos.php, donde
    la eleccion no cierra un modal sino que queda marcada hasta subir. */
-.vpdf-opcion.sel { border-color: var(--dorado); background: rgba(201,168,76,.10); }
+.vpdf-opcion.sel { border-color: var(--dorado); background: rgba(191,174,118,.10); }
 .vpdf-opcion.sel .vpdf-opcion-titulo { color: var(--dorado); }
-.vpdf-opcion-num    { font-size: 18px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; margin-bottom: 2px; }
+.vpdf-opcion-num    { font-size: 18px; font-weight: 700; color: var(--dorado); font-family: 'Montserrat', sans-serif; margin-bottom: 2px; }
 .vpdf-opcion-titulo { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 4px; }
 .vpdf-opcion-desc   { font-size: 12.5px; color: var(--gris4); line-height: 1.5; font-family: 'Roboto', sans-serif; }
 
@@ -946,7 +961,7 @@ body.tema-claro {
   border-radius: 7px;
   padding: 10px 12px;
   font-size: 13px;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   color: var(--blanco);
   outline: none;
   box-sizing: border-box;
@@ -956,7 +971,7 @@ body.tema-claro {
 .vpdf-preview-caja {
   margin-top: 16px; padding: 12px;
   border: 1px solid var(--gris2); border-radius: 6px;
-  background: rgba(201,168,76,.04);
+  background: rgba(191,174,118,.04);
 }
 .vpdf-preview-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--gris4); font-weight: 600; margin-bottom: 4px; }
-.vpdf-preview-val { font-size: 20px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; }
+.vpdf-preview-val { font-size: 20px; font-weight: 700; color: var(--dorado); font-family: 'Montserrat', sans-serif; }

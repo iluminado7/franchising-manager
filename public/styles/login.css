@@ -1,10 +1,12 @@
 @import url(style.css);
   /* ── PANTALLA DE LOGIN ──────────────────────────────────── */
+   /* Misma paleta de marca que panel.css. Esta duplicada porque el login no
+      carga panel.css; si se toca una, hay que tocar la otra. */
    :root {
-    --negro:   #0A0A0A;
-    --blanco:  #F5F3EE;
+    --negro:   #000000;
+    --blanco:  #FFFFFF;
     --dorado:  #BFAE76;
-    --dorado2: #E8C46A;
+    --dorado-oscuro: #8A7538;
     --gris1:   #1A1A1A;
     --gris2:   #2C2C2C;
     --gris3:   #444444;
@@ -14,12 +16,12 @@
     --exito:   #5CB87A;
   }
 body.tema-claro {
-  --negro:   #F5F3EE;
-  --blanco:  #1A1A1A;
+  --negro:   #F5F5F5;
+  --blanco:  #000000;
   --gris1:   #FFFFFF;
-  --gris2:   #E0DDD6;
+  --gris2:   #E5E5E5;   /* borde, no fondo: ver la nota en panel.css */
   --gris3:   #AAAAAA;
-  --gris4:   #666666;
+  --gris4:   #555555;
   --gris5:   #333333;
 }
 
@@ -411,7 +413,7 @@ body.tema-claro {
     gap: 8px;
   }
 
-  .btn-login:hover  { background: var(--dorado2); }
+  .btn-login:hover  { background: var(--dorado-oscuro); }
   .btn-login:active { transform: scale(.98); }
   .btn-login:disabled { opacity: .6; cursor: not-allowed; }
 
@@ -484,7 +486,7 @@ body.tema-claro {
     text-transform: uppercase;
   }
   .rol-badge.super-admin { background: rgba(245, 210, 115, 0.15); color: var(--dorado); }
-  .rol-badge.franquiciante { background: rgba(201,168,76,.15); color: var(--dorado); }
+  .rol-badge.franquiciante { background: rgba(191,174,118,.15); color: var(--dorado); }
   .rol-badge.franquiciado  { background: rgba(92,184,122,.15); color: var(--exito); }
   .rol-badge.empleado      { background: rgba(136,136,136,.15); color: var(--gris5); }
 
@@ -589,7 +591,7 @@ body.tema-claro {
   .nav-item:hover { background: var(--gris2); color: var(--blanco); }
 
   .nav-item.active {
-    background: rgba(201,168,76,.12);
+    background: rgba(191,174,118,.12);
     color: var(--dorado);
   }
 
@@ -739,7 +741,7 @@ body.tema-claro {
   }
 
   .estado-completo     { background: rgba(92,184,122,.12); color: var(--exito); }
-  .estado-solo-digital { background: rgba(201,168,76,.12);  color: var(--dorado); }
+  .estado-solo-digital { background: rgba(191,174,118,.12);  color: var(--dorado); }
   .estado-solo-fisico  { background: rgba(136,136,136,.12); color: var(--gris5); }
   .estado-pendiente    { background: rgba(226,92,92,.12);   color: var(--error); }
 
@@ -839,7 +841,7 @@ body.tema-claro {
 
   .login-marca-bp strong {
     display: block;
-    font-family: 'Archivo', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-size: clamp(13px, 1.5vw, 17px);
     font-weight: 600;
     letter-spacing: .16em;
@@ -850,7 +852,7 @@ body.tema-claro {
 
   .login-marca-bp span {
     display: block;
-    font-family: 'Archivo', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-size: clamp(12px, 1.3vw, 15px);
     color: var(--blanco);
     letter-spacing: .02em;

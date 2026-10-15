@@ -221,8 +221,8 @@ include 'layout/head.php';
   text-transform: uppercase; white-space: nowrap;
 }
 .badge-version.activa {
-  background: rgba(201,168,76,.12); color: var(--dorado);
-  border-color: rgba(201,168,76,.25);
+  background: rgba(191,174,118,.12); color: var(--dorado);
+  border-color: rgba(191,174,118,.25);
 }
 
 /* ── Sin dato ─────────────────────────────────────────────── */
@@ -263,7 +263,7 @@ include 'layout/head.php';
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
 .form-group input[type=text], .form-group .form-select, .form-group textarea.form-input {
   width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;
-  padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);
+  padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
 .form-group input[type=text]:focus, .form-group .form-select:focus, .form-group textarea.form-input:focus { border-color:var(--dorado); }
@@ -280,7 +280,7 @@ include 'layout/head.php';
   font-family: 'Roboto', sans-serif; line-height: 1.5;
 }
 .info-box.warning {
-  background: rgba(201,168,76,.08); border-color: rgba(201,168,76,.3); color: var(--dorado);
+  background: rgba(191,174,118,.08); border-color: rgba(191,174,118,.3); color: var(--dorado);
   display: flex; align-items: flex-start; gap: 8px;
 }
 
@@ -291,7 +291,7 @@ include 'layout/head.php';
   transition: border-color .2s, background .2s;
 }
 .drop-zone:hover, .drop-zone.dragover {
-  border-color: var(--dorado); background: rgba(201,168,76,.04);
+  border-color: var(--dorado); background: rgba(191,174,118,.04);
 }
 .drop-zone.has-file {
   border-color: var(--exito); background: rgba(76,175,80,.04);
@@ -698,7 +698,7 @@ function renderTabla(filas) {
         </div>
       </td>
       <td>${sucursal}</td>
-      <td>${esc(f.manual.titulo)}${f.manual.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</td>
+      <td>${esc(f.manual.titulo)}${f.manual.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</td>
       <td>
         <span class="badge-version ${f.version.es_activa ? 'activa' : ''}">v${f.version.version_number}${f.version.es_activa ? ' · activa' : ''}</span>
       </td>

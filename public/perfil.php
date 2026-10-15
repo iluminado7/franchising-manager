@@ -276,13 +276,13 @@ include 'layout/head.php';
 .avatar {
   width: 52px; height: 52px;
   border-radius: 50%;
-  background: rgba(201,168,76,.15);
-  border: 1px solid rgba(201,168,76,.25);
+  background: rgba(191,174,118,.15);
+  border: 1px solid rgba(191,174,118,.25);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; font-weight: 700;
   color: var(--dorado);
   flex-shrink: 0;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   letter-spacing: .02em;
 }
 #avatar-wrap { position: relative; overflow: hidden; }
@@ -304,7 +304,7 @@ include 'layout/head.php';
   background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px;
   padding: 20px; width: 92%; max-width: 420px;
 }
-.cropper-header { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 14px; font-family: 'Archivo', sans-serif; }
+.cropper-header { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 14px; font-family: 'Montserrat', sans-serif; }
 .cropper-area { max-height: 360px; }
 .cropper-area img { max-width: 100%; display: block; }
 .cropper-controles { display: flex; gap: 8px; justify-content: center; margin: 12px 0; }
@@ -366,7 +366,7 @@ include 'layout/head.php';
   width: 100%;
   background: var(--negro); border: 1px solid var(--gris2);
   border-radius: 7px; padding: 10px 12px;
-  font-size: 13px; font-family: 'Archivo', sans-serif;
+  font-size: 13px; font-family: 'Montserrat', sans-serif;
   color: var(--blanco); outline: none; transition: border-color .2s;
   box-sizing: border-box;
 }
@@ -400,7 +400,7 @@ include 'layout/head.php';
 /* ── Plan ─────────────────────────────────────────────────── */
 .plan-card {
   background: var(--negro);
-  border: 1px solid rgba(201,168,76,.2);
+  border: 1px solid rgba(191,174,118,.2);
   border-radius: 9px;
   padding: 16px;
 }
@@ -480,7 +480,7 @@ include 'layout/head.php';
 .mcuit-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--gris2);
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 15px; font-weight: 700;
   color: var(--blanco);
 }
@@ -496,7 +496,7 @@ include 'layout/head.php';
   background: var(--negro);
   border: 1px solid var(--gris2);
   border-radius: 8px;
-  font-family: 'Archivo', sans-serif; font-size: 14px;
+  font-family: 'Montserrat', sans-serif; font-size: 14px;
 }
 .mcuit-viejo  { color: var(--gris4); text-decoration: line-through; }
 .mcuit-nuevo  { color: var(--dorado); font-weight: 700; }
@@ -508,7 +508,7 @@ include 'layout/head.php';
 .mcuit-btn {
   padding: 8px 16px;
   border-radius: 7px;
-  font-family: 'Archivo', sans-serif; font-size: 13px;
+  font-family: 'Montserrat', sans-serif; font-size: 13px;
   cursor: pointer;
   border: 1px solid var(--gris2);
   background: transparent;
@@ -705,7 +705,7 @@ function renderFacturas(invoices) {
         <tbody>
           ${invoices.map(inv => `
             <tr>
-              <td style="font-family:'Archivo',sans-serif;font-size:12px;color:var(--blanco)">${esc(inv.numero_factura || '—')}</td>
+              <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:var(--blanco)">${esc(inv.numero_factura || '—')}</td>
               <td>${esc(inv.periodo || '—')}</td>
               <td style="text-align:center">${inv.franquicias_activas ?? '—'}</td>
               <td class="factura-total">$${Number(inv.total || 0).toLocaleString('es-AR')}</td>

@@ -174,7 +174,7 @@ include 'layout/head.php';
         </div>
         <input type="file" id="file-docx" accept=".docx" style="display:none" onchange="procesarDocx(this.files[0])">
         <div id="import-ok" style="display:none;margin-top:10px;background:rgba(92,184,122,.08);border:1px solid rgba(92,184,122,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--exito)"></div>
-        <div id="import-warn" style="display:none;margin-top:6px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
+        <div id="import-warn" style="display:none;margin-top:6px;background:rgba(191,174,118,.08);border:1px solid rgba(191,174,118,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
       </div>
 
       <div id="zona-pdf" style="display:none">
@@ -362,10 +362,10 @@ include 'layout/head.php';
 </div>
 
 <style>
-.filtro-btn { padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);background:transparent;font-size:12px;font-family:'Archivo',sans-serif;color:var(--gris4);cursor:pointer;transition:all .15s; }
+.filtro-btn { padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);background:transparent;font-size:12px;font-family:'Montserrat',sans-serif;color:var(--gris4);cursor:pointer;transition:all .15s; }
 .filtro-btn:hover { border-color:var(--gris3);color:var(--blanco); }
-.filtro-btn.active { background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--dorado); }
-.buscar-input { background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);font-family:'Archivo',sans-serif;outline:none;width:220px;transition:border-color .2s; }
+.filtro-btn.active { background:rgba(191,174,118,.12);border-color:rgba(191,174,118,.3);color:var(--dorado); }
+.buscar-input { background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);font-family:'Montserrat',sans-serif;outline:none;width:220px;transition:border-color .2s; }
 .buscar-input:focus { border-color:var(--dorado); }
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
@@ -377,27 +377,27 @@ include 'layout/head.php';
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
 .form-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
-.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
+.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
 .form-select:focus { border-color:var(--dorado); }
 .form-select option { background:var(--gris1); }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
-.form-group input[type=text] { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s; }
+.form-group input[type=text] { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s; }
 .form-group input:focus { border-color:var(--dorado); }
 .form-group input::placeholder { color:var(--gris3); }
 .form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
 .modo-selector { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
 .modo-btn { display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 12px;border-radius:10px;border:1px solid var(--gris2);background:var(--negro);cursor:pointer;transition:border-color .2s,background .2s;color:var(--gris4);text-align:center; }
 .modo-btn:hover { border-color:var(--gris3);color:var(--blanco); }
-.modo-btn.active { border-color:var(--dorado);background:rgba(201,168,76,.06);color:var(--blanco); }
-.modo-btn span { font-size:13px;font-weight:500;color:inherit;font-family:'Archivo',sans-serif; }
+.modo-btn.active { border-color:var(--dorado);background:rgba(191,174,118,.06);color:var(--blanco); }
+.modo-btn span { font-size:13px;font-weight:500;color:inherit;font-family:'Montserrat',sans-serif; }
 .modo-btn small { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 .drop-zone { border:1.5px dashed var(--gris2);border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;display:flex;flex-direction:column;align-items:center; }
-.drop-zone:hover { border-color:var(--dorado);background:rgba(201,168,76,.04); }
-.drop-zone.drag { border-color:var(--dorado);background:rgba(201,168,76,.08); }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
+.drop-zone:hover { border-color:var(--dorado);background:rgba(191,174,118,.04); }
+.drop-zone.drag { border-color:var(--dorado);background:rgba(191,174,118,.08); }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
-.empresa-separador td { background:rgba(201,168,76,.06);border-top:1px solid rgba(201,168,76,.15);border-bottom:1px solid rgba(201,168,76,.15);padding:8px 16px !important; }
+.empresa-separador td { background:rgba(191,174,118,.06);border-top:1px solid rgba(191,174,118,.15);border-bottom:1px solid rgba(191,174,118,.15);padding:8px 16px !important; }
 .empresa-sep-inner { display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--dorado); }
 .empresa-sep-count { font-size:10px;font-weight:400;color:var(--gris4);text-transform:none;letter-spacing:0;margin-left:4px; }
 .toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
@@ -419,22 +419,22 @@ include 'layout/head.php';
   font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
   background:rgba(196,162,107,.18);color:var(--dorado);
   border:1px solid rgba(196,162,107,.4);
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
 }
 /* (estilo de btn-editar-release eliminado: release notes son inmutables en v2.3) */
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 .nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
-.nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
+.nota-pendiente { background:rgba(191,174,118,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
 .nota-resuelta { background:rgba(92,184,122,.14);color:var(--exito); }
 
 /* v2.3: botones para cambiar el estado (super_admin/franquiciante salvo notas propias) */
 .nota-acciones { display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-top:1px solid var(--gris2);padding-top:10px;margin-top:10px; }
 .nota-acciones-label { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;margin-right:2px; }
-.nota-estado-btn { background:transparent;border:1px solid var(--gris2);border-radius:20px;padding:4px 12px;font-size:11px;font-family:'Archivo',sans-serif;color:var(--gris4);cursor:pointer;transition:all .15s; }
+.nota-estado-btn { background:transparent;border:1px solid var(--gris2);border-radius:20px;padding:4px 12px;font-size:11px;font-family:'Montserrat',sans-serif;color:var(--gris4);cursor:pointer;transition:all .15s; }
 .nota-estado-btn:hover { border-color:var(--gris3);color:var(--blanco); }
-.nota-estado-btn.activo { background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--dorado); }
+.nota-estado-btn.activo { background:rgba(191,174,118,.12);border-color:rgba(191,174,118,.3);color:var(--dorado); }
 /* ── Lista de ordenamiento ────────────────────────────────────
    El arrastre es HTML5 nativo, sin librería. No responde al tacto en
    celular; se asumió porque ordenar es tarea de escritorio y solo la
@@ -458,7 +458,7 @@ include 'layout/head.php';
    salió mientras el hueco se mueve. */
 .orden-item.arrastrando { opacity: .35; border-style: dashed; }
 .orden-item .orden-num {
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 11px;
   color: var(--gris4);
   min-width: 22px;
@@ -740,7 +740,7 @@ function renderTabla(lista) {
 
     return `<tr>
       <td>
-        <div style="color:var(--blanco);font-weight:500">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
+        <div style="color:var(--blanco);font-weight:500">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
       </td>
       <td>${esc(m.categoria) || '—'}</td>
       <td>${estadoPill(m.estado)}</td>
@@ -864,7 +864,7 @@ function renderListaCategoriasManual() {
 
     <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
       <div style="flex:1;height:1px;background:var(--gris2)"></div>
-      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Archivo',sans-serif">O elegí categorías específicas</span>
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Montserrat',sans-serif">O elegí categorías específicas</span>
       <div style="flex:1;height:1px;background:var(--gris2)"></div>
     </div>
 
@@ -1582,7 +1582,7 @@ function renderNotas(notas) {
         <div class="nota-contenido">${esc(n.contenido)}</div>
         ${puedeMarcar ? `
           <div class="nota-acciones" style="margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <span style="font-size:11px;color:var(--gris4);font-family:'Archivo Narrow',sans-serif;margin-right:4px">Marcar como:</span>
+            <span style="font-size:11px;color:var(--gris4);font-family:'Montserrat',sans-serif;margin-right:4px">Marcar como:</span>
             <button class="nota-estado-btn ${n.estado === 'pendiente' ? 'activo' : ''}" onclick="marcarEstadoNotaMiEmpresa(${n.id}, 'pendiente')">Pendiente</button>
             <button class="nota-estado-btn ${n.estado === 'leida' ? 'activo' : ''}" onclick="marcarEstadoNotaMiEmpresa(${n.id}, 'leida')">Leída</button>
             <button class="nota-estado-btn ${n.estado === 'resuelta' ? 'activo' : ''}" onclick="marcarEstadoNotaMiEmpresa(${n.id}, 'resuelta')">Resuelta</button>
@@ -1700,8 +1700,8 @@ async function verVersionesPdf(manualId, titulo) {
       return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;background:var(--negro);border:1px solid ${activa ? 'var(--dorado)' : 'var(--gris2)'};border-radius:8px;margin-bottom:8px">
         <div style="min-width:0">
           <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-family:'Archivo',sans-serif;font-size:14px;font-weight:700;color:${activa ? 'var(--dorado)' : 'var(--blanco)'}">v${v.version_number}.${v.version_minor}</span>
-            ${activa ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(201,168,76,.14);color:var(--dorado)">Vigente</span>` : ''}
+            <span style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;color:${activa ? 'var(--dorado)' : 'var(--blanco)'}">v${v.version_number}.${v.version_minor}</span>
+            ${activa ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(191,174,118,.14);color:var(--dorado)">Vigente</span>` : ''}
           </div>
           <div style="font-size:11.5px;color:var(--gris4);margin-top:3px;font-family:'Roboto',sans-serif">${esc(autor)} · ${v.publicado_at ? new Date(String(v.publicado_at).replace(' ', 'T')).toLocaleDateString('es-AR') : '—'}</div>
           ${nota}

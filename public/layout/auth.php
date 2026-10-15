@@ -52,7 +52,7 @@ function verificarSesion(?string $rol_requerido = null): void
         );
     } catch (PDOException $e) {
         http_response_code(500);
-        echo '<!DOCTYPE html><html lang="es"><body style="font-family:sans-serif;padding:40px;background:#0A0A0A;color:#F5F3EE">
+        echo '<!DOCTYPE html><html lang="es"><body style="font-family:sans-serif;padding:40px;background:#000000;color:#FFFFFF">
             <h2>Error del servidor</h2>
             <p style="color:#888">No se pudo verificar la sesión. Intentá de nuevo.</p>
         </body></html>';
@@ -112,14 +112,14 @@ function verificarSesion(?string $rol_requerido = null): void
   <title>Acceso denegado</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #0A0A0A; color: #F5F3EE;
+    body { font-family: Arial, sans-serif; background: #000000; color: #FFFFFF;
            display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     .card { background: #1A1A1A; border: 1px solid #2C2C2C; border-radius: 12px;
             padding: 40px 32px; text-align: center; max-width: 380px; width: 90%; }
     .icon { font-size: 40px; margin-bottom: 16px; }
     h2 { color: #E25C5C; font-size: 20px; margin-bottom: 10px; }
     p  { color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
-    a  { display: inline-block; background: #C9A84C; color: #0A0A0A;
+    a  { display: inline-block; background: #BFAE76; color: #000000;
          padding: 10px 24px; border-radius: 7px; text-decoration: none;
          font-weight: 600; font-size: 13px; }
     a:hover { opacity: .85; }

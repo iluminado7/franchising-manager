@@ -256,7 +256,7 @@ include 'layout/head.php';
   min-width: 34px;
   padding: 5px 10px;
   font-size: 12px;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   background: transparent;
   border: 1px solid var(--gris2);
   border-radius: 7px;
@@ -287,7 +287,7 @@ include 'layout/head.php';
 .filtro-select, .filtro-date {
   background: var(--gris2); border: 1px solid var(--gris2);
   border-radius: 7px; color: var(--gris5);
-  font-size: 12px; font-family: 'Archivo', sans-serif;
+  font-size: 12px; font-family: 'Montserrat', sans-serif;
   padding: 7px 10px; cursor: pointer; outline: none;
   transition: border-color .2s;
 }
@@ -299,7 +299,7 @@ include 'layout/head.php';
   background: var(--gris2); border: 1px solid var(--gris2);
   border-radius: 7px; padding: 7px 12px 7px 32px;
   font-size: 13px; color: var(--blanco);
-  font-family: 'Archivo', sans-serif; outline: none;
+  font-family: 'Montserrat', sans-serif; outline: none;
   width: 260px; transition: border-color .2s;
 }
 .buscar-input:focus { border-color: var(--dorado); }
@@ -319,7 +319,7 @@ include 'layout/head.php';
 
 /* Colores por categoría de acción */
 .accion-auth     { background: rgba(55,138,221,.12);  color: #378ADD; }
-.accion-manual   { background: rgba(201,168,76,.12);  color: var(--dorado); }
+.accion-manual   { background: rgba(191,174,118,.12);  color: var(--dorado); }
 .accion-usuario  { background: rgba(92,184,122,.12);  color: var(--exito); }
 .accion-archivo  { background: rgba(136,136,136,.12); color: var(--gris5); }
 .accion-sistema  { background: rgba(226,92,92,.12);   color: var(--error); }
@@ -372,9 +372,9 @@ include 'layout/head.php';
   line-height: 1.6; margin-top: 4px;
 }
 .log-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
-.log-tab { background:transparent; border:1px solid var(--gris2); border-radius:20px; padding:7px 16px; font-size:12px; font-family:'Archivo',sans-serif; color:var(--gris4); cursor:pointer; transition:all .15s; }
+.log-tab { background:transparent; border:1px solid var(--gris2); border-radius:20px; padding:7px 16px; font-size:12px; font-family:'Montserrat',sans-serif; color:var(--gris4); cursor:pointer; transition:all .15s; }
 .log-tab:hover { color:var(--blanco); border-color:var(--gris3); }
-.log-tab.active { background:rgba(201,168,76,.12); border-color:rgba(201,168,76,.3); color:var(--dorado); }
+.log-tab.active { background:rgba(191,174,118,.12); border-color:rgba(191,174,118,.3); color:var(--dorado); }
 </style>
 
 <script>

@@ -52,7 +52,7 @@ body {
   border-radius: 7px;
   padding: 7px 13px;
   color: #C9C4BA;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 13px;
   cursor: pointer;
   text-decoration: none;
@@ -61,10 +61,10 @@ body {
 .visor-back:hover { border-color: var(--dorado); color: var(--dorado); }
 
 .visor-titulo {
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 15px;
   font-weight: 600;
-  color: #F0EDE6;
+  color: #F5F5F5;
   margin: 0;
 }
 .visor-meta {
@@ -136,13 +136,13 @@ body {
    el bloqueo de menú contextual del canvas de abajo. */
 .pdf-hl {
   position: absolute;
-  background: rgba(232, 196, 106, .38);
+  background: rgba(138,117,56, .38);
   border-radius: 2px;
   pointer-events: none;
   mix-blend-mode: multiply;   /* deja leer el texto debajo */
 }
 .pdf-hl.actual {
-  background: rgba(232, 196, 106, .75);
+  background: rgba(138,117,56, .75);
   outline: 1px solid rgba(191, 174, 118, .9);
 }
 

@@ -108,7 +108,7 @@ include 'layout/head.php';
           </span>
         </span>
       </label>
-      <div id="demo-aviso" style="display:none;margin-bottom:14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
+      <div id="demo-aviso" style="display:none;margin-bottom:14px;background:rgba(191,174,118,.06);border:1px solid rgba(191,174,118,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
       <div id="wrap-ultimo-periodo" style="display:none;margin-bottom:14px">
       <div class="form-group" style="margin-bottom:0">
         <label>Último período facturado</label>
@@ -129,7 +129,7 @@ include 'layout/head.php';
       </div>
 
       <!-- Descripción del plan seleccionado -->
-      <div id="plan-desc" style="display:none;margin-bottom:14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
+      <div id="plan-desc" style="display:none;margin-bottom:14px;background:rgba(191,174,118,.06);border:1px solid rgba(191,174,118,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
 
       <!-- Precio custom según tipo de plan -->
       <div id="wrap-precio-franquicia" style="display:none">
@@ -158,7 +158,7 @@ include 'layout/head.php';
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <label style="font-size:12px;color:var(--gris5);white-space:nowrap">Cantidad de franquicias:</label>
           <input type="number" id="sim-cantidad" value="1" min="0" step="1" oninput="simular()"
-            style="width:80px;background:var(--gris2);border:1px solid var(--gris2);border-radius:6px;padding:6px 10px;font-size:13px;color:var(--blanco);outline:none;font-family:'Archivo',sans-serif">
+            style="width:80px;background:var(--gris2);border:1px solid var(--gris2);border-radius:6px;padding:6px 10px;font-size:13px;color:var(--blanco);outline:none;font-family:'Montserrat',sans-serif">
         </div>
         <div style="font-size:14px;color:var(--blanco)">
           Total estimado: <strong id="sim-total" style="color:var(--dorado);font-size:16px">—</strong>
@@ -171,7 +171,7 @@ include 'layout/head.php';
       <!-- Sección: Emails -->
       <div class="seccion-titulo" style="margin-top:8px">
         Emails de contacto
-        <button type="button" onclick="agregarEmailRow()" style="margin-left:auto;background:transparent;border:1px solid var(--gris2);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--gris4);cursor:pointer;font-family:'Archivo',sans-serif;transition:all .15s" onmouseover="this.style.borderColor='var(--dorado)';this.style.color='var(--dorado)'" onmouseout="this.style.borderColor='var(--gris2)';this.style.color='var(--gris4)'">
+        <button type="button" onclick="agregarEmailRow()" style="margin-left:auto;background:transparent;border:1px solid var(--gris2);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--gris4);cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .15s" onmouseover="this.style.borderColor='var(--dorado)';this.style.color='var(--dorado)'" onmouseout="this.style.borderColor='var(--gris2)';this.style.color='var(--gris4)'">
           + Agregar email
         </button>
       </div>
@@ -276,7 +276,7 @@ include 'layout/head.php';
   background: var(--gris2); border: 1px solid var(--gris2);
   border-radius: 7px; padding: 7px 12px 7px 32px;
   font-size: 13px; color: var(--blanco);
-  font-family: 'Archivo', sans-serif; outline: none;
+  font-family: 'Montserrat', sans-serif; outline: none;
   width: 220px; transition: border-color .2s;
 }
 .buscar-input:focus { border-color: var(--dorado); }
@@ -284,11 +284,11 @@ include 'layout/head.php';
 .filtro-btn {
   padding: 6px 14px; border-radius: 20px;
   border: 1px solid var(--gris2); background: transparent;
-  font-size: 12px; font-family: 'Archivo', sans-serif;
+  font-size: 12px; font-family: 'Montserrat', sans-serif;
   color: var(--gris4); cursor: pointer; transition: all .15s;
 }
 .filtro-btn:hover  { border-color: var(--gris3); color: var(--blanco); }
-.filtro-btn.active { background: rgba(201,168,76,.12); border-color: rgba(201,168,76,.3); color: var(--dorado); }
+.filtro-btn.active { background: rgba(191,174,118,.12); border-color: rgba(191,174,118,.3); color: var(--dorado); }
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
@@ -304,7 +304,7 @@ include 'layout/head.php';
   font-size: 11px; font-weight: 600; letter-spacing: .08em;
   text-transform: uppercase; color: var(--dorado);
   margin-bottom: 14px; padding-bottom: 6px;
-  border-bottom: 1px solid rgba(201,168,76,.2);
+  border-bottom: 1px solid rgba(191,174,118,.2);
   display: flex; align-items: center;
 }
 
@@ -321,7 +321,7 @@ include 'layout/head.php';
 .form-select {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
   border-radius:7px;padding:10px 12px;font-size:13px;
-  font-family:'Archivo',sans-serif;color:var(--blanco);
+  font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
 }
 .form-group input:focus, .form-select:focus { border-color:var(--dorado); }
@@ -344,7 +344,7 @@ include 'layout/head.php';
 .email-row input, .email-row select {
   background: var(--negro); border: 1px solid var(--gris2);
   border-radius: 7px; padding: 8px 10px; font-size: 13px;
-  font-family: 'Archivo', sans-serif; color: var(--blanco);
+  font-family: 'Montserrat', sans-serif; color: var(--blanco);
   outline: none; width: 100%; transition: border-color .2s;
 }
 .email-row input:focus, .email-row select:focus { border-color: var(--dorado); }
@@ -359,7 +359,7 @@ include 'layout/head.php';
 .accion-btn {
   background:transparent;border:none;cursor:pointer;
   padding:5px 8px;border-radius:5px;font-size:12px;
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   transition:background .15s;display:inline-flex;align-items:center;gap:4px;
 }
 .accion-btn:hover { background:var(--gris2); }

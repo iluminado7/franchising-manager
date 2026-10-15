@@ -10,22 +10,22 @@ include 'layout/head.php';
 
 <style>
 body {
-  background: #F2F0EB !important;
-  --negro:  #F2F0EB;
-  --blanco: #1A1A1A;
+  background: #F5F5F5 !important;
+  --negro:  #F5F5F5;
+  --blanco: #000000;
   --gris1:  #FFFFFF;
-  --gris2:  #E0DDD6;
+  --gris2:  #E5E5E5;
   --gris3:  #AAAAAA;
-  --gris4:  #666666;
+  --gris4:  #555555;
   --gris5:  #333333;
 }
-.topbar { background: #FFFFFF !important; border-bottom: 1px solid #E0DDD6 !important; }
-.topbar-brand     { color: #1A1A1A !important; }
+.topbar { background: #FFFFFF !important; border-bottom: 1px solid #E5E5E5 !important; }
+.topbar-brand     { color: #000000 !important; }
 .topbar-brand-dot { background: var(--dorado) !important; }
 .btn-logout       { color: #666; border-color: #ddd; }
-.btn-logout:hover { color: #1A1A1A; border-color: #aaa; }
+.btn-logout:hover { color: #000000; border-color: #aaa; }
 .notif-btn        { color: #888; }
-.notif-btn:hover  { color: #1A1A1A; background: #f0ede8; }
+.notif-btn:hover  { color: #000000; background: #F5F5F5; }
 
 .lectura-layout {
   min-height: calc(100vh - 56px);
@@ -47,17 +47,17 @@ body {
   z-index: 100;
 
   /* Fondo opaco + separador: el contenido del manual pasa por debajo. */
-  background: #F5F3EE;
-  border-bottom: 1px solid #E0DDD6;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E5E5;
   padding: 12px 0;
   margin-top: -12px;   /* compensa el padding para no correr el layout */
 }
 .doc-back {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 13px; color: #888; text-decoration: none;
-  transition: color .15s; font-family: 'Archivo', sans-serif;
+  transition: color .15s; font-family: 'Montserrat', sans-serif;
 }
-.doc-back:hover { color: #1A1A1A; }
+.doc-back:hover { color: #000000; }
 .doc-meta {
   display: flex; align-items: center; gap: 12px;
   font-size: 12px; color: #888; font-family: 'Roboto', sans-serif;
@@ -92,7 +92,7 @@ body {
 }
 .doc-content h2 {
   font-family: 'Roboto', sans-serif; font-size: 18px; font-weight: 600;
-  color: #1A1A1A; margin: 32px 0 12px;
+  color: #000000; margin: 32px 0 12px;
 }
 .doc-content h3 {
   font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 600;
@@ -104,9 +104,9 @@ body {
 .doc-content strong { font-weight: 700; color: #111; }
 .doc-content em     { font-style: italic; }
 .doc-content u      { text-decoration: underline; }
-#doc-content-wrap table  { width: 100%; border-collapse: collapse; border: 1px solid #E0DDD6; margin: 16px 0; font-size: 13px; font-family: 'Roboto', sans-serif; }
-#doc-content-wrap td, #doc-content-wrap th { border: 1px solid #E0DDD6; padding: 9px 14px; text-align: left; }
-#doc-content-wrap th { background: #F7F5F0; font-weight: 600; color: #1A1A1A; font-family: 'Roboto', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+#doc-content-wrap table  { width: 100%; border-collapse: collapse; border: 1px solid #E5E5E5; margin: 16px 0; font-size: 13px; font-family: 'Roboto', sans-serif; }
+#doc-content-wrap td, #doc-content-wrap th { border: 1px solid #E5E5E5; padding: 9px 14px; text-align: left; }
+#doc-content-wrap th { background: #F5F5F5; font-weight: 600; color: #000000; font-family: 'Roboto', sans-serif; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
 
 /* Imagenes del contenido: nunca desbordan el ancho de la hoja. !important
    para ganar a dimensiones inline que puedan venir de Word o del editor. */
@@ -116,42 +116,42 @@ body {
 .doc-find-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0;
-  background: transparent; border: 1px solid #E0DDD6; border-radius: 8px;
+  background: transparent; border: 1px solid #E5E5E5; border-radius: 8px;
   color: #666; cursor: pointer; transition: all .15s;
 }
-.doc-find-btn:hover { border-color: var(--dorado); color: #1A1A1A; }
+.doc-find-btn:hover { border-color: var(--dorado); color: #000000; }
 .doc-find-btn svg { width: 15px; height: 15px; }
 .find-bar {
   position: fixed; top: 72px; right: 28px; z-index: 500;
   display: flex; align-items: center; gap: 4px;
   padding: 6px 8px;
-  background: #FFFFFF; border: 1px solid #E0DDD6;
+  background: #FFFFFF; border: 1px solid #E5E5E5;
   border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.15);
 }
 .find-ico { width: 15px; height: 15px; color: #999; flex-shrink: 0; margin: 0 2px; }
 .find-input {
   width: 190px; padding: 5px 6px;
   background: transparent; border: none; outline: none;
-  color: #1A1A1A; font-family: 'Roboto', sans-serif; font-size: 13px;
+  color: #000000; font-family: 'Roboto', sans-serif; font-size: 13px;
 }
 .find-input::placeholder { color: #aaa; }
 .find-count {
   font-size: 11px; color: #999; font-family: 'Roboto', sans-serif;
   min-width: 38px; text-align: center; white-space: nowrap;
 }
-.find-sep { width: 1px; height: 18px; background: #E0DDD6; margin: 0 3px; }
+.find-sep { width: 1px; height: 18px; background: #E5E5E5; margin: 0 3px; }
 .find-nav, .find-close {
   display: flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; padding: 0;
   background: transparent; border: none; border-radius: 6px;
   color: #666; cursor: pointer; transition: background .12s, color .12s;
 }
-.find-nav:hover, .find-close:hover { background: #F0EDE6; color: #1A1A1A; }
+.find-nav:hover, .find-close:hover { background: #F5F5F5; color: #000000; }
 .find-nav svg, .find-close svg { width: 14px; height: 14px; }
 
 /* Resaltado por Custom Highlight API: no inserta nodos en el DOM. */
 ::highlight(doc-find)        { background-color: rgba(255, 213, 79, .45); }
-::highlight(doc-find-active) { background-color: rgba(255, 179, 0, .9); color: #1a1a1a; }
+::highlight(doc-find-active) { background-color: rgba(255, 179, 0, .9); color: #000000; }
 
 .doc-footer { width: 100%; max-width: 800px; margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -207,8 +207,8 @@ body.lectura-pdf .doc-page {
   gap: 10px;
   padding: 10px 14px;
   margin-bottom: 16px;
-  background: #F7F5F0;
-  border: 1px solid #E0DDD6;
+  background: #F5F5F5;
+  border: 1px solid #E5E5E5;
   border-radius: 8px;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
@@ -236,7 +236,7 @@ body.lectura-pdf .doc-page {
   z-index: 120;
   transition: opacity .18s, visibility .18s, color .15s, border-color .15s;
 }
-.btn-ir-final:hover { color: #1A1A1A; border-color: #B9B4A8; }
+.btn-ir-final:hover { color: #000000; border-color: #AAAAAA; }
 .btn-ir-final:active { transform: scale(.95); }
 
 /* Oculto cuando ya estas abajo. visibility ademas lo saca del foco por
@@ -333,7 +333,7 @@ body.lectura-pdf .doc-page {
    aca el fondo es claro. */
 .pdf-hl {
   position: absolute;
-  background: rgba(232, 196, 106, .45);
+  background: rgba(138,117,56, .45);
   border-radius: 2px;
   pointer-events: none;
   mix-blend-mode: multiply;
@@ -363,28 +363,28 @@ body.lectura-pdf .doc-page {
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:#FFFFFF;border:1px solid #E0DDD6;border-radius:14px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.modal-box { background:#FFFFFF;border:1px solid #E5E5E5;border-radius:14px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .modal-header { padding:18px 20px;border-bottom:1px solid #E8E4DC;display:flex;align-items:center;justify-content:space-between; }
-.modal-header h3 { font-size:15px;font-weight:600;color:#1A1A1A; }
+.modal-header h3 { font-size:15px;font-weight:600;color:#000000; }
 .modal-close { background:transparent;border:none;cursor:pointer;color:#999;padding:4px;border-radius:5px;display:flex;transition:color .15s; }
-.modal-close:hover { color:#1A1A1A; }
+.modal-close:hover { color:#000000; }
 .modal-body  { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid #E8E4DC;display:flex;justify-content:flex-end;gap:8px; }
-.btn-modal-cancel  { padding:8px 16px;border-radius:7px;border:1px solid #E0DDD6;background:transparent;font-size:13px;font-family:'Archivo',sans-serif;color:#666;cursor:pointer;transition:all .15s; }
-.btn-modal-cancel:hover { border-color:#aaa;color:#1A1A1A; }
-.btn-modal-confirm { padding:8px 16px;border-radius:7px;border:none;background:var(--dorado);color:#1A1A1A;font-size:13px;font-weight:600;font-family:'Archivo',sans-serif;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px; }
+.btn-modal-cancel  { padding:8px 16px;border-radius:7px;border:1px solid #E5E5E5;background:transparent;font-size:13px;font-family:'Montserrat',sans-serif;color:#666;cursor:pointer;transition:all .15s; }
+.btn-modal-cancel:hover { border-color:#aaa;color:#000000; }
+.btn-modal-confirm { padding:8px 16px;border-radius:7px;border:none;background:var(--dorado);color:#000000;font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px; }
 .btn-modal-confirm:hover    { opacity:.88; }
 .btn-modal-confirm:disabled { opacity:.4;cursor:not-allowed; }
 
 .loading-doc { display:flex;align-items:center;justify-content:center;gap:12px;padding:80px 0;color:#999;font-size:14px;font-family:'Roboto',sans-serif; }
-.spinner-doc { width:20px;height:20px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite; }
+.spinner-doc { width:20px;height:20px;border:2px solid rgba(191,174,118,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius:10px;padding:12px 16px;font-size:13px;color:#F5F3EE;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
+.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius:10px;padding:12px 16px;font-size:13px;color:#FFFFFF;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #F2F0EB; }
+::-webkit-scrollbar-track { background: #F5F5F5; }
 ::-webkit-scrollbar-thumb { background: #D0CDC6; border-radius: 3px; }
 
 @media (max-width: 860px) { .doc-page { padding: 40px 28px; } }
@@ -523,21 +523,21 @@ body.lectura-pdf .doc-page {
 /* Notas / Sugerencias (vista franquiciado) */
 .notas-box {
   width: 100%; max-width: 800px; margin-top: 24px;
-  background: #FFFFFF; border: 1px solid #E0DDD6; border-radius: 12px;
+  background: #FFFFFF; border: 1px solid #E5E5E5; border-radius: 12px;
   padding: 24px 28px; box-shadow: 0 2px 20px rgba(0,0,0,.05);
 }
-.notas-box-title { font-family: 'Archivo', sans-serif; font-size: 16px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
+.notas-box-title { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: #000000; margin-bottom: 4px; }
 .notas-box-sub   { font-size: 12.5px; color: #888; font-family: 'Roboto', sans-serif; margin-bottom: 14px; line-height: 1.5; }
 .nota-textarea {
-  width: 100%; background: #F7F5F0; border: 1px solid #E0DDD6; border-radius: 8px;
-  color: #1A1A1A; font-family: 'Roboto', sans-serif; font-size: 13.5px;
+  width: 100%; background: #F5F5F5; border: 1px solid #E5E5E5; border-radius: 8px;
+  color: #000000; font-family: 'Roboto', sans-serif; font-size: 13.5px;
   padding: 10px 12px; resize: vertical; outline: none; line-height: 1.5;
 }
 .nota-textarea:focus { border-color: var(--dorado); }
 .btn-nota-enviar {
   margin-top: 10px; padding: 10px 18px; background: var(--dorado);
-  color: #1A1A1A; border: none; border-radius: 8px;
-  font-size: 13px; font-weight: 600; font-family: 'Archivo', sans-serif;
+  color: #000000; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; font-family: 'Montserrat', sans-serif;
   cursor: pointer; transition: opacity .2s;
   display: inline-flex; align-items: center; gap: 8px;
 }
@@ -545,13 +545,13 @@ body.lectura-pdf .doc-page {
 .btn-nota-enviar:disabled { opacity: .4; cursor: not-allowed; }
 .notas-list { display: flex; flex-direction: column; gap: 10px; }
 .notas-list .nota-item {
-  background: #F7F5F0; border: 1px solid #E8E4DC; border-radius: 10px; padding: 12px 14px;
+  background: #F5F5F5; border: 1px solid #E8E4DC; border-radius: 10px; padding: 12px 14px;
 }
 .nota-item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
 .nota-fecha { font-size: 11px; color: #999; font-family: 'Roboto', sans-serif; }
 .nota-contenido { font-size: 13.5px; color: #333; font-family: 'Roboto', sans-serif; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
 .nota-estado { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
-.nota-estado.pendiente { background: rgba(201,168,76,.15); color: #8A6D1B; }
+.nota-estado.pendiente { background: rgba(191,174,118,.15); color: #8A6D1B; }
 .nota-estado.leida     { background: rgba(55,138,221,.12); color: #2A5E9E; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: #27500A; }
 
@@ -559,9 +559,9 @@ body.lectura-pdf .doc-page {
    Va destacado y SIN badge de estado — no es feedback que alguien gestione.
    Paleta clara, la de esta pantalla (mis-manuales.php usa el tema oscuro). */
 .nota-item.nota-release {
-  background: rgba(201,168,76,.06);
-  border-color: rgba(201,168,76,.3);
-  border-left: 3px solid #C9A84C;
+  background: rgba(191,174,118,.06);
+  border-color: rgba(191,174,118,.3);
+  border-left: 3px solid #BFAE76;
 }
 .nota-release-tag {
   display: inline-block;
@@ -571,10 +571,10 @@ body.lectura-pdf .doc-page {
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
-  background: rgba(201,168,76,.18);
+  background: rgba(191,174,118,.18);
   color: #8A6D1B;
-  border: 1px solid rgba(201,168,76,.4);
-  font-family: 'Archivo', sans-serif;
+  border: 1px solid rgba(191,174,118,.4);
+  font-family: 'Montserrat', sans-serif;
 }
 .nota-autor {
   display: block;
@@ -587,7 +587,6 @@ body.lectura-pdf .doc-page {
 
 </style>
 
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 
 <div class="app-layout">
   <?php include 'layout/topbar.php'; ?>

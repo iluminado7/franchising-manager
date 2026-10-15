@@ -246,7 +246,7 @@ async function mostrarPopupNotificaciones() {
             </div>
             <div style="padding:8px 20px;max-height:280px;overflow-y:auto" id="popup-notif-lista"></div>
             <div style="padding:12px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px">
-              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--dorado);color:var(--negro);font-size:13px;font-weight:600;font-family:'Archivo',sans-serif;cursor:pointer">Cerrar</button>
+              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--dorado);color:var(--negro);font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer">Cerrar</button>
             </div>
           </div>
         </div>`;
@@ -322,10 +322,10 @@ async function abrirPanelNotificaciones() {
           <div style="display:flex;align-items:center;gap:10px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dorado)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span style="font-size:15px;font-weight:600;color:var(--blanco)">Notificaciones</span>
-            <span id="panel-count-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:rgba(201,168,76,.15);color:var(--dorado);display:none"></span>
+            <span id="panel-count-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:rgba(191,174,118,.15);color:var(--dorado);display:none"></span>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <button id="panel-marcar-btn" onclick="marcarTodasPanel()" style="font-size:11px;color:var(--gris4);background:transparent;border:none;cursor:pointer;font-family:'Archivo',sans-serif;display:none" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">Marcar todo leído</button>
+            <button id="panel-marcar-btn" onclick="marcarTodasPanel()" style="font-size:11px;color:var(--gris4);background:transparent;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;display:none" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">Marcar todo leído</button>
             <button onclick="cerrarPanelNotificaciones()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -356,7 +356,7 @@ function cerrarPanelNotificaciones() {
 
 async function cargarNotificacionesPanel() {
   const lista = document.getElementById('notif-panel-lista');
-  lista.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--gris4);font-size:13px;font-family:'Roboto',sans-serif"><div style="width:16px;height:16px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .6s linear infinite"></div>Cargando...</div>`;
+  lista.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--gris4);font-size:13px;font-family:'Roboto',sans-serif"><div style="width:16px;height:16px;border:2px solid rgba(191,174,118,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .6s linear infinite"></div>Cargando...</div>`;
 
   try {
     const data     = await apiFetch('GET', '/notificaciones');
@@ -400,9 +400,9 @@ async function cargarNotificacionesPanel() {
         padding:14px 20px;border-bottom:1px solid rgba(44,44,44,.5);
         cursor:pointer;transition:background .15s;
         opacity:${n.disponible ? '1' : '.55'};
-        background:${!n.leida ? 'rgba(201,168,76,.04)' : 'transparent'}"
+        background:${!n.leida ? 'rgba(191,174,118,.04)' : 'transparent'}"
         onmouseover="this.style.background='rgba(255,255,255,.04)'"
-        onmouseout="this.style.background='${!n.leida ? 'rgba(201,168,76,.04)' : 'transparent'}'">
+        onmouseout="this.style.background='${!n.leida ? 'rgba(191,174,118,.04)' : 'transparent'}'">
         <div style="display:flex;gap:10px;align-items:flex-start">
           <div class="notif-dot" style="width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;background:${!n.leida ? 'var(--dorado)' : 'var(--gris2)'}"></div>
           <div style="flex:1">

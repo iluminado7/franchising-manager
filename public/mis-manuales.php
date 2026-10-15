@@ -125,7 +125,7 @@ include 'layout/head.php';
 </div>
 
 <style>
-.buscar-input { background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);font-family:'Archivo',sans-serif;outline:none;width:260px;transition:border-color .2s; }
+.buscar-input { background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);font-family:'Montserrat',sans-serif;outline:none;width:260px;transition:border-color .2s; }
 .buscar-input:focus { border-color:var(--dorado); }
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
@@ -151,7 +151,7 @@ include 'layout/head.php';
 .nota-card:last-child { margin-bottom:0; }
 .nota-card-top { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px; }
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
-.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
+.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
 .form-select:focus { border-color:var(--dorado); }
 .form-select option { background:var(--gris1); }
 /* Release notes: anuncios del publicador, estilo destacado */
@@ -161,11 +161,11 @@ include 'layout/head.php';
   font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
   background:rgba(196,162,107,.18);color:var(--dorado);
   border:1px solid rgba(196,162,107,.4);
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
 }
 .nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;white-space:pre-wrap; }
 .nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
-.nota-pendiente { background:rgba(201,168,76,.14);color:var(--dorado); }
+.nota-pendiente { background:rgba(191,174,118,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
 .nota-resuelta { background:rgba(92,184,122,.14);color:var(--exito); }
 /* Combobox de categoría. Estas clases YA existen en manuales.php; acá van
@@ -434,7 +434,7 @@ function renderTabla(lista) {
 
     return `<tr>
       <td>
-        <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(201,168,76,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
+        <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
       </td>
       <td>${esc(m.categoria) || '—'}</td>
       <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">${fecha}</td>

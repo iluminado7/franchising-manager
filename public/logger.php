@@ -114,7 +114,7 @@ include 'layout/head.php';
   background: var(--gris2); border: 1px solid var(--gris2);
   border-radius: 7px; padding: 7px 12px 7px 32px;
   font-size: 13px; color: var(--blanco);
-  font-family: 'Archivo', sans-serif; outline: none;
+  font-family: 'Montserrat', sans-serif; outline: none;
   width: 300px; transition: border-color .2s;
 }
 .buscar-input:focus { border-color: var(--dorado); }
@@ -122,11 +122,11 @@ include 'layout/head.php';
 .log-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
 .log-tab {
   background:transparent; border:1px solid var(--gris2); border-radius:20px;
-  padding:7px 16px; font-size:12px; font-family:'Archivo',sans-serif;
+  padding:7px 16px; font-size:12px; font-family:'Montserrat',sans-serif;
   color:var(--gris4); cursor:pointer; transition:all .15s;
 }
 .log-tab:hover  { color:var(--blanco); border-color:var(--gris3); }
-.log-tab.active { background:rgba(201,168,76,.12); border-color:rgba(201,168,76,.3); color:var(--dorado); }
+.log-tab.active { background:rgba(191,174,118,.12); border-color:rgba(191,174,118,.3); color:var(--dorado); }
 
 .modal-overlay {
   display: none; position: fixed; inset: 0;
@@ -185,7 +185,7 @@ include 'layout/head.php';
    los tiene en panel.css. */
 .err-btn {
   background: transparent; border: none; cursor: pointer;
-  font-family: 'Archivo', sans-serif; font-size: 12px;
+  font-family: 'Montserrat', sans-serif; font-size: 12px;
   padding: 4px 7px; border-radius: 5px; transition: background .15s;
 }
 .err-btn:hover { background: var(--gris2); }
@@ -295,7 +295,7 @@ function verDetalle(id) {
   document.getElementById('det-body').innerHTML =
       fila('Excepción',   esc(e.excepcion || ''))
     + fila('Mensaje',     esc(e.mensaje || ''))
-    + fila('Archivo',     esc(e.archivo || '') + (e.linea ? `:${e.linea}` : ''))
+    + fila('Montserrat',     esc(e.archivo || '') + (e.linea ? `:${e.linea}` : ''))
     + fila('Petición',    `${esc(e.metodo || '—')} ${esc(e.ruta || '')}`)
     + fila('Usuario',     e.user_id ? `#${e.user_id}` : 'Sin sesión')
     + fila('IP',          esc(e.ip || '—'))
@@ -341,14 +341,14 @@ function mostrarToast(msg, tipo = 'exito') {
     t.id = 'toast-errores';
     t.style.cssText =
       'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
-      'padding:11px 20px;border-radius:8px;font-family:Archivo,sans-serif;' +
+      'padding:11px 20px;border-radius:8px;font-family:Montserrat,sans-serif;' +
       'font-size:13px;z-index:900;opacity:0;transition:opacity .2s;' +
       'pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.35)';
     document.body.appendChild(t);
   }
   t.textContent = msg;
   t.style.background = tipo === 'error' ? '#8C2F2F' : '#2F6B45';
-  t.style.color      = '#F5F3EE';
+  t.style.color      = '#FFFFFF';
   t.style.opacity    = '1';
   clearTimeout(t._to);
   t._to = setTimeout(() => { t.style.opacity = '0'; }, 2600);

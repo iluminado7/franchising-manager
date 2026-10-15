@@ -343,7 +343,7 @@ include 'layout/head.php';
         </div>
         <input type="file" id="file-docx" accept=".docx" style="display:none" onchange="importarDocx(this.files[0])">
         <div id="import-result"   style="display:none;margin-top:8px;background:rgba(92,184,122,.08);border:1px solid rgba(92,184,122,.2);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--exito)"></div>
-        <div id="import-warnings" style="display:none;margin-top:6px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
+        <div id="import-warnings" style="display:none;margin-top:6px;background:rgba(191,174,118,.08);border:1px solid rgba(191,174,118,.2);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
       </div>
 
       <!-- v2.3: Visible para qué categorías de Socios comerciales -->
@@ -472,9 +472,9 @@ include 'layout/head.php';
         </div>
       </div>
 
-      <div style="margin-top:16px;padding:12px;border:1px solid var(--gris2);border-radius:6px;background:rgba(201,168,76,.04)">
+      <div style="margin-top:16px;padding:12px;border:1px solid var(--gris2);border-radius:6px;background:rgba(191,174,118,.04)">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris4);font-weight:600;margin-bottom:4px">Se publicará como</div>
-        <div id="vi-preview" style="font-size:20px;font-weight:700;color:var(--dorado);font-family:'Archivo',sans-serif">v1.0</div>
+        <div id="vi-preview" style="font-size:20px;font-weight:700;color:var(--dorado);font-family:'Montserrat',sans-serif">v1.0</div>
       </div>
 
       <div class="form-error" id="vi-error" style="display:none;margin-top:12px"></div>
@@ -536,7 +536,7 @@ include 'layout/head.php';
 
       <!-- Nota de publicación (opcional, común a super_admin y franquiciante) -->
       <div style="margin-top:16px">
-        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);margin-bottom:6px;font-family:'Archivo',sans-serif">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);margin-bottom:6px;font-family:'Montserrat',sans-serif">
           Mensaje al publicar <span style="text-transform:none;font-weight:400;color:var(--gris4);letter-spacing:0">(opcional)</span>
         </label>
         <textarea id="pub-nota" maxlength="2000" rows="3"
@@ -701,12 +701,12 @@ include 'layout/head.php';
 }
 .tb-btn svg { width: 14px; height: 14px; }
 .tb-btn:hover  { background: var(--gris2); color: var(--blanco); }
-.tb-btn.active { background: rgba(201,168,76,.15); color: var(--dorado); }
+.tb-btn.active { background: rgba(191,174,118,.15); color: var(--dorado); }
 
 .tb-select {
   background: transparent; border: 1px solid var(--gris2);
   border-radius: 5px; color: var(--gris5);
-  font-size: 12px; font-family: 'Archivo', sans-serif;
+  font-size: 12px; font-family: 'Montserrat', sans-serif;
   padding: 4px 8px; cursor: pointer; outline: none;
   transition: border-color .15s;
 }
@@ -818,7 +818,7 @@ include 'layout/head.php';
   transition: background .15s, color .15s;
 }
 .mini-btn:hover { background: var(--gris2); color: var(--blanco); }
-.mini-btn:active { background: rgba(201,168,76,.15); }
+.mini-btn:active { background: rgba(191,174,118,.15); }
 .mini-sep { width: 1px; height: 14px; background: var(--gris2); margin: 0 2px; }
 .mini-select {
   background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
@@ -985,8 +985,8 @@ include 'layout/head.php';
   display: flex; flex-direction: column; align-items: center;
   transition: border-color .2s, background .2s;
 }
-.drop-zone:hover { border-color: var(--dorado); background: rgba(201,168,76,.04); }
-.drop-zone.drag  { border-color: var(--dorado); background: rgba(201,168,76,.08); }
+.drop-zone:hover { border-color: var(--dorado); background: rgba(191,174,118,.04); }
+.drop-zone.drag  { border-color: var(--dorado); background: rgba(191,174,118,.08); }
 
 .version-list { display: flex; flex-direction: column; gap: 6px; }
 
@@ -996,13 +996,13 @@ include 'layout/head.php';
   transition: border-color .15s, background .15s;
 }
 .version-item:hover  { border-color: var(--gris3); background: rgba(255,255,255,.05); }
-.version-item.activa { border-color: rgba(201,168,76,.4); background: rgba(201,168,76,.05); }
+.version-item.activa { border-color: rgba(191,174,118,.4); background: rgba(191,174,118,.05); }
 
 .version-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
 .version-num  { font-size: 13px; font-weight: 600; color: var(--blanco); }
 .version-fecha { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .version-autor { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
-.version-tag   { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(201,168,76,.15); color: var(--dorado); margin-top: 4px; }
+.version-tag   { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(191,174,118,.15); color: var(--dorado); margin-top: 4px; }
 
 /* Modal elegir tipo de version (menor / mayor) */
 .ver-opciones { display: flex; flex-direction: column; gap: 10px; }
@@ -1012,8 +1012,8 @@ include 'layout/head.php';
   border-radius: 10px; padding: 14px 16px;
   transition: border-color .15s, background .15s;
 }
-.ver-opcion:hover { border-color: var(--dorado); background: rgba(201,168,76,.06); }
-.ver-opcion-num    { font-size: 18px; font-weight: 700; color: var(--dorado); font-family: 'Archivo', sans-serif; margin-bottom: 2px; }
+.ver-opcion:hover { border-color: var(--dorado); background: rgba(191,174,118,.06); }
+.ver-opcion-num    { font-size: 18px; font-weight: 700; color: var(--dorado); font-family: 'Montserrat', sans-serif; margin-bottom: 2px; }
 .ver-opcion-titulo { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 4px; }
 .ver-opcion-desc   { font-size: 12.5px; color: var(--gris4); line-height: 1.5; font-family: 'Roboto', sans-serif; }
 
@@ -1056,7 +1056,7 @@ include 'layout/head.php';
   display: block; font-size: 11px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.6px;
   color: var(--gris4); margin-bottom: 6px;
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 .form-input {
   width: 100%; box-sizing: border-box;
@@ -1126,7 +1126,7 @@ include 'layout/head.php';
   letter-spacing: .04em; text-transform: uppercase;
   padding: 2px 7px; border-radius: 20px;
 }
-.nota-estado.pendiente { background: rgba(201,168,76,.15); color: var(--dorado); }
+.nota-estado.pendiente { background: rgba(191,174,118,.15); color: var(--dorado); }
 .nota-estado.leida     { background: rgba(55,138,221,.15); color: #378ADD; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: var(--exito); }
 .nota-ver { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
@@ -1138,7 +1138,7 @@ include 'layout/head.php';
   transition: border-color .15s, color .15s, background .15s;
 }
 .nota-btn:hover { border-color: var(--gris3); color: var(--blanco); background: rgba(255,255,255,.04); }
-.nota-btn.activo { border-color: rgba(201,168,76,.4); color: var(--dorado); background: rgba(201,168,76,.06); cursor: default; }
+.nota-btn.activo { border-color: rgba(191,174,118,.4); color: var(--dorado); background: rgba(191,174,118,.06); cursor: default; }
 
 </style>
 
@@ -1298,7 +1298,7 @@ function renderVersiones(versiones) {
   }
 
   const itemsBorrador = borrador ? [`
-    <div class="version-item" data-version="borrador" style="border-color:rgba(201,168,76,.2)" onclick='cargarVersionDesdeJSON(${JSON.stringify(borrador)})'>
+    <div class="version-item" data-version="borrador" style="border-color:rgba(191,174,118,.2)" onclick='cargarVersionDesdeJSON(${JSON.stringify(borrador)})'>
       <div class="version-item-header">
         <span class="version-num" style="color:var(--dorado)">Borrador</span>
         <span class="version-fecha">${formatFecha(borrador.publicado_at)}</span>
@@ -1891,8 +1891,8 @@ function formatBlock(tag) {
 // ── COLOR: texto y resaltado (Opción C: paleta + picker nativo) ────────
 // Paleta homogénea: neutros + dorado de marca + cálidos + fríos.
 const COLORES_PALETA = [
-  '#000000','#434343','#666666','#999999','#cccccc','#ffffff',
-  '#c9a84c','#c0392b','#e67e22','#f1c40f',
+  '#000000','#434343','#555555','#999999','#cccccc','#ffffff',
+  '#BFAE76','#c0392b','#e67e22','#f1c40f',
   '#27ae60','#2980b9','#3498db','#8e44ad'
 ];
 
@@ -2609,7 +2609,7 @@ function renderListaModalVisible() {
 
     <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
       <div style="flex:1;height:1px;background:var(--gris2)"></div>
-      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Archivo',sans-serif">O elegí categorías específicas</span>
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Montserrat',sans-serif">O elegí categorías específicas</span>
       <div style="flex:1;height:1px;background:var(--gris2)"></div>
     </div>
 
@@ -2921,7 +2921,7 @@ function renderNotas(notas) {
           </div>
           <div class="nota-contenido">${escNota(n.contenido || '')}</div>
           <div class="nota-meta">
-            <span class="nota-estado pendiente" style="background:rgba(201,168,76,.15);color:#8A6D1B">mensaje del publicador</span>
+            <span class="nota-estado pendiente" style="background:rgba(191,174,118,.15);color:#8A6D1B">mensaje del publicador</span>
             ${ver}
           </div>
         </div>`;

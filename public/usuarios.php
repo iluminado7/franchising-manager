@@ -428,17 +428,17 @@ include 'layout/head.php';
 <style>
 .filtro-btn {
   padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);
-  background:transparent;font-size:12px;font-family:'Archivo',sans-serif;
+  background:transparent;font-size:12px;font-family:'Montserrat',sans-serif;
   color:var(--gris4);cursor:pointer;transition:all .15s;
 }
 .filtro-btn:hover  { border-color:var(--gris3);color:var(--blanco); }
-.filtro-btn.active { background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--dorado); }
+.filtro-btn.active { background:rgba(191,174,118,.12);border-color:rgba(191,174,118,.3);color:var(--dorado); }
 .filtro-sep { width:1px;height:20px;background:var(--gris2);margin:0 4px; }
 
 .filtro-select, .form-select {
   background:var(--gris2);border:1px solid var(--gris2);
   border-radius:7px;color:var(--gris5);font-size:12px;
-  font-family:'Archivo',sans-serif;padding:7px 10px;
+  font-family:'Montserrat',sans-serif;padding:7px 10px;
   cursor:pointer;outline:none;transition:border-color .2s;
 }
 .filtro-select:focus, .form-select:focus { border-color:var(--dorado); }
@@ -449,7 +449,7 @@ include 'layout/head.php';
 .buscar-input {
   background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;
   padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);
-  font-family:'Archivo',sans-serif;outline:none;width:220px;transition:border-color .2s;
+  font-family:'Montserrat',sans-serif;outline:none;width:220px;transition:border-color .2s;
 }
 .buscar-input:focus { border-color:var(--dorado); }
 
@@ -472,8 +472,8 @@ include 'layout/head.php';
 .cat-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 260px; }
 .cat-chip {
   display: inline-flex; align-items: center;
-  background: rgba(201,168,76,.10); color: var(--dorado);
-  border: 1px solid rgba(201,168,76,.28);
+  background: rgba(191,174,118,.10); color: var(--dorado);
+  border: 1px solid rgba(191,174,118,.28);
   border-radius: 10px; padding: 2px 8px;
   font-size: 10.5px; font-family: 'Roboto', sans-serif;
   white-space: nowrap; max-width: 130px;
@@ -504,14 +504,14 @@ include 'layout/head.php';
 .form-group input[type=password] {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
   border-radius:7px;padding:10px 12px;font-size:13px;
-  font-family:'Archivo',sans-serif;color:var(--blanco);
+  font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
 }
 .form-group input:focus { border-color:var(--dorado); }
 .form-group input::placeholder { color:var(--gris3); }
 .form-group input:disabled { opacity:.5;cursor:not-allowed; }
 .form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
 .btn-sm { padding:8px 14px;font-size:12px; }
 .toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
@@ -713,7 +713,7 @@ function renderTabla(lista) {
     // restaurar: no le queda email ni contrasena con los cuales entrar.
     const purgado       = !!u.anonimizado_at;
     const badgeElim     = eliminado
-      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Archivo',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado</span>`
+      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Montserrat',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado</span>`
       : '';
 
     // Empresa / franquicia según rol

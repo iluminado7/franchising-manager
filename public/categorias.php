@@ -121,7 +121,7 @@ include 'layout/head.php';
 
       <!-- Se llena solo cuando el backend rechaza con 409. -->
       <div id="elim-cat-bloqueo" style="display:none;margin-top:14px;padding:12px;border:1px solid var(--gris2);border-radius:8px;background:var(--negro)">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-weight:600;margin-bottom:8px;font-family:'Archivo',sans-serif">Asignaciones que lo impiden</div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-weight:600;margin-bottom:8px;font-family:'Montserrat',sans-serif">Asignaciones que lo impiden</div>
         <div id="elim-cat-detalle" style="font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;line-height:1.8"></div>
         <div style="font-size:11.5px;color:var(--gris4);margin-top:10px;line-height:1.6;font-family:'Roboto',sans-serif">
           Este conteo incluye lo eliminado y lo archivado, que la tabla no muestra.
@@ -144,11 +144,11 @@ include 'layout/head.php';
 <style>
 .filtro-btn {
   padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);
-  background:transparent;font-size:12px;font-family:'Archivo',sans-serif;
+  background:transparent;font-size:12px;font-family:'Montserrat',sans-serif;
   color:var(--gris4);cursor:pointer;transition:all .15s;
 }
 .filtro-btn:hover  { border-color:var(--gris3);color:var(--blanco); }
-.filtro-btn.active { background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--dorado); }
+.filtro-btn.active { background:rgba(191,174,118,.12);border-color:rgba(191,174,118,.3);color:var(--dorado); }
 
 /* ── Grid de empresas (vista 1) ────────────────────────────── */
 .empresas-grid {
@@ -186,7 +186,7 @@ include 'layout/head.php';
 }
 .badge-suspendida {
   font-size:10px;
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   padding:2px 8px;
   border-radius:10px;
   background:rgba(226,92,92,.12);
@@ -202,7 +202,7 @@ include 'layout/head.php';
 }
 .empresa-card-stat strong {
   color:var(--dorado);
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   font-weight:600;
   font-size:13px;
 }
@@ -223,7 +223,7 @@ include 'layout/head.php';
 /* ── Badges activa/inactiva (compartidos por la tabla) ───── */
 .badge-inactiva {
   font-size:10px;
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   padding:2px 8px;
   border-radius:10px;
   background:rgba(150,150,150,.12);
@@ -232,7 +232,7 @@ include 'layout/head.php';
 }
 .badge-activa {
   font-size:10px;
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   padding:2px 8px;
   border-radius:10px;
   background:rgba(95,179,128,.12);
@@ -251,7 +251,7 @@ include 'layout/head.php';
   max-width:340px;
 }
 .cat-stat-num {
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   font-weight:600;
   color:var(--blanco);
 }
@@ -272,14 +272,14 @@ include 'layout/head.php';
 .form-group textarea {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
   border-radius:7px;padding:10px 12px;font-size:13px;
-  font-family:'Archivo',sans-serif;color:var(--blanco);
+  font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
   box-sizing:border-box;
 }
 .form-group input:focus, .form-group textarea:focus { border-color:var(--dorado); }
 .form-group input::placeholder, .form-group textarea::placeholder { color:var(--gris3); }
 .form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
 
 .toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
@@ -301,7 +301,7 @@ include 'layout/head.php';
 .empty-state strong {
   display:block;
   color:var(--gris5);
-  font-family:'Archivo',sans-serif;
+  font-family:'Montserrat',sans-serif;
   font-size:14px;
   font-weight:500;
   margin-bottom:4px;

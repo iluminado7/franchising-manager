@@ -239,12 +239,12 @@ include 'layout/head.php';
   border: 1px solid rgba(101,163,255,.25);
 }
 .plan-tipo-badge.global {
-  background: rgba(201,168,76,.12); color: var(--dorado);
-  border: 1px solid rgba(201,168,76,.25);
+  background: rgba(191,174,118,.12); color: var(--dorado);
+  border: 1px solid rgba(191,174,118,.25);
 }
 .plan-precio {
   font-size: 26px; font-weight: 700; color: var(--blanco);
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 .plan-precio span {
   font-size: 12px; font-weight: 400; color: var(--gris4); margin-left: 4px;
@@ -277,7 +277,7 @@ include 'layout/head.php';
 .filtro-select-lg {
   background: var(--gris1); border: 1px solid var(--gris2);
   border-radius: 8px; color: var(--blanco);
-  font-size: 13px; font-family: 'Archivo', sans-serif;
+  font-size: 13px; font-family: 'Montserrat', sans-serif;
   padding: 9px 14px; outline: none; cursor: pointer;
   transition: border-color .2s; min-width: 240px;
 }
@@ -322,7 +322,7 @@ include 'layout/head.php';
 .filtro-select {
   background: var(--gris2); border: 1px solid var(--gris2);
   border-radius: 7px; color: var(--gris5); font-size: 12px;
-  font-family: 'Archivo', sans-serif; padding: 7px 10px;
+  font-family: 'Montserrat', sans-serif; padding: 7px 10px;
   cursor: pointer; outline: none; transition: border-color .2s;
 }
 .filtro-select:focus { border-color: var(--dorado); }
@@ -353,7 +353,7 @@ include 'layout/head.php';
 .form-group .form-select {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
   border-radius:7px;padding:10px 12px;font-size:13px;
-  font-family:'Archivo',sans-serif;color:var(--blanco);
+  font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
 .form-group textarea { resize:vertical; font-family:'Roboto',sans-serif; line-height:1.6; }
@@ -367,7 +367,7 @@ include 'layout/head.php';
 .form-select { background:var(--negro)!important; color:var(--blanco)!important; }
 .form-select option { background:var(--gris1); }
 .btn-sm { padding:8px 14px;font-size:12px; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
 .accion-btn:hover { background:var(--gris2);color:var(--blanco); }
 .toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
@@ -629,7 +629,7 @@ function renderTablaFacturas(facturas, empresaId) {
           </thead>
           <tbody>
             ${facturas.map(f => `<tr>
-              <td style="color:var(--blanco);font-family:'Archivo',sans-serif;font-size:12px">${esc(f.numero_factura || '—')}</td>
+              <td style="color:var(--blanco);font-family:'Montserrat',sans-serif;font-size:12px">${esc(f.numero_factura || '—')}</td>
               <td>${esc(f.periodo || '—')}</td>
               <td>${esc(f.plan?.nombre || '—')}</td>
               <td style="text-align:center">${f.franquicias_activas ?? '—'}</td>

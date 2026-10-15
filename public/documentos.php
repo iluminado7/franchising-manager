@@ -521,7 +521,7 @@ include 'layout/head.php';
       </button>
     </div>
     <div class="modal-body">
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Archivo',sans-serif;margin-bottom:8px"
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-family:'Montserrat',sans-serif;margin-bottom:8px"
            id="nota-doc-titulo"></div>
       <p style="font-size:14px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif;white-space:pre-wrap;margin:0"
          id="nota-doc-texto"></p>
@@ -588,7 +588,7 @@ include 'layout/head.php';
 .tipo-politica  { background: rgba(186,104,200,.12); color: #ba68c8;       border: 1px solid rgba(186,104,200,.25); }
 .tipo-protocolo { background: rgba(255,138,101,.12); color: #ff8a65;       border: 1px solid rgba(255,138,101,.25); }
 .tipo-circular  { background: rgba(38,198,218,.12);  color: #26c6da;       border: 1px solid rgba(38,198,218,.25); }
-.tipo-anexo     { background: rgba(201,168,76,.12);  color: var(--dorado); border: 1px solid rgba(201,168,76,.25); }
+.tipo-anexo     { background: rgba(191,174,118,.12);  color: var(--dorado); border: 1px solid rgba(191,174,118,.25); }
 .tipo-acta      { background: rgba(76,175,80,.12);   color: var(--exito);  border: 1px solid rgba(76,175,80,.25); }
 .tipo-procedimiento { background: rgba(121,134,203,.12); color: #7986cb;      border: 1px solid rgba(121,134,203,.25); }
 .tipo-otro      { background: rgba(255,255,255,.07); color: var(--gris5);  border: 1px solid var(--gris2); }
@@ -600,7 +600,7 @@ include 'layout/head.php';
   transition: border-color .2s, background .2s;
 }
 .drop-zone:hover, .drop-zone.dragover {
-  border-color: var(--dorado); background: rgba(201,168,76,.04);
+  border-color: var(--dorado); background: rgba(191,174,118,.04);
 }
 .drop-zone.has-file {
   border-color: var(--exito); background: rgba(76,175,80,.04);
@@ -622,7 +622,7 @@ include 'layout/head.php';
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
 .form-group input[type=text], .form-group .form-select {
   width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;
-  padding:10px 12px;font-size:13px;font-family:'Archivo',sans-serif;color:var(--blanco);
+  padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
 .form-group input[type=text]:focus, .form-group .form-select:focus { border-color:var(--dorado); }
@@ -630,7 +630,7 @@ include 'layout/head.php';
 .form-select { background:var(--negro)!important;color:var(--blanco)!important;cursor:pointer; }
 .form-select option { background:var(--gris1); }
 .form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Archivo',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
 .accion-btn:hover { background:var(--gris2);color:var(--blanco); }
 
 /* ── Toast ────────────────────────────────────────────────── */
@@ -670,7 +670,7 @@ include 'layout/head.php';
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   background: rgba(226,92,92,.15); color: var(--error);
   border: 1px solid rgba(226,92,92,.3);
-  font-family: 'Archivo', sans-serif; text-transform: uppercase;
+  font-family: 'Montserrat', sans-serif; text-transform: uppercase;
 }
 
 /* Botón pequeño tipo pill para toggles del header */
@@ -697,7 +697,7 @@ include 'layout/head.php';
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   background: rgba(166,200,132,.15); color: var(--exito);
   border: 1px solid rgba(166,200,132,.3);
-  font-family: 'Archivo', sans-serif; text-transform: uppercase;
+  font-family: 'Montserrat', sans-serif; text-transform: uppercase;
 }
 
 .version-info-autor {
@@ -1481,7 +1481,7 @@ function renderTabla(lista) {
     const eliminado          = !!d.deleted_at;
     const eliminadoPorFranq  = eliminado && d.deleted_by?.rol === 'franquiciante';
     const badgeEliminado     = eliminado
-      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Archivo',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado${eliminadoPorFranq ? ' por franquiciante' : ''}</span>`
+      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Montserrat',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado${eliminadoPorFranq ? ' por franquiciante' : ''}</span>`
       : '';
 
     // El título de la fila es clickeable: lleva a la vista detalle
@@ -1853,7 +1853,7 @@ async function verAudiencia(id) {
 
     cont.innerHTML = acotado + res.usuarios.map(u => {
       const motivos = u.categorias.map(c =>
-        `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:rgba(201,168,76,.12);color:var(--dorado);border:1px solid rgba(201,168,76,.3)">${esc(c)}</span>`
+        `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:rgba(191,174,118,.12);color:var(--dorado);border:1px solid rgba(191,174,118,.3)">${esc(c)}</span>`
       ).join(' ');
       const indiv = u.individual
         ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:var(--gris2);color:var(--gris5)">Asignado individualmente</span>`
