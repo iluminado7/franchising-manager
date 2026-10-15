@@ -1462,6 +1462,21 @@ caché.
 **`php artisan optimize:clear` no limpia el opcache de PHP.** En XAMPP hay que
 reiniciar Apache para que tome el código nuevo.
 
+**Nunca castear a `(string)` algo que viene del request sin chequear
+`is_string()` primero.** Un escáner manda `email[]=a&email[]=b`; `input()`
+devuelve un array, castearlo emite un warning de PHP, Laravel lo convierte en
+`ErrorException` y el endpoint responde **500 en vez de 422**, ensuciando
+`error_logs` con lo que parece un bug propio.
+
+Pasó en dos lugares (corregido el 14/10/2026): los limitadores `login` y
+`password-reset` de `AppServiceProvider`, y el token de Turnstile en
+`VerificaTurnstile`.
+
+⚠️ **La validación no te protege en estos dos casos**: los limitadores corren
+**antes** del controller por diseño, y `turnstile_token` no está en ningún
+`validate()`. Cualquier código que lea del request fuera de la validación tiene
+que defenderse solo.
+
 **Algo falla solo con F12 abierto** → revisá el dropdown de throttling en la
 pestaña Network. Modo "Offline" activado.
 

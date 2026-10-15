@@ -49,7 +49,7 @@ class AppServiceProvider extends ServiceProvider
         //     hora, y es lo unico que frena a quien rota IPs para hostigar a
         //     una persona puntual.
         RateLimiter::for('password-reset', function (Request $request) {
-            $email = strtolower((string) $request->input('email', ''));
+            $email = self::emailDelRequest($request);
 
             return [
                 Limit::perMinute(5)->by('pwreset_ip:' . $request->ip()),
@@ -58,7 +58,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $email = strtolower((string) $request->input('email', ''));
+            $email = self::emailDelRequest($request);
 
             return [
                 Limit::perMinute(10)->by('login_ip:' . $request->ip()),
@@ -93,5 +93,33 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MessageSending::class, function (MessageSending $evento) {
             return LimiteMailsDemo::permitir($evento) ? null : false;
         });
+    }
+
+    /**
+     * El email del request, normalizado, para usarlo como clave del limitador.
+     *
+     * POR QUE NO ALCANZA CON (string) $request->input('email'):
+     *
+     * Los limitadores corren ANTES que la validacion del controller — ese es
+     * su trabajo, frenar la fuerza bruta antes de tocar la base. Eso significa
+     * que aca llega CUALQUIER COSA, sin filtrar.
+     *
+     * Un escaner automatico manda email[]=a&email[]=b. Con eso, input() no
+     * devuelve un texto sino un array, y castear un array a string emite un
+     * warning de PHP que Laravel convierte en ErrorException: el login
+     * respondia 500 en vez del 422 que corresponde, y el error quedaba
+     * registrado como si fuera un bug nuestro. (Visto en produccion el
+     * 12/10/2026 desde 156.59.50.231.)
+     *
+     * Devolver '' para lo que no sea texto tiene un efecto util: todos los
+     * pedidos malformados comparten el mismo contador, asi que un script que
+     * los repita se limita solo. Y el pedido sigue su curso hasta la
+     * validacion, que lo rechaza con 422 como debe ser.
+     */
+    private static function emailDelRequest(Request $request): string
+    {
+        $email = $request->input('email');
+
+        return is_string($email) ? strtolower($email) : '';
     }
 }

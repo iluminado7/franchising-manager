@@ -71,7 +71,15 @@ trait VerificaTurnstile
             return;
         }
 
-        $token = trim((string) $request->input('turnstile_token', ''));
+        // is_string ANTES de castear: turnstile_token no pasa por validate()
+        // en ninguno de los dos controllers que usan este trait, asi que llega
+        // sin filtrar. Si un escaner manda turnstile_token[]=a, el cast
+        // (string) de un array emite un warning que Laravel convierte en
+        // ErrorException, y el login responde 500 en vez de pedir la
+        // verificacion. Mismo problema que habia en los limitadores de
+        // AppServiceProvider (ver emailDelRequest).
+        $token = $request->input('turnstile_token');
+        $token = is_string($token) ? trim($token) : '';
 
         if ($token === '') {
             throw ValidationException::withMessages([
