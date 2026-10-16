@@ -249,7 +249,7 @@ include 'layout/head.php';
 .card-perfil {
   background: var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 20px;
 }
 .card-perfil-header {
@@ -289,7 +289,7 @@ include 'layout/head.php';
 #avatar-foto { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .foto-acciones { display: flex; gap: 8px; margin-top: 6px; }
 .foto-btn {
-  background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
+  background: transparent; border: 1px solid var(--gris2); border-radius: var(--radius);
   color: var(--gris5); cursor: pointer; font-size: 11px; padding: 3px 10px;
   font-family: 'Roboto', sans-serif; transition: border-color .12s, color .12s;
 }
@@ -301,7 +301,7 @@ include 'layout/head.php';
   background: rgba(0,0,0,.7);
 }
 .cropper-box {
-  background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px;
+  background: var(--gris1); border: 1px solid var(--gris2); border-radius: var(--radius);
   padding: 20px; width: 92%; max-width: 420px;
 }
 .cropper-header { font-size: 14px; font-weight: 600; color: var(--blanco); margin-bottom: 14px; font-family: 'Montserrat', sans-serif; }
@@ -332,7 +332,7 @@ include 'layout/head.php';
   gap: 12px;
   padding: 10px 12px;
   background: var(--negro);
-  border-radius: 7px;
+  border-radius: var(--radius);
   border: 1px solid var(--gris2);
 }
 .dato-label {
@@ -365,7 +365,7 @@ include 'layout/head.php';
 .form-group input[type=text] {
   width: 100%;
   background: var(--negro); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 10px 12px;
+  border-radius: var(--radius); padding: 10px 12px;
   font-size: 13px; font-family: 'Montserrat', sans-serif;
   color: var(--blanco); outline: none; transition: border-color .2s;
   box-sizing: border-box;
@@ -385,13 +385,13 @@ include 'layout/head.php';
 .eye-btn:hover { color: var(--blanco); }
 .form-error {
   background: rgba(226,92,92,.1); border: 1px solid rgba(226,92,92,.3);
-  border-radius: 7px; padding: 9px 12px;
+  border-radius: var(--radius); padding: 9px 12px;
   font-size: 12px; color: var(--error);
   margin-bottom: 12px; line-height: 1.5;
 }
 .form-exito {
   background: rgba(76,175,80,.1); border: 1px solid rgba(76,175,80,.3);
-  border-radius: 7px; padding: 9px 12px;
+  border-radius: var(--radius); padding: 9px 12px;
   font-size: 12px; color: var(--exito);
   margin-bottom: 12px; line-height: 1.5;
 }
@@ -401,7 +401,7 @@ include 'layout/head.php';
 .plan-card {
   background: var(--negro);
   border: 1px solid rgba(191,174,118,.2);
-  border-radius: 9px;
+  border-radius: var(--radius);
   padding: 16px;
 }
 .plan-nombre {
@@ -447,7 +447,7 @@ include 'layout/head.php';
 .toast {
   position: fixed; bottom: 24px; right: 24px;
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 10px; padding: 12px 16px;
+  border-radius: var(--radius); padding: 12px 16px;
   font-size: 13px; color: var(--blanco);
   display: flex; align-items: center; gap: 10px;
   transform: translateY(80px); opacity: 0;
@@ -472,10 +472,9 @@ include 'layout/head.php';
 .mcuit-box {
   background: var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 12px;
+  border-radius: var(--radius);
   width: 100%; max-width: 400px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,.35);
 }
 .mcuit-header {
   padding: 16px 20px;
@@ -495,7 +494,7 @@ include 'layout/head.php';
   margin-top: 14px; padding: 12px;
   background: var(--negro);
   border: 1px solid var(--gris2);
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-family: 'Montserrat', sans-serif; font-size: 14px;
 }
 .mcuit-viejo  { color: var(--gris4); text-decoration: line-through; }
@@ -507,7 +506,7 @@ include 'layout/head.php';
 }
 .mcuit-btn {
   padding: 8px 16px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   font-family: 'Montserrat', sans-serif; font-size: 13px;
   cursor: pointer;
   border: 1px solid var(--gris2);

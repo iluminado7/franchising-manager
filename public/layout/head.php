@@ -20,9 +20,30 @@ $css_extra = $css_extra ?? null;
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= htmlspecialchars($titulo) ?> — Sistema de Franquicias</title>
+<?php
+/* TEMA: se aplica ANTES de cargar el CSS, a proposito.
+   Si se hiciera despues, el navegador alcanza a pintar un cuadro con el tema
+   por defecto y el usuario ve un destello blanco al entrar a cada pagina.
+   Por eso este script va inline y arriba de todo: es la unica forma de que
+   no parpadee. */
+?>
+<script>
+(function () {
+  var guardado = null;
+  try { guardado = localStorage.getItem('tema'); } catch (e) {}
+  // Sin preferencia guardada se respeta la del sistema operativo (guia, §7).
+  var oscuro = guardado
+    ? guardado === 'oscuro'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (oscuro) document.documentElement.setAttribute('data-theme', 'dark');
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<?php /* Los tokens de marca van PRIMEROS: todo lo demas depende de ellos. */ ?>
+<link rel="stylesheet" href="<?= BASE_URL_PHP ?>/styles/goharv-tokens.css">
+<link rel="stylesheet" href="<?= BASE_URL_PHP ?>/styles/goharv-ui.css">
 <link rel="stylesheet" href="<?= BASE_URL_PHP ?>/styles/style.css">
 <link rel="stylesheet" href="<?= BASE_URL_PHP ?>/styles/panel.css">
 <?php if ($css_extra): ?>

@@ -1,0 +1,128 @@
+/* goharv-tokens.css — Marca Madre GoHarv. No editar por proyecto. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  /* ── Paleta de marca ── */
+  --gh-gold: #BFAE76;
+  --gh-gold-dark: #8A7538;
+  --gh-black: #000000;
+  --gh-white: #FFFFFF;
+  --gh-gray-text: #555555;
+  --gh-gray-soft: #F5F5F5;
+
+  /* ── Roles (lo que usan los componentes) ── */
+  --bg-app: var(--gh-white);
+  --bg-band: var(--gh-gray-soft);   /* franja del encabezado de página */
+  --surface: var(--gh-white);       /* cards, tablas, modales */
+  --text: var(--gh-black);
+  --text-muted: var(--gh-gray-text);
+  --label: var(--gh-gold-dark);     /* etiquetas en mayúscula, links */
+  --accent: var(--gh-gold);         /* rellenos, bordes, barras, ítem activo */
+  --accent-soft: rgba(191, 174, 118, 0.15); /* fondo del ítem activo del menú */
+  --border: #E2E2E2;
+
+  --success: #2E6B47;
+  --error: #A33A3A;
+  --warning: #8A6A1F;
+
+  /* ── Tipografía ── */
+  --font-display: 'Montserrat', sans-serif;
+  --font-body: 'Roboto', sans-serif;
+  --tracking-label: 0.14em;
+  --tracking-button: 0.08em;
+
+  /* ── Forma y espacio ── */
+  --radius: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+  --container: 1280px;
+  --sidebar-w: 280px;
+  --sidebar-w-collapsed: 88px;
+  --topbar-h: 92px;
+}
+
+[data-theme="dark"] {
+  --bg-app: #0B0B0B;
+  --bg-band: #141414;
+  --surface: #141414;
+  --text: var(--gh-white);
+  --text-muted: #B5B5B5;
+  --label: var(--gh-gold);          /* gold-dark da 4.1:1 sobre #141414; gold da 8.4:1 */
+  --accent-soft: rgba(191, 174, 118, 0.12);
+  --border: #2A2A2A;
+
+  --success: #6FBF8E;
+  --error: #E07C7C;
+  --warning: #D9B45A;
+}
+
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; }
+h1 { font-weight: 700; font-size: clamp(2rem, 1.5rem + 2vw, 3rem); line-height: 1.1; }
+h2 { font-weight: 700; font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem); line-height: 1.2; }
+h3 { font-weight: 600; font-size: 1.25rem; line-height: 1.3; }
+
+a { color: var(--label); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+
+/* ══════════════════════════════════════════════════════════════
+   PUENTE CON LOS TOKENS HISTORICOS DE BUSINESS PARTNER
+
+   Todo lo de arriba es la guia, copiada tal cual y sin tocar. De aca
+   para abajo es PROPIO del proyecto y temporal.
+
+   POR QUE EXISTE: el proyecto tiene mas de mil usos de --dorado, --negro,
+   --blanco y --gris1..5 repartidos en 25 archivos. Cambiarlos uno por uno
+   en un solo paso es donde se rompen las cosas sin que nadie lo note.
+
+   Redefiniendo los nombres viejos ENCIMA de los roles nuevos, esos mil
+   usos pasan a tomar los valores correctos sin tocarlos, y el modo oscuro
+   queda resuelto en un solo lugar.
+
+   COMO SE SACA: a medida que cada pantalla se migre a los roles de la
+   guia, su uso de los nombres viejos desaparece. Cuando no quede ninguno,
+   este bloque se borra entero.
+
+   NO AGREGAR NOMBRES NUEVOS ACA. Esto es una rampa de salida, no una
+   segunda nomenclatura.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --dorado:        var(--accent);
+  --dorado-oscuro: var(--gh-gold-dark);
+
+  --negro:  var(--bg-app);    /* fondo de pantalla (62 de sus 76 usos) */
+  --blanco: var(--text);
+  --gris1:  var(--surface);   /* tarjetas, tablas, topbar, sidebar */
+  --gris2:  var(--border);    /* bordes: su uso mayoritario, 238 contra 73 */
+  --gris3:  var(--text-muted);
+  --gris4:  var(--text-muted);
+  --gris5:  var(--text);
+  --exito:  var(--success);
+  /* --error ya se llama igual en la guia: no necesita puente. */
+}
+
+/* OJO con --negro como COLOR DE TEXTO.
+   Se usa de dos maneras incompatibles: fondo de pantalla (62 veces) y texto
+   sobre dorado (14 veces). El puente lo resuelve como fondo, que es su uso
+   mayoritario.
+   Los 14 casos de texto se pasaron a --gh-black a mano, porque el texto del
+   boton primario va en negro en LOS DOS temas (la guia lo dice en §7, y en
+   claro --bg-app seria blanco: 2.2:1 sobre dorado, prohibido por §2). */

@@ -222,7 +222,7 @@ include 'layout/head.php';
 
 <style>
 .buscar-input {
-  background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;
+  background:var(--gris2);border:1px solid var(--gris2);border-radius: var(--radius);
   padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);
   font-family:'Montserrat',sans-serif;outline:none;width:220px;transition:border-color .2s;
 }
@@ -230,7 +230,7 @@ include 'layout/head.php';
 
 .form-select {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
-  border-radius:7px;padding:10px 12px;font-size:13px;
+  border-radius: var(--radius);padding:10px 12px;font-size:13px;
   font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
 }
@@ -238,7 +238,7 @@ include 'layout/head.php';
 .form-select option { background:var(--gris1); }
 
 .filtro-btn {
-  padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);
+  padding:6px 14px;border-radius: var(--radius);border:1px solid var(--gris2);
   background:transparent;font-size:12px;font-family:'Montserrat',sans-serif;
   color:var(--gris4);cursor:pointer;transition:all .15s;
 }
@@ -247,35 +247,35 @@ include 'layout/head.php';
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:560px;overflow:hidden; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-width:560px;overflow:hidden; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body  { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px; }
 .form-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
-.form-group input { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s; }
+.form-group input { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s; }
 .form-group input:focus { border-color:var(--dorado); }
 .form-group input::placeholder { color:var(--gris3); }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px; }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius: var(--radius);font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 /* Tarjetas de empresa */
 .empresa-card {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 10px; padding: 18px 20px; cursor: pointer;
+  border-radius: var(--radius); padding: 18px 20px; cursor: pointer;
   transition: border-color .2s, background .2s;
 }
 .empresa-card:hover { border-color: var(--dorado); background: rgba(191,174,118,.04); }
 .empresa-card-nombre { font-size:14px;font-weight:600;color:var(--blanco);margin-bottom:4px; }
 .empresa-card-sub    { font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
-.empresa-card-badge  { display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;margin-top:8px; }
+.empresa-card-badge  { display:inline-block;font-size:10px;padding:2px 8px;border-radius: var(--radius);margin-top:8px; }
 </style>
 
 <script>
@@ -471,7 +471,7 @@ function renderTabla(lista, tbodyId, tituloId) {
       <td>
         <div style="display:flex;align-items:center;gap:7px">
           <span style="color:var(--blanco);font-weight:500">${esc(f.nombre)}</span>
-          ${f.es_sede_central ? `<span style="font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:rgba(191,174,118,.15);color:var(--dorado);border:1px solid rgba(191,174,118,.3);white-space:nowrap">Sede central</span>` : ''}
+          ${f.es_sede_central ? `<span style="font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius: var(--radius);background:rgba(191,174,118,.15);color:var(--dorado);border:1px solid rgba(191,174,118,.3);white-space:nowrap">Sede central</span>` : ''}
         </div>
       </td>
       <td>${esc(f.razon_social)}</td>

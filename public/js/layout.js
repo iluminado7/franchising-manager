@@ -15,23 +15,121 @@ function esc(str) {
 }
 
 // ── TEMA ─────────────────────────────────────────────────────
+//
+// El tema vive en data-theme="dark" sobre <html>, no en una clase del body:
+// lo pide la guia de marca (§7) y permite aplicarlo antes de que se pinte
+// nada (ver el script inline de layout/head.php, que evita el destello).
+//
+// Claro es el estado por defecto. Oscuro es el atributo presente.
+function temaEsOscuro() {
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
 function aplicarTema() {
-  const esClaro = localStorage.getItem('tema') === 'claro';
-  document.body.classList.toggle('tema-claro', esClaro);
+  // head.php ya lo aplico al cargar. Esto solo mantiene el boton en sintonia
+  // si alguna pantalla lo vuelve a llamar.
+  pintarBotonTema(temaEsOscuro());
 }
 
 function toggleTema() {
-  const esClaro = document.body.classList.toggle('tema-claro');
-  localStorage.setItem('tema', esClaro ? 'claro' : 'oscuro');
-  const labelEl = document.getElementById('label-tema');
-  const iconEl  = document.getElementById('icon-tema');
-  if (labelEl) labelEl.textContent = esClaro ? 'Modo oscuro' : 'Modo claro';
-  if (iconEl)  iconEl.innerHTML    = esClaro
-    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
-    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+  const oscuro = !temaEsOscuro();
+  if (oscuro) document.documentElement.setAttribute('data-theme', 'dark');
+  else        document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('tema', oscuro ? 'oscuro' : 'claro'); } catch (e) {}
+  pintarBotonTema(oscuro);
+}
+
+// El boton muestra el tema que se va a APLICAR al tocarlo, no el actual:
+// estando en oscuro muestra el sol.
+//
+// Es solo un icono, sin texto: desde que paso al topbar (guia §6) no hay
+// lugar para una etiqueta, y el aria-label del boton ya dice que hace.
+function pintarBotonTema(oscuro) {
+  const iconEl = document.getElementById('icon-tema');
+  if (!iconEl) return;
+  iconEl.innerHTML = oscuro
+    ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+    : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 }
 
 aplicarTema();
+
+// ── USUARIO DEL TOPBAR ────────────────────────────────────────
+//
+// Avatar, nombre y rol de quien esta usando el sistema, dentro del boton que
+// lleva a perfil.php.
+const ROL_LEGIBLE = {
+  super_admin:   'Superadmin',
+  franquiciante: 'Franquiciante',
+  franquiciado:  'Socio comercial',
+  empleado:      'Empleado',
+};
+
+function pintarUsuarioTopbar(me, nombreCompleto) {
+  const avatarEl = document.getElementById('topbar-avatar');
+  const nombreEl = document.getElementById('topbar-nombre');
+  const rolEl    = document.getElementById('topbar-rol');
+
+  if (nombreEl) nombreEl.textContent = nombreCompleto || me.email;
+  if (rolEl)    rolEl.textContent    = ROL_LEGIBLE[me.rol] || me.rol.replace('_', ' ');
+
+  if (!avatarEl) return;
+
+  // Iniciales abajo, foto encima: si el endpoint devuelve 404 (sin foto,
+  // archivo faltante) el onerror borra la imagen y quedan las iniciales.
+  //
+  // Se pinta a mano y no con avatarUsuario() porque esa funcion agrega
+  // u-avatar-click, y aca el clic tiene que ir al boton (perfil.php), no al
+  // visor de imagen.
+  avatarEl.textContent = inicialesDeUsuario(me);
+  if (me.avatar_url) {
+    const img = document.createElement('img');
+    img.className = 'u-avatar-img';
+    img.alt = '';
+    img.onerror = () => img.remove();
+    // Con API y no con me.avatar_url tal cual: ese campo es una ruta
+    // absoluta y en XAMPP el proyecto vive en un subpath.
+    img.src = `${API}/perfil/foto/${me.id}`;
+    avatarEl.appendChild(img);
+  }
+}
+
+// ── EYEBROW DE LA BANDA DE ENCABEZADO ─────────────────────────
+//
+// La guia (§6) pide que cada pantalla tenga, arriba del titulo, una etiqueta
+// en mayusculas con una rayita dorada que diga el rol de quien mira.
+//
+// Se inyecta desde aca y no se escribe en el HTML de cada pantalla por dos
+// motivos: son 13 archivos con la misma estructura, y el rol recien se sabe
+// cuando responde /me. Hacerlo en un solo lugar evita que la proxima
+// pantalla nazca sin eyebrow.
+//
+// Inicio (dashboard.php) ya trae el suyo en el markup, con su propia banda:
+// por eso se busca .page-header y no .gh-banda.
+function ponerEyebrowDePagina(rol) {
+  const texto = ROL_LEGIBLE[rol] || rol.replace('_', ' ');
+
+  // TODOS los encabezados, no solo el primero: franquicias.php tiene tres,
+  // uno por cada estado de la pantalla (sin empresa elegida, vista de
+  // super_admin, vista de franquiciante) y muestra uno por vez. Con
+  // querySelector a secas, dos de los tres quedaban sin eyebrow.
+  document.querySelectorAll('.page-header').forEach(header => {
+    // Idempotente: si ya hay uno, no se duplica.
+    if (header.querySelector('.gh-label')) return;
+
+    const titulo = header.querySelector('.page-title');
+    if (!titulo) return;
+
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'gh-label gh-label--line';
+    eyebrow.textContent = texto;
+
+    // Antes del titulo, dentro de su mismo contenedor: el .page-header suele
+    // ser un flex con el titulo a la izquierda y un boton a la derecha, asi
+    // que insertarlo en el header lo mandaria al costado del boton.
+    titulo.parentNode.insertBefore(eyebrow, titulo);
+  });
+}
 
 // ── SIDEBAR ───────────────────────────────────────────────────
 function renderSidebar(rol) {
@@ -99,6 +197,8 @@ function renderSidebar(rol) {
       <a href="${BASE_URL}/${item.href}"
          class="nav-item ${paginaActual === item.id ? 'active' : ''}"
          data-tooltip="${item.label}"
+         aria-label="${item.label}"
+         ${paginaActual === item.id ? 'aria-current="page"' : ''}
          onclick="cerrarSidebar()">
         ${ICONOS[item.icon] || ''}
         <span>${item.label}</span>
@@ -121,36 +221,13 @@ document.addEventListener('DOMContentLoaded', async function iniciarLayout() {
   try {
     const me = await apiFetch('GET', '/me');
 
-    const nombreEl = document.getElementById('topbar-nombre');
-    const rolEl    = document.getElementById('topbar-rol');
     // v2.3: nombre/apellido viven en users — vienen al toplevel de /me
     const nombreCompleto = [me.nombre, me.apellido].filter(Boolean).join(' ').trim();
-    if (nombreEl) nombreEl.textContent = nombreCompleto || me.email;
 
-    // Avatar del topbar. Se pinta a mano y no con avatarUsuario() porque esa
-    // funcion agrega u-avatar-click, y aca el clic tiene que ir al boton
-    // (perfil.php), no al lightbox.
-    //
-    // La <img> se monta ENCIMA de las iniciales; si el endpoint devuelve 404
-    // (sin foto, archivo faltante) el onerror la borra y quedan las iniciales.
-    const avatarEl = document.getElementById('topbar-avatar');
-    if (avatarEl) {
-      avatarEl.textContent = inicialesDeUsuario(me);
-      if (me.avatar_url) {
-        const img = document.createElement('img');
-        img.className = 'u-avatar-img';
-        img.alt = '';
-        img.onerror = () => img.remove();
-        // Con API y no con me.avatar_url tal cual: ese campo es una ruta
-        // absoluta y en XAMPP el proyecto vive en un subpath.
-        img.src = `${API}/perfil/foto/${me.id}`;
-        avatarEl.appendChild(img);
-      }
-    }
-    if (rolEl) {
-      rolEl.textContent = me.rol.replace('_', ' ');
-      rolEl.className   = `rol-badge ${me.rol}`;
-    }
+    // Avatar, nombre y rol del topbar, en una sola llamada.
+    pintarUsuarioTopbar(me, nombreCompleto);
+
+    ponerEyebrowDePagina(me.rol);
 
     if (typeof MODO_EDITOR === 'undefined' || !MODO_EDITOR) {
       renderSidebar(me.rol);
@@ -230,9 +307,8 @@ async function mostrarPopupNotificaciones() {
           justify-content:center;padding-top:64px">
           <div style="
             background:var(--gris1);border:1px solid var(--gris2);
-            border-radius:14px;width:100%;max-width:420px;
-            margin:0 16px;overflow:hidden;
-            box-shadow:0 20px 60px rgba(0,0,0,.4)">
+            border-radius: var(--radius);width:100%;max-width:420px;
+            margin:0 16px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between">
               <div style="display:flex;align-items:center;gap:10px">
                 <div style="width:8px;height:8px;border-radius:50%;background:var(--dorado);flex-shrink:0"></div>
@@ -240,13 +316,13 @@ async function mostrarPopupNotificaciones() {
                   Tenés <span id="popup-notif-count" style="color:var(--dorado)"></span> novedad(es)
                 </span>
               </div>
-              <button onclick="cerrarPopupNotif()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
+              <button onclick="cerrarPopupNotif()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <div style="padding:8px 20px;max-height:280px;overflow-y:auto" id="popup-notif-lista"></div>
             <div style="padding:12px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px">
-              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--dorado);color:var(--negro);font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer">Cerrar</button>
+              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius: var(--radius);border:none;background:var(--dorado);color:var(--gh-black);font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer">Cerrar</button>
             </div>
           </div>
         </div>`;
@@ -316,17 +392,16 @@ async function abrirPanelNotificaciones() {
         position:fixed;top:0;right:0;height:100vh;width:360px;
         background:var(--gris1);border-left:1px solid var(--gris2);
         z-index:801;display:flex;flex-direction:column;
-        transform:translateX(100%);transition:transform .25s ease;
-        box-shadow:-8px 0 32px rgba(0,0,0,.3)">
+        transform:translateX(100%);transition:transform .25s ease;">
         <div style="padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
           <div style="display:flex;align-items:center;gap:10px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dorado)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span style="font-size:15px;font-weight:600;color:var(--blanco)">Notificaciones</span>
-            <span id="panel-count-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:rgba(191,174,118,.15);color:var(--dorado);display:none"></span>
+            <span id="panel-count-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius: var(--radius);background:rgba(191,174,118,.15);color:var(--dorado);display:none"></span>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button id="panel-marcar-btn" onclick="marcarTodasPanel()" style="font-size:11px;color:var(--gris4);background:transparent;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;display:none" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">Marcar todo leído</button>
-            <button onclick="cerrarPanelNotificaciones()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
+            <button onclick="cerrarPanelNotificaciones()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>

@@ -112,7 +112,7 @@ include 'layout/head.php';
 }
 .buscar-input {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 7px 12px 7px 32px;
+  border-radius: var(--radius); padding: 7px 12px 7px 32px;
   font-size: 13px; color: var(--blanco);
   font-family: 'Montserrat', sans-serif; outline: none;
   width: 300px; transition: border-color .2s;
@@ -121,7 +121,7 @@ include 'layout/head.php';
 
 .log-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
 .log-tab {
-  background:transparent; border:1px solid var(--gris2); border-radius:20px;
+  background:transparent; border:1px solid var(--gris2); border-radius: var(--radius);
   padding:7px 16px; font-size:12px; font-family:'Montserrat',sans-serif;
   color:var(--gris4); cursor:pointer; transition:all .15s;
 }
@@ -137,7 +137,7 @@ include 'layout/head.php';
 
 .modal-box {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 14px; width: 100%; max-height: 90vh; overflow-y: auto;
+  border-radius: var(--radius); width: 100%; max-height: 90vh; overflow-y: auto;
 }
 .modal-header {
   padding: 18px 20px; border-bottom: 1px solid var(--gris2);
@@ -147,7 +147,7 @@ include 'layout/head.php';
 .modal-header h3 { font-size: 14px; font-weight: 600; color: var(--blanco); }
 .modal-close {
   background: transparent; border: none; cursor: pointer;
-  color: var(--gris4); padding: 4px; border-radius: 5px;
+  color: var(--gris4); padding: 4px; border-radius: var(--radius);
   transition: color .15s, background .15s; display: flex;
 }
 .modal-close:hover { color: var(--blanco); background: var(--gris2); }
@@ -167,7 +167,7 @@ include 'layout/head.php';
 
 .json-block {
   background: var(--negro); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 12px; font-size: 12px;
+  border-radius: var(--radius); padding: 12px; font-size: 12px;
   font-family: monospace; color: var(--gris5);
   white-space: pre-wrap; word-break: break-all;
   line-height: 1.6; margin-top: 4px; max-height: 320px; overflow-y: auto;
@@ -176,7 +176,7 @@ include 'layout/head.php';
 .accion-pill {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 500;
-  padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+  padding: 3px 9px; border-radius: var(--radius); white-space: nowrap;
 }
 .pill-pendiente { background: rgba(201,76,76,.12); color: #D46A6A; }
 .pill-resuelto  { background: rgba(92,184,122,.12); color: var(--exito); }
@@ -186,7 +186,7 @@ include 'layout/head.php';
 .err-btn {
   background: transparent; border: none; cursor: pointer;
   font-family: 'Montserrat', sans-serif; font-size: 12px;
-  padding: 4px 7px; border-radius: 5px; transition: background .15s;
+  padding: 4px 7px; border-radius: var(--radius); transition: background .15s;
 }
 .err-btn:hover { background: var(--gris2); }
 
@@ -341,9 +341,9 @@ function mostrarToast(msg, tipo = 'exito') {
     t.id = 'toast-errores';
     t.style.cssText =
       'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
-      'padding:11px 20px;border-radius:8px;font-family:Montserrat,sans-serif;' +
+      'padding:11px 20px;border-radius: var(--radius);font-family:Montserrat,sans-serif;' +
       'font-size:13px;z-index:900;opacity:0;transition:opacity .2s;' +
-      'pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+      'pointer-events:none;';
     document.body.appendChild(t);
   }
   t.textContent = msg;

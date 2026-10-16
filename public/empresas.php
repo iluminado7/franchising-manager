@@ -99,7 +99,7 @@ include 'layout/head.php';
 
       <!-- Empresa demo: el check es solo para el alta. Al editar una demo se
            muestra el aviso de vencimiento en su lugar. -->
-      <label id="wrap-es-demo" style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;cursor:pointer">
+      <label id="wrap-es-demo" style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);cursor:pointer">
         <input type="checkbox" id="form-es-demo" onchange="onChangeDemo()" style="margin-top:3px;accent-color:var(--dorado)">
         <span style="font-size:13px;color:var(--blanco);line-height:1.5">
           Empresa demo
@@ -108,11 +108,11 @@ include 'layout/head.php';
           </span>
         </span>
       </label>
-      <div id="demo-aviso" style="display:none;margin-bottom:14px;background:rgba(191,174,118,.06);border:1px solid rgba(191,174,118,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
+      <div id="demo-aviso" style="display:none;margin-bottom:14px;background:rgba(191,174,118,.06);border:1px solid rgba(191,174,118,.2);border-radius: var(--radius);padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
       <div id="wrap-ultimo-periodo" style="display:none;margin-bottom:14px">
       <div class="form-group" style="margin-bottom:0">
         <label>Último período facturado</label>
-        <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">
+        <div style="background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:10px 12px;font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif">
           <span id="ultimo-periodo">—</span>
         </div>
       </div>
@@ -129,7 +129,7 @@ include 'layout/head.php';
       </div>
 
       <!-- Descripción del plan seleccionado -->
-      <div id="plan-desc" style="display:none;margin-bottom:14px;background:rgba(191,174,118,.06);border:1px solid rgba(191,174,118,.2);border-radius:8px;padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
+      <div id="plan-desc" style="display:none;margin-bottom:14px;background:rgba(191,174,118,.06);border:1px solid rgba(191,174,118,.2);border-radius: var(--radius);padding:12px 14px;font-size:12px;font-family:'Roboto',sans-serif;line-height:1.6;color:var(--gris5)"></div>
 
       <!-- Precio custom según tipo de plan -->
       <div id="wrap-precio-franquicia" style="display:none">
@@ -153,12 +153,12 @@ include 'layout/head.php';
       </div>
 
       <!-- Simulador de precio -->
-      <div id="simulador" style="display:none;margin-bottom:14px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px 14px">
+      <div id="simulador" style="display:none;margin-bottom:14px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 14px">
         <div style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Simulador de facturación</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <label style="font-size:12px;color:var(--gris5);white-space:nowrap">Cantidad de franquicias:</label>
           <input type="number" id="sim-cantidad" value="1" min="0" step="1" oninput="simular()"
-            style="width:80px;background:var(--gris2);border:1px solid var(--gris2);border-radius:6px;padding:6px 10px;font-size:13px;color:var(--blanco);outline:none;font-family:'Montserrat',sans-serif">
+            style="width:80px;background:var(--gris2);border:1px solid var(--gris2);border-radius: var(--radius);padding:6px 10px;font-size:13px;color:var(--blanco);outline:none;font-family:'Montserrat',sans-serif">
         </div>
         <div style="font-size:14px;color:var(--blanco)">
           Total estimado: <strong id="sim-total" style="color:var(--dorado);font-size:16px">—</strong>
@@ -171,7 +171,7 @@ include 'layout/head.php';
       <!-- Sección: Emails -->
       <div class="seccion-titulo" style="margin-top:8px">
         Emails de contacto
-        <button type="button" onclick="agregarEmailRow()" style="margin-left:auto;background:transparent;border:1px solid var(--gris2);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--gris4);cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .15s" onmouseover="this.style.borderColor='var(--dorado)';this.style.color='var(--dorado)'" onmouseout="this.style.borderColor='var(--gris2)';this.style.color='var(--gris4)'">
+        <button type="button" onclick="agregarEmailRow()" style="margin-left:auto;background:transparent;border:1px solid var(--gris2);border-radius: var(--radius);padding:3px 10px;font-size:11px;color:var(--gris4);cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .15s" onmouseover="this.style.borderColor='var(--dorado)';this.style.color='var(--dorado)'" onmouseout="this.style.borderColor='var(--gris2)';this.style.color='var(--gris4)'">
           + Agregar email
         </button>
       </div>
@@ -274,7 +274,7 @@ include 'layout/head.php';
 <style>
 .buscar-input {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 7px 12px 7px 32px;
+  border-radius: var(--radius); padding: 7px 12px 7px 32px;
   font-size: 13px; color: var(--blanco);
   font-family: 'Montserrat', sans-serif; outline: none;
   width: 220px; transition: border-color .2s;
@@ -282,7 +282,7 @@ include 'layout/head.php';
 .buscar-input:focus { border-color: var(--dorado); }
 
 .filtro-btn {
-  padding: 6px 14px; border-radius: 20px;
+  padding: 6px 14px; border-radius: var(--radius);
   border: 1px solid var(--gris2); background: transparent;
   font-size: 12px; font-family: 'Montserrat', sans-serif;
   color: var(--gris4); cursor: pointer; transition: all .15s;
@@ -292,10 +292,10 @@ include 'layout/head.php';
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body  { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px; }
@@ -320,7 +320,7 @@ include 'layout/head.php';
 .form-group input[type=number],
 .form-select {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
-  border-radius:7px;padding:10px 12px;font-size:13px;
+  border-radius: var(--radius);padding:10px 12px;font-size:13px;
   font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
 }
@@ -330,7 +330,7 @@ include 'layout/head.php';
 
 .form-error {
   background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);
-  border-radius:7px;padding:10px 12px;font-size:13px;
+  border-radius: var(--radius);padding:10px 12px;font-size:13px;
   color:var(--error);display:none;margin-top:8px;
 }
 
@@ -343,7 +343,7 @@ include 'layout/head.php';
 }
 .email-row input, .email-row select {
   background: var(--negro); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 8px 10px; font-size: 13px;
+  border-radius: var(--radius); padding: 8px 10px; font-size: 13px;
   font-family: 'Montserrat', sans-serif; color: var(--blanco);
   outline: none; width: 100%; transition: border-color .2s;
 }
@@ -351,14 +351,14 @@ include 'layout/head.php';
 .email-row select option { background: var(--gris1); }
 .email-row .btn-remove {
   background: transparent; border: none; cursor: pointer;
-  color: var(--gris4); padding: 6px; border-radius: 5px;
+  color: var(--gris4); padding: 6px; border-radius: var(--radius);
   display: flex; transition: color .15s;
 }
 .email-row .btn-remove:hover { color: var(--error); }
 
 .accion-btn {
   background:transparent;border:none;cursor:pointer;
-  padding:5px 8px;border-radius:5px;font-size:12px;
+  padding:5px 8px;border-radius: var(--radius);font-size:12px;
   font-family:'Montserrat',sans-serif;
   transition:background .15s;display:inline-flex;align-items:center;gap:4px;
 }
@@ -367,7 +367,7 @@ include 'layout/head.php';
 .toast {
   position:fixed;bottom:24px;right:24px;
   background:var(--gris1);border:1px solid var(--gris2);
-  border-radius:10px;padding:12px 16px;font-size:13px;
+  border-radius: var(--radius);padding:12px 16px;font-size:13px;
   color:var(--blanco);display:flex;align-items:center;gap:10px;
   transform:translateY(80px);opacity:0;
   transition:transform .3s,opacity .3s;

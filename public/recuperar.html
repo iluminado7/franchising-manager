@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<!-- TEMA FIJO EN OSCURO, a proposito.
+     Las pantallas de acceso van siempre sobre negro: es la cara de entrada al
+     sistema y no sigue la preferencia del usuario, que ademas todavia no
+     inicio sesion. Por eso el atributo esta escrito aca y no lo pone ningun
+     script. -->
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/goharv-tokens.css">
 <link rel="stylesheet" href="styles/style.css">
 <link rel="stylesheet" href="styles/login.css?v=3">
 <link rel="preconnect" href="https://challenges.cloudflare.com">
@@ -46,7 +52,7 @@
       <!-- Mensaje de exito. Reemplaza al formulario una vez enviado: dejarlo
            visible invitaria a reintentar, y el limite es de 3 por hora. -->
       <div id="zona-ok" style="display:none">
-        <div style="background:rgba(92,184,122,.1);border:1px solid rgba(92,184,122,.3);border-radius:8px;padding:16px;margin-bottom:20px">
+        <div style="background:rgba(92,184,122,.1);border:1px solid rgba(92,184,122,.3);border-radius: var(--radius);padding:16px;margin-bottom:20px">
           <p style="color:var(--exito);font-size:14px;line-height:1.6;margin:0">
             Si el email está registrado, vas a recibir las instrucciones en unos minutos.
           </p>

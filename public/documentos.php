@@ -200,7 +200,7 @@ include 'layout/head.php';
         </div>
 
         <!-- Sub-bloque: lista de categorías (visible solo cuando el toggle está ON) -->
-        <div id="doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
+        <div id="doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4)">Categorías visibles</span>
             <button type="button" id="doc-btn-sel-todas" onclick="toggleSeleccionarTodasCategorias('doc')"
@@ -213,7 +213,7 @@ include 'layout/head.php';
               ${''}
             </div>
           </div>
-          <div id="doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Roboto',sans-serif;line-height:1.5">
+          <div id="doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius: var(--radius);font-size:12px;color:var(--dorado);font-family:'Roboto',sans-serif;line-height:1.5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Sin categorías marcadas: ningún socio comercial verá este documento.
           </div>
@@ -456,7 +456,7 @@ include 'layout/head.php';
           Si está desactivado, ningun socio comercial ni empleado podra ver el documento. Las categorías marcadas se preservan para cuando vuelvas a activarlo.
         </div>
 
-        <div id="edit-doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px">
+        <div id="edit-doc-categorias-wrap" style="display:none;margin-top:12px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4)">Categorías visibles</span>
             <button type="button" id="edit-doc-btn-sel-todas" onclick="toggleSeleccionarTodasCategorias('edit-doc')"
@@ -469,7 +469,7 @@ include 'layout/head.php';
               Cargando categorías...
             </div>
           </div>
-          <div id="edit-doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius:6px;font-size:12px;color:var(--dorado);font-family:'Roboto',sans-serif;line-height:1.5">
+          <div id="edit-doc-categorias-warning" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);border-radius: var(--radius);font-size:12px;color:var(--dorado);font-family:'Roboto',sans-serif;line-height:1.5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Sin categorías marcadas: ningún socio comercial verá este documento.
           </div>
@@ -539,7 +539,7 @@ include 'layout/head.php';
 /* ── Filtros ──────────────────────────────────────────────── */
 .filtro-select {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; color: var(--gris5); font-size: 12px;
+  border-radius: var(--radius); color: var(--gris5); font-size: 12px;
   font-family: 'Roboto', sans-serif; padding: 7px 10px;
   cursor: pointer; outline: none; transition: border-color .2s;
 }
@@ -547,7 +547,7 @@ include 'layout/head.php';
 .filtro-select option { background: var(--gris1); }
 .filtro-select-lg {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 8px; color: var(--blanco); font-size: 13px;
+  border-radius: var(--radius); color: var(--blanco); font-size: 13px;
   font-family: 'Roboto', sans-serif; padding: 9px 14px;
   outline: none; cursor: pointer; transition: border-color .2s; min-width: 220px;
 }
@@ -555,7 +555,7 @@ include 'layout/head.php';
 .filtro-select-lg option { background: var(--gris1); }
 .buscar-input {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 8px; padding: 8px 12px 8px 32px;
+  border-radius: var(--radius); padding: 8px 12px 8px 32px;
   font-size: 13px; font-family: 'Roboto', sans-serif;
   color: var(--blanco); outline: none; transition: border-color .2s; width: 220px;
 }
@@ -563,13 +563,13 @@ include 'layout/head.php';
 .buscar-input::placeholder { color: var(--gris3); }
 
 /* ── Combobox de empresa (igual a manuales.php) ─────────────── */
-.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);z-index:50; }
 .combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
 
 /* ── Tabla ────────────────────────────────────────────────── */
-.tabla-wrap { background: var(--gris1); border: 1px solid var(--gris2); border-radius: 12px; overflow: hidden; }
+.tabla-wrap { background: var(--gris1); border: 1px solid var(--gris2); border-radius: var(--radius); overflow: hidden; }
 .tabla-header { padding: 14px 18px; border-bottom: 1px solid var(--gris2); font-size: 13px; font-weight: 500; color: var(--gris5); }
 .tabla { width: 100%; border-collapse: collapse; }
 .tabla th { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--gris4); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--gris2); white-space: nowrap; }
@@ -580,7 +580,7 @@ include 'layout/head.php';
 /* ── Tipo badge ───────────────────────────────────────────── */
 .tipo-badge {
   display: inline-flex; align-items: center;
-  padding: 3px 9px; border-radius: 20px;
+  padding: 3px 9px; border-radius: var(--radius);
   font-size: 11px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap;
 }
@@ -595,7 +595,7 @@ include 'layout/head.php';
 
 /* ── Drop zone ────────────────────────────────────────────── */
 .drop-zone {
-  border: 1.5px dashed var(--gris3); border-radius: 9px;
+  border: 1.5px dashed var(--gris3); border-radius: var(--radius);
   padding: 28px 16px; text-align: center; cursor: pointer;
   transition: border-color .2s, background .2s;
 }
@@ -609,10 +609,10 @@ include 'layout/head.php';
 /* ── Modal ────────────────────────────────────────────────── */
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-width:540px;max-height:90vh;overflow-y:auto; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--gris1);z-index:1; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
@@ -621,7 +621,7 @@ include 'layout/head.php';
 .form-group { margin-bottom:14px; }
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
 .form-group input[type=text], .form-group .form-select {
-  width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;
+  width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);
   padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
@@ -629,12 +629,12 @@ include 'layout/head.php';
 .form-group input::placeholder { color:var(--gris3); }
 .form-select { background:var(--negro)!important;color:var(--blanco)!important;cursor:pointer; }
 .form-select option { background:var(--gris1); }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius: var(--radius);font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
 .accion-btn:hover { background:var(--gris2);color:var(--blanco); }
 
 /* ── Toast ────────────────────────────────────────────────── */
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 /* ── Vista detalle ─────────────────────────────────────────── */
 .detalle-header {
@@ -666,7 +666,7 @@ include 'layout/head.php';
 .version-card.eliminada { opacity: .55; background: rgba(226,92,92,.04); }
 .version-card.eliminada:hover { background: rgba(226,92,92,.07); }
 .version-eliminada-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  display: inline-block; padding: 2px 8px; border-radius: var(--radius);
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   background: rgba(226,92,92,.15); color: var(--error);
   border: 1px solid rgba(226,92,92,.3);
@@ -676,13 +676,13 @@ include 'layout/head.php';
 /* Botón pequeño tipo pill para toggles del header */
 .filtro-btn {
   background: transparent; border: 1px solid var(--gris2);
-  border-radius: 20px; padding: 6px 14px;
+  border-radius: var(--radius); padding: 6px 14px;
   font-size: 12px; color: var(--gris5);
   font-family: 'Roboto', sans-serif;
   cursor: pointer; transition: all .15s; outline: none;
 }
 .filtro-btn:hover { border-color: var(--dorado); color: var(--blanco); }
-.filtro-btn.active { background: var(--dorado); color: var(--negro); border-color: var(--dorado); }
+.filtro-btn.active { background: var(--dorado); color: var(--gh-black); border-color: var(--dorado); }
 
 .version-numero {
   display: flex; flex-direction: column; align-items: center;
@@ -693,7 +693,7 @@ include 'layout/head.php';
   font-family: 'Roboto', sans-serif;
 }
 .version-vigente-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  display: inline-block; padding: 2px 8px; border-radius: var(--radius);
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   background: rgba(166,200,132,.15); color: var(--exito);
   border: 1px solid rgba(166,200,132,.3);
@@ -713,7 +713,7 @@ include 'layout/head.php';
 .version-nota {
   margin-top: 8px; padding: 8px 12px;
   background: var(--gris1); border-left: 2px solid var(--gris3);
-  border-radius: 4px; font-size: 12px; color: var(--gris5);
+  border-radius: var(--radius); font-size: 12px; color: var(--gris5);
   font-family: 'Roboto', sans-serif; line-height: 1.5;
   display: flex; gap: 8px; align-items: flex-start;
 }
@@ -734,7 +734,7 @@ include 'layout/head.php';
 .nota-edit-area {
   width: 100%; box-sizing: border-box;
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 6px; padding: 8px 10px;
+  border-radius: var(--radius); padding: 8px 10px;
   font-size: 12px; color: var(--blanco);
   font-family: 'Roboto', sans-serif;
   resize: vertical; min-height: 60px; outline: none;
@@ -913,7 +913,7 @@ function renderListaCategoriasModal(prefix, idsMarcadas, usuariosAsignados = new
 
   cont.innerHTML = categoriasEmpresa.map(c => `
     <div class="cat-item-wrap" data-cat-wrap="${c.id}">
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px">
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius: var(--radius)">
         <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica-doc" style="margin:0;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onToggleCatDoc('${prefix}', ${c.id})">
         <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleCheckCatDoc('${prefix}', ${c.id})">
           <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)} <span style="color:var(--gris4);font-weight:400;font-size:11px">(${usuariosDeCategoria(c.id).length})</span></div>
@@ -921,7 +921,7 @@ function renderListaCategoriasModal(prefix, idsMarcadas, usuariosAsignados = new
         </div>
         <button type="button" class="cat-chevron" data-chevron="${c.id}" onclick="onToggleSublistaDoc('${prefix}', ${c.id})" style="display:none;background:none;border:none;color:var(--gris4);cursor:pointer;font-size:12px;padding:2px 6px">▾</button>
       </div>
-      <div class="cat-sublista" data-sublista="${c.id}" style="display:none;margin:2px 0 8px 26px;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid var(--gris2);border-radius:6px">
+      <div class="cat-sublista" data-sublista="${c.id}" style="display:none;margin:2px 0 8px 26px;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid var(--gris2);border-radius: var(--radius)">
         ${sublistaUsuariosDocHTML(prefix, c.id)}
       </div>
     </div>
@@ -1481,7 +1481,7 @@ function renderTabla(lista) {
     const eliminado          = !!d.deleted_at;
     const eliminadoPorFranq  = eliminado && d.deleted_by?.rol === 'franquiciante';
     const badgeEliminado     = eliminado
-      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Montserrat',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado${eliminadoPorFranq ? ' por franquiciante' : ''}</span>`
+      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius: var(--radius);font-size:10px;font-family:'Montserrat',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado${eliminadoPorFranq ? ' por franquiciante' : ''}</span>`
       : '';
 
     // El título de la fila es clickeable: lleva a la vista detalle
@@ -1853,13 +1853,13 @@ async function verAudiencia(id) {
 
     cont.innerHTML = acotado + res.usuarios.map(u => {
       const motivos = u.categorias.map(c =>
-        `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:rgba(191,174,118,.12);color:var(--dorado);border:1px solid rgba(191,174,118,.3)">${esc(c)}</span>`
+        `<span style="display:inline-block;padding:2px 8px;border-radius: var(--radius);font-size:10.5px;background:rgba(191,174,118,.12);color:var(--dorado);border:1px solid rgba(191,174,118,.3)">${esc(c)}</span>`
       ).join(' ');
       const indiv = u.individual
-        ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;background:var(--gris2);color:var(--gris5)">Asignado individualmente</span>`
+        ? `<span style="display:inline-block;padding:2px 8px;border-radius: var(--radius);font-size:10.5px;background:var(--gris2);color:var(--gris5)">Asignado individualmente</span>`
         : '';
 
-      return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px">
+      return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);margin-bottom:8px">
         <div>
           <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc((u.nombre || '') + ' ' + (u.apellido || ''))}</div>
           <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">${esc(u.email || '')}${u.sucursal ? ' · ' + esc(u.sucursal) : ' · Sin sucursal asignada'}</div>

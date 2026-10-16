@@ -21,6 +21,7 @@ function icono(string $nombre): string {
         'bell'      => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
         'sun'       => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
         'moon'      => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+        'log-out'   => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
     ];
     return $iconos[$nombre] ?? '';
 }
@@ -31,24 +32,16 @@ function icono(string $nombre): string {
     <!-- Se renderiza por layout.js según el rol -->
   </div>
 
+  <!-- Pie de la sidebar: solo "Salir".
+       Los datos del usuario (avatar, nombre y rol) estan en el boton del
+       topbar que lleva a perfil.php. Aca ocupaban alto, que es lo que
+       escasea en esta columna; alla aprovechan el ancho que sobraba.
+       El cambio de tema tambien se fue al topbar, como icono. -->
   <div class="sidebar-footer">
-    <button class="nav-item" onclick="toggleTema()" id="btn-tema">
-      <span id="icon-tema"><?= icono('sun') ?></span>
-      <span id="label-tema">Modo claro</span>
+    <button class="nav-item" onclick="hacerLogout()"
+            data-tooltip="Salir" aria-label="Salir">
+      <?= icono('log-out') ?>
+      <span>Salir</span>
     </button>
   </div>
 </nav>
-
-<script>
-// Restaurar tema al cargar — antes de layout.js
-(function() {
-  const esClaro = localStorage.getItem('tema') === 'claro';
-  if (esClaro) document.body.classList.add('tema-claro');
-  const labelEl = document.getElementById('label-tema');
-  const iconEl  = document.getElementById('icon-tema');
-  if (labelEl) labelEl.textContent = esClaro ? 'Modo oscuro' : 'Modo claro';
-  if (iconEl)  iconEl.innerHTML    = esClaro
-    ? `<?= icono('moon') ?>`
-    : `<?= icono('sun') ?>`;
-})();
-</script>

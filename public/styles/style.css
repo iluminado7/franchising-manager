@@ -1,17 +1,20 @@
+/* Boton de usuario del topbar.
+   Antes el fondo y el borde eran rgba blancas escritas a mano, pensadas para
+   un panel oscuro: con el tema claro por defecto quedaban invisibles sobre
+   blanco. Ahora sale todo de los tokens y funciona en los dos temas. */
 .topbar-user-btn {
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 20px;
-  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 12px 4px 4px;
   font-size: 13px;
   font-family: 'Montserrat', sans-serif;
-  color: var(--blanco);
+  color: var(--text);
   cursor: pointer;
   transition: background .15s, border-color .15s;
   white-space: nowrap;
 }
 .topbar-user-btn:hover {
-  background: rgba(191,174,118,.15);
-  border-color: rgba(191,174,118,.35);
-  color: var(--dorado);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }

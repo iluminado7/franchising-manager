@@ -120,7 +120,7 @@ include 'layout/head.php';
       <p id="elim-cat-msg" style="font-size:14px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif"></p>
 
       <!-- Se llena solo cuando el backend rechaza con 409. -->
-      <div id="elim-cat-bloqueo" style="display:none;margin-top:14px;padding:12px;border:1px solid var(--gris2);border-radius:8px;background:var(--negro)">
+      <div id="elim-cat-bloqueo" style="display:none;margin-top:14px;padding:12px;border:1px solid var(--gris2);border-radius: var(--radius);background:var(--negro)">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris4);font-weight:600;margin-bottom:8px;font-family:'Montserrat',sans-serif">Asignaciones que lo impiden</div>
         <div id="elim-cat-detalle" style="font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;line-height:1.8"></div>
         <div style="font-size:11.5px;color:var(--gris4);margin-top:10px;line-height:1.6;font-family:'Roboto',sans-serif">
@@ -143,7 +143,7 @@ include 'layout/head.php';
 
 <style>
 .filtro-btn {
-  padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);
+  padding:6px 14px;border-radius: var(--radius);border:1px solid var(--gris2);
   background:transparent;font-size:12px;font-family:'Montserrat',sans-serif;
   color:var(--gris4);cursor:pointer;transition:all .15s;
 }
@@ -159,7 +159,7 @@ include 'layout/head.php';
 .empresa-card {
   background:var(--gris1);
   border:1px solid var(--gris2);
-  border-radius:12px;
+  border-radius: var(--radius);
   padding:18px 18px 16px;
   cursor:pointer;
   transition:border-color .15s, transform .1s;
@@ -188,7 +188,7 @@ include 'layout/head.php';
   font-size:10px;
   font-family:'Montserrat',sans-serif;
   padding:2px 8px;
-  border-radius:10px;
+  border-radius: var(--radius);
   background:rgba(226,92,92,.12);
   color:var(--error);
   border:1px solid rgba(226,92,92,.3);
@@ -225,7 +225,7 @@ include 'layout/head.php';
   font-size:10px;
   font-family:'Montserrat',sans-serif;
   padding:2px 8px;
-  border-radius:10px;
+  border-radius: var(--radius);
   background:rgba(150,150,150,.12);
   color:var(--gris4);
   border:1px solid var(--gris3);
@@ -234,7 +234,7 @@ include 'layout/head.php';
   font-size:10px;
   font-family:'Montserrat',sans-serif;
   padding:2px 8px;
-  border-radius:10px;
+  border-radius: var(--radius);
   background:rgba(95,179,128,.12);
   color:var(--exito);
   border:1px solid rgba(95,179,128,.3);
@@ -259,10 +259,10 @@ include 'layout/head.php';
 /* ── Modal ─────────────────────────────────────────────────── */
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-width:560px;max-height:90vh;overflow-y:auto; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--gris1);z-index:1; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
@@ -271,18 +271,18 @@ include 'layout/head.php';
 .form-group input[type=text],
 .form-group textarea {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
-  border-radius:7px;padding:10px 12px;font-size:13px;
+  border-radius: var(--radius);padding:10px 12px;font-size:13px;
   font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
   box-sizing:border-box;
 }
 .form-group input:focus, .form-group textarea:focus { border-color:var(--dorado); }
 .form-group input::placeholder, .form-group textarea::placeholder { color:var(--gris3); }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius: var(--radius);font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
 
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 /* Estado vacío */

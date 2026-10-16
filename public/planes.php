@@ -144,7 +144,7 @@ include 'layout/head.php';
     </div>
     <div class="modal-body">
       <input type="hidden" id="factura-id">
-      <div id="factura-resumen" style="background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-family:'Roboto',sans-serif;font-size:13px;color:var(--gris5);line-height:1.7"></div>
+      <div id="factura-resumen" style="background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 14px;margin-bottom:16px;font-family:'Roboto',sans-serif;font-size:13px;color:var(--gris5);line-height:1.7"></div>
       <div class="form-group">
         <label>Estado *</label>
         <select id="factura-estado" class="form-select">
@@ -217,7 +217,7 @@ include 'layout/head.php';
 .plan-card {
   background: var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 20px;
   display: flex; flex-direction: column; gap: 12px;
   transition: border-color .2s;
@@ -231,7 +231,7 @@ include 'layout/head.php';
 }
 .plan-tipo-badge {
   font-size: 11px; font-weight: 600; letter-spacing: .06em;
-  text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+  text-transform: uppercase; padding: 3px 8px; border-radius: var(--radius);
   white-space: nowrap;
 }
 .plan-tipo-badge.por_franquicia {
@@ -276,7 +276,7 @@ include 'layout/head.php';
 }
 .filtro-select-lg {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 8px; color: var(--blanco);
+  border-radius: var(--radius); color: var(--blanco);
   font-size: 13px; font-family: 'Montserrat', sans-serif;
   padding: 9px 14px; outline: none; cursor: pointer;
   transition: border-color .2s; min-width: 240px;
@@ -288,7 +288,7 @@ include 'layout/head.php';
 /* ── Tabla facturas ───────────────────────────────────────── */
 .tabla-facturas-wrap {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 12px; overflow: hidden;
+  border-radius: var(--radius); overflow: hidden;
 }
 .tabla-facturas-header {
   padding: 14px 18px; border-bottom: 1px solid var(--gris2);
@@ -321,7 +321,7 @@ include 'layout/head.php';
 }
 .filtro-select {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; color: var(--gris5); font-size: 12px;
+  border-radius: var(--radius); color: var(--gris5); font-size: 12px;
   font-family: 'Montserrat', sans-serif; padding: 7px 10px;
   cursor: pointer; outline: none; transition: border-color .2s;
 }
@@ -338,10 +338,10 @@ include 'layout/head.php';
 /* ── Modal reutilizado ────────────────────────────────────── */
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--gris1);z-index:1; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
@@ -352,7 +352,7 @@ include 'layout/head.php';
 .form-group textarea,
 .form-group .form-select {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
-  border-radius:7px;padding:10px 12px;font-size:13px;
+  border-radius: var(--radius);padding:10px 12px;font-size:13px;
   font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
@@ -362,14 +362,14 @@ include 'layout/head.php';
 .form-group .form-select:focus { border-color:var(--dorado); }
 .form-group input::placeholder,
 .form-group textarea::placeholder { color:var(--gris3); }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
-.form-exito { background:rgba(76,175,80,.1);border:1px solid rgba(76,175,80,.3);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--exito);margin-top:8px;line-height:1.5; }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
+.form-exito { background:rgba(76,175,80,.1);border:1px solid rgba(76,175,80,.3);border-radius: var(--radius);padding:9px 12px;font-size:12px;color:var(--exito);margin-top:8px;line-height:1.5; }
 .form-select { background:var(--negro)!important; color:var(--blanco)!important; }
 .form-select option { background:var(--gris1); }
 .btn-sm { padding:8px 14px;font-size:12px; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius: var(--radius);font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px;color:var(--gris5); }
 .accion-btn:hover { background:var(--gris2);color:var(--blanco); }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 </style>
 

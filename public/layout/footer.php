@@ -10,13 +10,17 @@ if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
 }
 ?>
 
-<!-- Leyenda legal. Va en el layout para que salga igual en todas las
+<!-- Pie de marca. Va en el layout para que salga igual en todas las
      pantallas del panel y no haya que acordarse de sumarla en cada una.
+
+     El formato lo fija la guia (§6): "GOHARV <PRODUCTO> · <AÑO>" como
+     etiqueta en mayusculas, con borde superior dorado. Reemplaza a la
+     leyenda de copyright, que era texto corrido.
 
      El año es dinámico a propósito: uno fijo queda viejo el 1 de enero y
      nadie se acuerda de tocarlo. -->
 <footer class="pie-legal">
-  Copyright &copy; <?= date('Y') ?> GoHarv Technology. All rights reserved
+  GoHarv Business Partner &middot; <?= date('Y') ?>
 </footer>
 
 <script src="<?= BASE_URL_PHP ?>/js/layout.js"></script>

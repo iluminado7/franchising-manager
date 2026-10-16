@@ -1,46 +1,12 @@
-/* ── PALETA ──────────────────────────────────────────────────
-   Los seis colores de la marca (los mismos de la pagina madre):
+/* La paleta ya NO vive aca: esta en goharv-tokens.css, que se importa antes
+   que este archivo. Ahi estan los colores de la marca, los roles que usan los
+   componentes (--accent, --text, --surface, --border...) y el puente que
+   mantiene andando los nombres historicos (--dorado, --negro, --gris1..5).
 
-     Dorado         #BFAE76    Negro   #000000    Gris texto  #555555
-     Dorado oscuro  #8A7538    Blanco  #FFFFFF    Gris suave  #F5F5F5
+   El tema se cambia con data-theme="dark" en <html>, no con una clase en el
+   body: asi lo pide la guia de marca (§7) y asi el fondo correcto esta
+   aplicado antes de que se pinte nada. */
 
-   Los --gris1..5 NO son de la marca: son las superficies y bordes del panel.
-   La paleta de la marca esta pensada para un sitio claro y no cubre los
-   grises intermedios que necesita una interfaz oscura, asi que se conservan.
-
-   Cualquier color nuevo sale de estas variables. Escribirlo a mano rompe el
-   tema claro, que funciona redefiniendolas mas abajo. */
-:root {
-    --negro:   #000000;
-    --blanco:  #FFFFFF;
-    --dorado:  #BFAE76;
-    /* Dorado oscuro de la marca. Es el hover de lo dorado: un boton dorado
-       se oscurece al pasar el mouse, no se aclara. */
-    --dorado-oscuro: #8A7538;
-    --gris1:   #1A1A1A;
-    --gris2:   #2C2C2C;
-    --gris3:   #444444;
-    --gris4:   #888888;
-    --gris5:   #CCCCCC;
-    --error:   #E25C5C;
-    --exito:   #5CB87A;
-  }
-/* Tema claro: se da vuelta el par negro/blanco y se usan los dos grises de la
-   marca donde corresponde — gris suave como fondo de pantalla, gris texto
-   para lo secundario.
-
-   OJO con --gris2: es sobre todo color de BORDE (238 usos como borde contra
-   73 como fondo). Ponerle el gris suave de la marca dejaria los bordes
-   invisibles sobre tarjetas blancas; lleva un gris de borde propio. */
-body.tema-claro {
-  --negro:   #F5F5F5;
-  --blanco:  #000000;
-  --gris1:   #FFFFFF;
-  --gris2:   #E5E5E5;
-  --gris3:   #AAAAAA;
-  --gris4:   #555555;
-  --gris5:   #333333;
-}
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -82,11 +48,17 @@ body.tema-claro {
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  background: var(--gris1);
-  border-top: 1px solid var(--gris2);
-  font-family: 'Roboto', sans-serif;
-  font-size: 11.5px;
-  color: var(--gris4);
+  background: var(--surface);
+  /* Borde dorado arriba: guia §6. */
+  border-top: 1px solid var(--accent);
+  /* El pie es una etiqueta de marca, no un parrafo legal (guia §6):
+     "GOHARV BUSINESS PARTNER · 2026" en mayusculas. */
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--label);
   text-align: center;
   /* Que no lo apriete un contenido largo al lado. */
   flex-shrink: 0;
@@ -106,8 +78,9 @@ body.tema-claro {
 /* ── TOPBAR ──────────────────────────────────────────────────── */
 .topbar {
   height: 56px;
-  background: var(--gris1);
-  border-bottom: 1px solid var(--gris2);
+  background: var(--surface);
+  /* Borde dorado: guia §6. Es lo que enmarca la aplicacion. */
+  border-bottom: 1px solid var(--accent);
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -117,20 +90,40 @@ body.tema-claro {
   z-index: 100;
 }
 
+/* La marca va en DOS lineas: logotipo arriba y nombre del producto abajo
+   (guia §6).
+
+   La guia fija --topbar-h en 92px para que entren comodas. Acá la topbar
+   mide 56px y ese numero esta escrito a mano en cuatro archivos mas, entre
+   ellos los dos visores de lectura, que calculan sus barras pegajosas a
+   partir de el. Tocarlo era arriesgar justo la pantalla mas delicada por un
+   detalle visual, asi que en vez de agrandar la barra se achico el logo: el
+   bloque entra en 56px y el resto del layout no se entera. */
 .topbar-brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--blanco);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
   flex: 1;
+  min-width: 0;
+}
+
+.topbar-producto {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--label);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .topbar-brand-dot {
   width: 8px; height: 8px;
   background: var(--dorado);
-  border-radius: 2px;
+  border-radius: var(--radius);
 }
 
 /* ── LOGO DE LA TOPBAR ───────────────────────────────────────
@@ -147,8 +140,8 @@ body.tema-claro {
    esa clase, pisa las variables en su propio <style> y deja la topbar en
    blanco — el logo habria quedado invisible justo ahi. */
 .topbar-logo {
-  width: 166px;
-  height: 26px;
+  width: 134px;
+  height: 21px;
   background-color: var(--blanco);
   -webkit-mask: url('../img/logo-goharv-marca.png') no-repeat center / contain;
           mask: url('../img/logo-goharv-marca.png') no-repeat center / contain;
@@ -183,43 +176,106 @@ body.tema-claro {
 .topbar-user-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  max-width: 230px;
 }
 
+/* Nombre arriba, rol abajo. El bloque se achica si hace falta (min-width:0)
+   para que un nombre largo recorte con puntos suspensivos en vez de empujar
+   el topbar y sacar la campana de la pantalla. */
+.topbar-user-btn__datos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.topbar-user-btn__nombre {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-user-btn__rol {
+  font-size: 9.5px;
+  margin-top: 1px;
+}
+
+/* El rol seguia el mismo patron de pastilla pastel. Pasa a etiqueta de
+   texto, sin fondo. Sin punto: no es un estado, es una clasificacion. */
 .rol-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: .04em;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  font-weight: 600;
+  padding: 0;
+  background: none;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
+  color: var(--text-muted);
 }
- .rol-badge.super_admin { background: rgba(44, 146, 160, 0.26); color: var(--gris5); }
-.rol-badge.franquiciante { background: rgba(191,174,118,.15); color: var(--dorado); }
-.rol-badge.franquiciado  { background: rgba(92,184,122,.15); color: var(--exito); }
-.rol-badge.empleado      { background: rgba(136,136,136,.15); color: var(--gris5); }
+/* Un solo color para los cuatro roles. Pintar cada rol de un color era
+   decorativo: el rol ya se lee, y la guia (§1) pide marcar la jerarquia con
+   tipografia, no con color. El unico que se distingue es el franquiciante,
+   en --label, por ser el que administra. */
+.rol-badge.super_admin   { color: var(--label); }
+.rol-badge.franquiciante { color: var(--label); }
+.rol-badge.franquiciado  { color: var(--text-muted); }
+.rol-badge.empleado      { color: var(--text-muted); }
 
-.notif-btn {
+/* Las etiquetas de rol y estado, DENTRO de una tabla, van mas compactas.
+   El interletrado de marca (0.14em) es lo correcto para un eyebrow suelto
+   arriba de un titulo, pero en una celda infla mucho: "SOCIO COMERCIAL" se
+   lleva una columna entera y empuja "Acciones" fuera de la pantalla.
+   Fuera de las tablas conservan el interletrado completo. */
+tbody td .rol-badge,
+tbody td .estado-pill {
+  font-size: 0.625rem;
+  letter-spacing: .06em;
+}
+tbody td .estado-pill::before { width: 7px; height: 7px; }
+
+/* Las acciones de cada fila, mas compactas.
+   .accion-btn lo define cada pantalla en su propio <style>, que va DESPUES
+   de este archivo en la cascada: una regla `.accion-btn` de aca no ganaria.
+   Con `tbody td .accion-btn` el selector pesa mas y se impone sin tener que
+   tocar los trece archivos. */
+tbody td .accion-btn {
+  padding: 4px 6px;
+  font-size: 11.5px;
+  gap: 3px;
+}
+tbody td .accion-btn svg { width: 12px; height: 12px; }
+
+.notif-btn,
+.topbar-icon-btn {
   position: relative;
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--gris4);
   padding: 6px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   transition: color .2s, background .2s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.notif-btn:hover { color: var(--blanco); background: var(--gris2); }
+.notif-btn:hover,
+.topbar-icon-btn:hover { color: var(--blanco); background: var(--gris2); }
 
 .notif-badge {
   position: absolute;
   top: 2px; right: 2px;
   background: var(--dorado);
-  color: var(--negro);
+  color: var(--gh-black);
   font-size: 11px;
   font-weight: 700;
   width: 16px; height: 16px;
@@ -236,7 +292,7 @@ body.tema-claro {
   color: var(--gris4);
   background: transparent;
   border: 1px solid var(--gris2);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 5px 12px;
   cursor: pointer;
   transition: color .2s, border-color .2s;
@@ -246,8 +302,9 @@ body.tema-claro {
 
 /* ── SIDEBAR ─────────────────────────────────────────────────── */
 .sidebar {
-  background: var(--gris1);
-  border-right: 1px solid var(--gris2);
+  background: var(--surface);
+  /* Borde dorado: guia §6, igual que el inferior del topbar. */
+  border-right: 1px solid var(--accent);
   padding: 20px 0 0;
   position: sticky;
   top: 56px;
@@ -265,6 +322,10 @@ body.tema-claro {
   margin-top: auto;
 }
 
+/* Boton de icono del topbar (tema). Comparte todo con el de notificaciones:
+   si cambia uno, cambian los dos. */
+.topbar-icon-btn { /* ver .notif-btn, abajo */ }
+
 .nav-section { margin-bottom: 2px; }
 
 .nav-item {
@@ -272,8 +333,8 @@ body.tema-claro {
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 7px;
-  font-size: 16px;
+  border-radius: var(--radius);
+  font-size: 15px;
   font-family: 'Roboto', sans-serif;
   color: var(--gris4);
   cursor: pointer;
@@ -286,30 +347,92 @@ body.tema-claro {
 }
 
 .nav-item:hover  { background: var(--gris2); color: var(--blanco); }
-.nav-item.active { background: rgba(191,174,118,.12); color: var(--dorado); }
+/* Item activo (guia §6): fondo dorado muy suave + barra vertical dorada a
+   la izquierda, y el TEXTO EN --text, no en dorado.
+
+   El texto se saca del dorado por una razon concreta y no por seguir la guia
+   de memoria: sobre ese fondo (dorado al 12% sobre blanco) el dorado claro
+   queda en 2,1:1 y no se lee. Es el unico caso del paso de "sacar el dorado
+   de los textos" que se aplico, porque aca el fondo nuevo lo volvio ilegible.
+   Si se prefiere el dorado, es esta linea. */
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--text);
+  position: relative;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
 .nav-item svg    { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* ── CONTENIDO PRINCIPAL ─────────────────────────────────────── */
 .main-content {
-  padding: 32px;
+  /* El relleno va en variables porque la banda de encabezado (.gh-banda)
+     necesita sangrar EXACTAMENTE este valor con margen negativo para llegar
+     a los bordes. Con un numero escrito a mano en los dos lados, cualquier
+     cambio de relleno dejaba la banda sobresaliendo o con aire al costado. */
+  --content-pad-y: 32px;
+  --content-pad-x: 32px;
+  padding: var(--content-pad-y) var(--content-pad-x);
   overflow-y: auto;
   background: var(--negro);
+  /* ESTO ES LO QUE IMPIDE EL SCROLL HORIZONTAL DE PAGINA.
+     .app-body es un grid y esta columna es 1fr, pero un item de grid arranca
+     con min-width:auto: una tabla ancha estira la columna mas alla de 1fr y
+     termina scrolleando la pantalla entera. Con min-width:0 la columna puede
+     achicarse, y el que scrollea es .tabla-wrap, como pide la guia (§6). */
+  min-width: 0;
 }
 
-.page-header { margin-bottom: 28px; }
+/* ── BANDA DE ENCABEZADO (guia §6) ───────────────────────────
+   Las 13 pantallas que no son Inicio arman su encabezado con esta misma
+   estructura: .page-header > div > (.page-title + .page-sub).
 
+   En vez de reescribir el HTML de las 13, se convierte .page-header en la
+   banda. El eyebrow (el rol, con la rayita dorada) no existe en el markup y
+   lo inyecta layout.js en un solo lugar.
+
+   Los margenes negativos la hacen llegar a los bordes del area de contenido;
+   el valor sale de --content-pad-*, igual que en .gh-banda. */
+.page-header {
+  background: var(--bg-band);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) var(--content-pad-x, var(--space-5));
+  /* A los costados sangra siempre, hasta los bordes del area de contenido. */
+  margin-left:  calc(var(--content-pad-x, 0px) * -1);
+  margin-right: calc(var(--content-pad-x, 0px) * -1);
+  margin-bottom: var(--space-5);
+}
+
+/* Arriba sangra SOLO si es lo primero de su contenedor. Un margen negativo
+   superior aplicado a ciegas treparia la banda por encima de lo que tenga
+   arriba en las pantallas donde el encabezado no abre la vista. */
+.page-header:first-child {
+  margin-top: calc(var(--content-pad-y, 0px) * -1);
+}
+
+/* El titulo de pagina es el H1 de la guia: Montserrat 700. Mismo tamano
+   que el .gh-banda h1 de Inicio, para que las pantallas no bailen. */
 .page-title {
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.35rem + 0.5vw, 1.75rem);
   font-weight: 700;
-  color: var(--blanco);
-  margin-bottom: 4px;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 2px;
 }
 
 .page-sub {
   font-size: 14px;
-  color: var(--gris4);
-  font-family: 'Roboto', sans-serif;
-  margin-bottom: 15px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  /* El aire de abajo ahora lo da el padding de la banda. */
+  margin-bottom: 0;
+  max-width: 70ch;
 }
 
 /* ── STATS CARDS ─────────────────────────────────────────────── */
@@ -320,37 +443,58 @@ body.tema-claro {
   margin-bottom: 28px;
 }
 
+/* ── CARD DE METRICA (guia §5.3) ─────────────────────────────
+   Borde superior dorado de 3px, y el NUMERO ARRIBA con la etiqueta abajo.
+
+   El orden se da vuelta con column-reverse y no reescribiendo el HTML: las
+   dos pantallas que tienen metricas (log.php y logger.php) las escriben
+   etiqueta-primero, y asi no hay que tocarlas. */
 .stat-card {
-  background: var(--gris1);
-  border: 1px solid var(--gris2);
-  border-radius: 12px;
-  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .stat-card-label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: .06em;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--gris4);
-  margin-bottom: 8px;
+  color: var(--label);
+  /* El aire lo da el gap del contenedor; con margin se duplicaba. */
+  margin-bottom: 0;
 }
 
 .stat-card-value {
-  font-size: 32px;
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 1.5rem + 0.45vw, 2rem);
   font-weight: 700;
-  color: var(--blanco);
+  color: var(--text);
   line-height: 1;
 }
 
-.stat-card-value.dorado { color: var(--dorado); }
+/* Antes algunos numeros iban en dorado "para destacarlos". La guia (§5.3 y
+   §8) pide que TODOS vayan en --text: si uno se destaca, los demas parecen
+   secundarios sin serlo. La clase se deja porque el HTML de dos pantallas la
+   escribe, pero ya no pinta nada. */
+.stat-card-value.dorado { color: var(--text); }
 
 /* ── TABLAS ──────────────────────────────────────────────────── */
 .tabla-wrap {
   background: var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: var(--radius);
+  /* La tabla scrollea ADENTRO de su caja; la pagina nunca (guia §6).
+     Antes era overflow:hidden, que estaba para recortar las esquinas
+     redondeadas — ya no hay esquinas que recortar. */
+  overflow-x: auto;
   margin-bottom: 24px;
 }
 
@@ -370,20 +514,26 @@ body.tema-claro {
 
 table { width: 100%; border-collapse: collapse; }
 
+/* Montserrat es bastante mas ancha que Archivo, la fuente que reemplazo.
+   Con 14px en MAYUSCULAS y letter-spacing, los encabezados estiraban la tabla
+   lo suficiente como para sacar la columna de acciones fuera de pantalla.
+   12px es ademas lo que usa la guia para encabezados de tabla (§5.4). */
 thead th {
   text-align: left;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--gris4);
-  padding: 10px 20px;
+  /* Guia §5.4 y §9 punto 15: los encabezados de tabla van en --label. */
+  color: var(--label);
+  padding: 10px 10px;
   border-bottom: 1px solid var(--gris2);
+  white-space: nowrap;
 }
 
 tbody td {
-  padding: 12px 20px;
-  font-size: 14px;
+  padding: 12px 10px;
+  font-size: 13px;
   color: var(--gris5);
   border-bottom: 1px solid rgba(44,44,44,.5);
   font-family: 'Roboto', sans-serif;
@@ -393,46 +543,80 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: rgba(255,255,255,.02); }
 
 /* ── BOTONES ─────────────────────────────────────────────────── */
+/* ── BOTONES (guia §5.2) ─────────────────────────────────────
+   Mayusculas, Montserrat 600 e interletrado. Es lo que les da el aire de la
+   marca; sin eso siguen pareciendo botones de panel generico.
+
+   OJO: NO se aplica a .accion-btn, las acciones chicas dentro de las filas
+   de las tablas ("Editar", "Archivar", "Eliminar"). En mayusculas cada una
+   crece cerca de un 10% y esas columnas ya venian justas de ancho. Se
+   comportan mas como enlaces que como botones. Si se prefiere alinearlas
+   con la guia, es agregarles las tres propiedades de abajo. */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 7px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: 'Montserrat', sans-serif;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-button);
   cursor: pointer;
-  border: none;
-  transition: opacity .2s, transform .1s;
+  border: 1px solid transparent;
+  transition: background .2s, color .2s, border-color .2s;
   text-decoration: none;
 }
 
 .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--dorado); color: var(--negro); }
-.btn-primary:hover { opacity: .88; }
-.btn-ghost { background: transparent; color: var(--gris5); border: 1px solid var(--gris2); }
-.btn-ghost:hover { border-color: var(--gris3); color: var(--blanco); }
+.btn-primary { background: var(--accent); color: var(--gh-black); }
+/* Se oscurece, no se transparenta: con opacity el boton se mezclaba con el
+   fondo y en tema claro parecia deshabilitado. */
+.btn-primary:hover { background: var(--gh-gold-dark); color: var(--gh-white); }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-ghost:hover { border-color: var(--accent); }
 .btn-danger { background: transparent; color: var(--error); border: 1px solid rgba(226,92,92,.3); }
 .btn-danger:hover { background: rgba(226,92,92,.08); }
 .btn-success { background: var(--exito); color: var(--negro); }
 .btn-success:hover { opacity: .88; }
 
 /* ── ESTADO PILLS ────────────────────────────────────────────── */
+/* ── ESTADOS (guia §5.5) ─────────────────────────────────────
+   Dejan de ser pastillas con fondo pastel —prohibidas en §8— y pasan a ser
+   texto en mayusculas con un punto de color adelante.
+
+   El punto es el UNICO circulo que la guia admite ademas de los avatares. */
 .estado-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 9px;
-  border-radius: 20px;
+  gap: var(--space-2);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  padding: 0;
+  background: none;
+  color: var(--text-muted);
+}
+.estado-pill::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
-.estado-completo     { background: rgba(92,184,122,.12);  color: var(--exito); }
-.estado-solo-digital { background: rgba(191,174,118,.12);  color: var(--dorado); }
-.estado-solo-fisico  { background: rgba(136,136,136,.12); color: var(--gris5); }
-.estado-pendiente    { background: rgba(226,92,92,.12);   color: var(--error); }
+/* Sin fondo: el color va en el texto y en el punto.
+   "Solo digital" usaba el dorado claro, que como texto no se lee sobre
+   blanco (2,2:1). Pasa a --warning, que es el color de aviso de la guia y
+   es justo lo que significa: falta la parte fisica. */
+.estado-completo     { color: var(--success); }
+.estado-solo-digital { color: var(--warning); }
+.estado-solo-fisico  { color: var(--text-muted); }
+.estado-pendiente    { color: var(--error); }
 
 /* ── LOADING / EMPTY ─────────────────────────────────────────── */
 .loading-msg {
@@ -497,7 +681,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   .nav-item {
     justify-content: center;
     padding: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius);
     margin: 2px 4px;
     width: auto;
     position: relative;
@@ -514,7 +698,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     color: var(--blanco);
     font-size: 12px;
     padding: 5px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     white-space: nowrap;
     z-index: 200;
     pointer-events: none;
@@ -525,7 +709,8 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   }
 
   .main-content {
-    padding: 20px 16px;
+    --content-pad-y: 20px;
+    --content-pad-x: 16px;
   }
 
   /* Stats en 2 columnas */
@@ -556,10 +741,12 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     font-size: 13px;
   }
 
-  .topbar-user,
-  .topbar-user-btn {
-    display: none;
-  }
+  .topbar-user { display: none; }
+
+  /* En celular se esconde SOLO el texto, no el boton: el avatar sigue
+     siendo el acceso al perfil, y sin el no quedaria ninguno. */
+  .topbar-user-btn__datos { display: none; }
+  .topbar-user-btn { max-width: none; padding: 4px; }
 
   .topbar-right {
     gap: 6px;
@@ -575,7 +762,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     cursor: pointer;
     color: var(--gris4);
     padding: 6px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     transition: color .15s, background .15s;
     order: -1;
   }
@@ -598,7 +785,9 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     z-index: 300;
     transform: translateX(-100%);
     transition: transform .25s ease;
-    box-shadow: 4px 0 20px rgba(0,0,0,.4);
+    /* Panel que se desliza sobre el contenido: necesita un canto que lo
+       separe de lo que tapa, ahora que no hay sombra. */
+    border-right: 1px solid var(--border);
     padding: 12px 0 0;    /* ← era 0, le devolvemos padding-top */
     display: flex !important;
     flex-direction: column !important;
@@ -650,7 +839,8 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 
   /* Contenido */
   .main-content {
-    padding: 16px 12px;
+    --content-pad-y: 16px;
+    --content-pad-x: 12px;
     min-height: calc(100vh - 56px);
   }
 
@@ -710,7 +900,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   .modal-box {
     max-width: 100% !important;
     margin: 0 8px;
-    border-radius: 12px;
+    border-radius: var(--radius);
   }
 
   .modal-overlay {
@@ -843,8 +1033,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   width: auto; height: auto;
   max-width: min(72vw, 560px);
   max-height: 72vh;
-  border-radius: 10px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+  border-radius: var(--radius);
 }
 
 .avatar-lb-cap {
@@ -901,7 +1090,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   font-family: 'Montserrat', sans-serif;
   background: transparent;
   border: 1px solid var(--gris2);
-  border-radius: 7px;
+  border-radius: var(--radius);
   color: var(--gris5);
   cursor: pointer;
   transition: all .15s;
@@ -914,7 +1103,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 .pag-activa {
   background: var(--dorado);
   border-color: var(--dorado);
-  color: var(--negro);
+  color: var(--gh-black);
   font-weight: 600;
 }
 .pag-activa:disabled { opacity: 1; }
@@ -937,7 +1126,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   text-align: left;
   padding: 14px 16px;
   border: 1px solid var(--gris2);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--negro);
   cursor: pointer;
   transition: border-color .2s, background .2s;
@@ -958,7 +1147,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   width: 100%;
   background: var(--negro);
   border: 1px solid var(--gris2);
-  border-radius: 7px;
+  border-radius: var(--radius);
   padding: 10px 12px;
   font-size: 13px;
   font-family: 'Montserrat', sans-serif;
@@ -970,7 +1159,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 .vpdf-num:focus { border-color: var(--dorado); }
 .vpdf-preview-caja {
   margin-top: 16px; padding: 12px;
-  border: 1px solid var(--gris2); border-radius: 6px;
+  border: 1px solid var(--gris2); border-radius: var(--radius);
   background: rgba(191,174,118,.04);
 }
 .vpdf-preview-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--gris4); font-weight: 600; margin-bottom: 4px; }

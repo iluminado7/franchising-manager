@@ -176,7 +176,7 @@ include 'layout/head.php';
 /* ── Filtros (misma clase que documentos.php) ─────────────── */
 .filtro-select {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; color: var(--gris5); font-size: 12px;
+  border-radius: var(--radius); color: var(--gris5); font-size: 12px;
   font-family: 'Roboto', sans-serif; padding: 7px 10px;
   cursor: pointer; outline: none; transition: border-color .2s;
 }
@@ -186,7 +186,7 @@ include 'layout/head.php';
 
 .buscar-input {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 8px; padding: 8px 12px 8px 32px;
+  border-radius: var(--radius); padding: 8px 12px 8px 32px;
   font-size: 13px; font-family: 'Roboto', sans-serif;
   color: var(--blanco); outline: none; transition: border-color .2s;
 }
@@ -194,7 +194,7 @@ include 'layout/head.php';
 .buscar-input::placeholder { color: var(--gris3); }
 
 /* ── Combobox de empresa ──────────────────────────────────── */
-.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);z-index:50; }
 .combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
@@ -216,7 +216,7 @@ include 'layout/head.php';
   display: inline-flex; align-items: center; gap: 4px;
   background: rgba(101,163,255,.12); color: #65a3ff;
   border: 1px solid rgba(101,163,255,.25);
-  padding: 3px 9px; border-radius: 20px;
+  padding: 3px 9px; border-radius: var(--radius);
   font-size: 11px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap;
 }
@@ -237,7 +237,7 @@ include 'layout/head.php';
        que la fila mantenga el border-bottom continuo) ────────── */
 .acciones-cell { text-align: right; white-space: nowrap; }
 .accion-btn {
-  background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
+  background: transparent; border: 1px solid var(--gris2); border-radius: var(--radius);
   padding: 5px 10px; font-size: 11px; color: var(--gris5);
   font-family: 'Roboto', sans-serif; cursor: pointer;
   display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
@@ -245,24 +245,24 @@ include 'layout/head.php';
 }
 .accion-btn:hover { border-color: var(--dorado); color: var(--dorado); }
 .accion-btn.primary {
-  background: var(--dorado); border-color: var(--dorado); color: var(--negro); font-weight: 500;
+  background: var(--dorado); border-color: var(--dorado); color: var(--gh-black); font-weight: 500;
 }
 .accion-btn.primary:hover { opacity: .85; }
 
 /* ── Modal (mismo patrón que documentos.php) ──────────────── */
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-width:540px;max-height:90vh;overflow-y:auto; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--gris1);z-index:1; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
 .form-group input[type=text], .form-group .form-select, .form-group textarea.form-input {
-  width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;
+  width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);
   padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;box-sizing:border-box;
 }
@@ -271,11 +271,11 @@ include 'layout/head.php';
 .form-select { background:var(--negro)!important;color:var(--blanco)!important;cursor:pointer; }
 .form-select:disabled { opacity:.5;cursor:not-allowed; }
 .form-select option { background:var(--gris1); }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:9px 12px;font-size:12px;color:var(--error);margin-top:8px;line-height:1.5; }
 
 /* ── Info box ──────────────────────────────────────────────── */
 .info-box {
-  background: var(--negro); border: 1px solid var(--gris2); border-radius: 7px;
+  background: var(--negro); border: 1px solid var(--gris2); border-radius: var(--radius);
   padding: 9px 12px; font-size: 12px; color: var(--gris5);
   font-family: 'Roboto', sans-serif; line-height: 1.5;
 }
@@ -286,7 +286,7 @@ include 'layout/head.php';
 
 /* ── Drop zone (mismo patrón que documentos.php) ──────────── */
 .drop-zone {
-  border: 1.5px dashed var(--gris3); border-radius: 9px;
+  border: 1.5px dashed var(--gris3); border-radius: var(--radius);
   padding: 24px 16px; text-align: center; cursor: pointer;
   transition: border-color .2s, background .2s;
 }
@@ -298,7 +298,7 @@ include 'layout/head.php';
 }
 
 /* ── Toast ────────────────────────────────────────────────── */
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 </style>
 
@@ -698,7 +698,7 @@ function renderTabla(filas) {
         </div>
       </td>
       <td>${sucursal}</td>
-      <td>${esc(f.manual.titulo)}${f.manual.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</td>
+      <td>${esc(f.manual.titulo)}${f.manual.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius: var(--radius);background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</td>
       <td>
         <span class="badge-version ${f.version.es_activa ? 'activa' : ''}">v${f.version.version_number}${f.version.es_activa ? ' · activa' : ''}</span>
       </td>

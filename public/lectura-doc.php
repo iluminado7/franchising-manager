@@ -49,7 +49,7 @@ body {
   gap: 7px;
   background: transparent;
   border: 1px solid #333;
-  border-radius: 7px;
+  border-radius: var(--radius);
   padding: 7px 13px;
   color: #C9C4BA;
   font-family: 'Montserrat', sans-serif;
@@ -99,7 +99,7 @@ body {
   height: 34px;
   padding: 0 13px;
   border: 1px solid #383838;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: #1F1F1F;
   color: #E8E4DC;
   font-family: inherit;
@@ -124,7 +124,8 @@ body {
   position: relative;
   max-width: 100%;
   background: #fff;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, .5);
+  /* Pagina blanca sobre el fondo del visor: el borde reemplaza a la sombra. */
+  border: 1px solid var(--border);
 }
 .pdfjs-pagina canvas { display: block; max-width: 100%; height: auto; }
 /* Marca de agua por encima del canvas. */
@@ -137,7 +138,7 @@ body {
 .pdf-hl {
   position: absolute;
   background: rgba(138,117,56, .38);
-  border-radius: 2px;
+  border-radius: var(--radius);
   pointer-events: none;
   mix-blend-mode: multiply;   /* deja leer el texto debajo */
 }
@@ -155,7 +156,7 @@ body {
   padding: 5px 8px;
   background: #2c2b2b;
   border: 1px solid #383838;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .buscar-bar.abierta { display: flex; }
 .buscar-input {
@@ -182,7 +183,7 @@ body {
   border: none;
   color: #C9C4BA;
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: var(--radius);
 }
 .buscar-btn:hover:not(:disabled) { background: #2A2A2A; color: var(--dorado); }
 .buscar-btn:disabled { opacity: .35; cursor: default; }
@@ -225,7 +226,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,.4);
   z-index: 120;
   transition: opacity .18s, visibility .18s, color .15s, border-color .15s;
 }
