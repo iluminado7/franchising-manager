@@ -94,6 +94,43 @@ function pintarUsuarioTopbar(me, nombreCompleto) {
   }
 }
 
+// ── EYEBROW DE LA BANDA DE ENCABEZADO ─────────────────────────
+//
+// La guia (§6) pide que cada pantalla tenga, arriba del titulo, una etiqueta
+// en mayusculas con una rayita dorada que diga el rol de quien mira.
+//
+// Se inyecta desde aca y no se escribe en el HTML de cada pantalla por dos
+// motivos: son 13 archivos con la misma estructura, y el rol recien se sabe
+// cuando responde /me. Hacerlo en un solo lugar evita que la proxima
+// pantalla nazca sin eyebrow.
+//
+// Inicio (dashboard.php) ya trae el suyo en el markup, con su propia banda:
+// por eso se busca .page-header y no .gh-banda.
+function ponerEyebrowDePagina(rol) {
+  const texto = ROL_LEGIBLE[rol] || rol.replace('_', ' ');
+
+  // TODOS los encabezados, no solo el primero: franquicias.php tiene tres,
+  // uno por cada estado de la pantalla (sin empresa elegida, vista de
+  // super_admin, vista de franquiciante) y muestra uno por vez. Con
+  // querySelector a secas, dos de los tres quedaban sin eyebrow.
+  document.querySelectorAll('.page-header').forEach(header => {
+    // Idempotente: si ya hay uno, no se duplica.
+    if (header.querySelector('.gh-label')) return;
+
+    const titulo = header.querySelector('.page-title');
+    if (!titulo) return;
+
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'gh-label gh-label--line';
+    eyebrow.textContent = texto;
+
+    // Antes del titulo, dentro de su mismo contenedor: el .page-header suele
+    // ser un flex con el titulo a la izquierda y un boton a la derecha, asi
+    // que insertarlo en el header lo mandaria al costado del boton.
+    titulo.parentNode.insertBefore(eyebrow, titulo);
+  });
+}
+
 // ── SIDEBAR ───────────────────────────────────────────────────
 function renderSidebar(rol) {
   const el = document.getElementById('sidebar-nav');
@@ -189,6 +226,8 @@ document.addEventListener('DOMContentLoaded', async function iniciarLayout() {
 
     // Avatar, nombre y rol del topbar, en una sola llamada.
     pintarUsuarioTopbar(me, nombreCompleto);
+
+    ponerEyebrowDePagina(me.rol);
 
     if (typeof MODO_EDITOR === 'undefined' || !MODO_EDITOR) {
       renderSidebar(me.rol);

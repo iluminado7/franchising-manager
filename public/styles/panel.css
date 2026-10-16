@@ -207,19 +207,51 @@
   margin-top: 1px;
 }
 
+/* El rol seguia el mismo patron de pastilla pastel. Pasa a etiqueta de
+   texto, sin fondo. Sin punto: no es un estado, es una clasificacion. */
 .rol-badge {
-  font-size: 11px;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
   white-space: nowrap;
-  font-weight: 500;
-  padding: 3px 10px;
-  border-radius: var(--radius);
-  letter-spacing: .04em;
+  font-weight: 600;
+  padding: 0;
+  background: none;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
+  color: var(--text-muted);
 }
- .rol-badge.super_admin { background: rgba(44, 146, 160, 0.26); color: var(--gris5); }
-.rol-badge.franquiciante { background: rgba(191,174,118,.15); color: var(--dorado); }
-.rol-badge.franquiciado  { background: rgba(92,184,122,.15); color: var(--exito); }
-.rol-badge.empleado      { background: rgba(136,136,136,.15); color: var(--gris5); }
+/* Un solo color para los cuatro roles. Pintar cada rol de un color era
+   decorativo: el rol ya se lee, y la guia (§1) pide marcar la jerarquia con
+   tipografia, no con color. El unico que se distingue es el franquiciante,
+   en --label, por ser el que administra. */
+.rol-badge.super_admin   { color: var(--label); }
+.rol-badge.franquiciante { color: var(--label); }
+.rol-badge.franquiciado  { color: var(--text-muted); }
+.rol-badge.empleado      { color: var(--text-muted); }
+
+/* Las etiquetas de rol y estado, DENTRO de una tabla, van mas compactas.
+   El interletrado de marca (0.14em) es lo correcto para un eyebrow suelto
+   arriba de un titulo, pero en una celda infla mucho: "SOCIO COMERCIAL" se
+   lleva una columna entera y empuja "Acciones" fuera de la pantalla.
+   Fuera de las tablas conservan el interletrado completo. */
+tbody td .rol-badge,
+tbody td .estado-pill {
+  font-size: 0.625rem;
+  letter-spacing: .06em;
+}
+tbody td .estado-pill::before { width: 7px; height: 7px; }
+
+/* Las acciones de cada fila, mas compactas.
+   .accion-btn lo define cada pantalla en su propio <style>, que va DESPUES
+   de este archivo en la cascada: una regla `.accion-btn` de aca no ganaria.
+   Con `tbody td .accion-btn` el selector pesa mas y se impone sin tener que
+   tocar los trece archivos. */
+tbody td .accion-btn {
+  padding: 4px 6px;
+  font-size: 11.5px;
+  gap: 3px;
+}
+tbody td .accion-btn svg { width: 12px; height: 12px; }
 
 .notif-btn,
 .topbar-icon-btn {
@@ -356,20 +388,51 @@
   min-width: 0;
 }
 
-.page-header { margin-bottom: 28px; }
+/* ── BANDA DE ENCABEZADO (guia §6) ───────────────────────────
+   Las 13 pantallas que no son Inicio arman su encabezado con esta misma
+   estructura: .page-header > div > (.page-title + .page-sub).
 
+   En vez de reescribir el HTML de las 13, se convierte .page-header en la
+   banda. El eyebrow (el rol, con la rayita dorada) no existe en el markup y
+   lo inyecta layout.js en un solo lugar.
+
+   Los margenes negativos la hacen llegar a los bordes del area de contenido;
+   el valor sale de --content-pad-*, igual que en .gh-banda. */
+.page-header {
+  background: var(--bg-band);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) var(--content-pad-x, var(--space-5));
+  /* A los costados sangra siempre, hasta los bordes del area de contenido. */
+  margin-left:  calc(var(--content-pad-x, 0px) * -1);
+  margin-right: calc(var(--content-pad-x, 0px) * -1);
+  margin-bottom: var(--space-5);
+}
+
+/* Arriba sangra SOLO si es lo primero de su contenedor. Un margen negativo
+   superior aplicado a ciegas treparia la banda por encima de lo que tenga
+   arriba en las pantallas donde el encabezado no abre la vista. */
+.page-header:first-child {
+  margin-top: calc(var(--content-pad-y, 0px) * -1);
+}
+
+/* El titulo de pagina es el H1 de la guia: Montserrat 700. Mismo tamano
+   que el .gh-banda h1 de Inicio, para que las pantallas no bailen. */
 .page-title {
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.35rem + 0.5vw, 1.75rem);
   font-weight: 700;
-  color: var(--blanco);
-  margin-bottom: 4px;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 2px;
 }
 
 .page-sub {
   font-size: 14px;
-  color: var(--gris4);
-  font-family: 'Roboto', sans-serif;
-  margin-bottom: 15px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  /* El aire de abajo ahora lo da el padding de la banda. */
+  margin-bottom: 0;
+  max-width: 70ch;
 }
 
 /* ── STATS CARDS ─────────────────────────────────────────────── */
@@ -380,30 +443,48 @@
   margin-bottom: 28px;
 }
 
+/* ── CARD DE METRICA (guia §5.3) ─────────────────────────────
+   Borde superior dorado de 3px, y el NUMERO ARRIBA con la etiqueta abajo.
+
+   El orden se da vuelta con column-reverse y no reescribiendo el HTML: las
+   dos pantallas que tienen metricas (log.php y logger.php) las escriben
+   etiqueta-primero, y asi no hay que tocarlas. */
 .stat-card {
-  background: var(--gris1);
-  border: 1px solid var(--gris2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .stat-card-label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: .06em;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--gris4);
-  margin-bottom: 8px;
+  color: var(--label);
+  /* El aire lo da el gap del contenedor; con margin se duplicaba. */
+  margin-bottom: 0;
 }
 
 .stat-card-value {
-  font-size: 32px;
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 1.5rem + 0.45vw, 2rem);
   font-weight: 700;
-  color: var(--blanco);
+  color: var(--text);
   line-height: 1;
 }
 
-.stat-card-value.dorado { color: var(--dorado); }
+/* Antes algunos numeros iban en dorado "para destacarlos". La guia (§5.3 y
+   §8) pide que TODOS vayan en --text: si uno se destaca, los demas parecen
+   secundarios sin serlo. La clase se deja porque el HTML de dos pantallas la
+   escribe, pero ya no pinta nada. */
+.stat-card-value.dorado { color: var(--text); }
 
 /* ── TABLAS ──────────────────────────────────────────────────── */
 .tabla-wrap {
@@ -443,15 +524,16 @@ thead th {
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--gris4);
-  padding: 10px 14px;
+  /* Guia §5.4 y §9 punto 15: los encabezados de tabla van en --label. */
+  color: var(--label);
+  padding: 10px 10px;
   border-bottom: 1px solid var(--gris2);
   white-space: nowrap;
 }
 
 tbody td {
-  padding: 12px 14px;
-  font-size: 14px;
+  padding: 12px 10px;
+  font-size: 13px;
   color: var(--gris5);
   border-bottom: 1px solid rgba(44,44,44,.5);
   font-family: 'Roboto', sans-serif;
@@ -461,47 +543,80 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: rgba(255,255,255,.02); }
 
 /* ── BOTONES ─────────────────────────────────────────────────── */
+/* ── BOTONES (guia §5.2) ─────────────────────────────────────
+   Mayusculas, Montserrat 600 e interletrado. Es lo que les da el aire de la
+   marca; sin eso siguen pareciendo botones de panel generico.
+
+   OJO: NO se aplica a .accion-btn, las acciones chicas dentro de las filas
+   de las tablas ("Editar", "Archivar", "Eliminar"). En mayusculas cada una
+   crece cerca de un 10% y esas columnas ya venian justas de ancho. Se
+   comportan mas como enlaces que como botones. Si se prefiere alinearlas
+   con la guia, es agregarles las tres propiedades de abajo. */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  font-family: 'Montserrat', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-button);
   cursor: pointer;
-  border: none;
-  transition: opacity .2s, transform .1s;
+  border: 1px solid transparent;
+  transition: background .2s, color .2s, border-color .2s;
   text-decoration: none;
 }
 
 .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--dorado); color: var(--gh-black); }
-.btn-primary:hover { opacity: .88; }
-.btn-ghost { background: transparent; color: var(--gris5); border: 1px solid var(--gris2); }
-.btn-ghost:hover { border-color: var(--gris3); color: var(--blanco); }
+.btn-primary { background: var(--accent); color: var(--gh-black); }
+/* Se oscurece, no se transparenta: con opacity el boton se mezclaba con el
+   fondo y en tema claro parecia deshabilitado. */
+.btn-primary:hover { background: var(--gh-gold-dark); color: var(--gh-white); }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-ghost:hover { border-color: var(--accent); }
 .btn-danger { background: transparent; color: var(--error); border: 1px solid rgba(226,92,92,.3); }
 .btn-danger:hover { background: rgba(226,92,92,.08); }
 .btn-success { background: var(--exito); color: var(--negro); }
 .btn-success:hover { opacity: .88; }
 
 /* ── ESTADO PILLS ────────────────────────────────────────────── */
+/* ── ESTADOS (guia §5.5) ─────────────────────────────────────
+   Dejan de ser pastillas con fondo pastel —prohibidas en §8— y pasan a ser
+   texto en mayusculas con un punto de color adelante.
+
+   El punto es el UNICO circulo que la guia admite ademas de los avatares. */
 .estado-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-2);
   white-space: nowrap;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 9px;
-  border-radius: var(--radius);
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  padding: 0;
+  background: none;
+  color: var(--text-muted);
+}
+.estado-pill::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
-.estado-completo     { background: rgba(92,184,122,.12);  color: var(--exito); }
-.estado-solo-digital { background: rgba(191,174,118,.12);  color: var(--dorado); }
-.estado-solo-fisico  { background: rgba(136,136,136,.12); color: var(--gris5); }
-.estado-pendiente    { background: rgba(226,92,92,.12);   color: var(--error); }
+/* Sin fondo: el color va en el texto y en el punto.
+   "Solo digital" usaba el dorado claro, que como texto no se lee sobre
+   blanco (2,2:1). Pasa a --warning, que es el color de aviso de la guia y
+   es justo lo que significa: falta la parte fisica. */
+.estado-completo     { color: var(--success); }
+.estado-solo-digital { color: var(--warning); }
+.estado-solo-fisico  { color: var(--text-muted); }
+.estado-pendiente    { color: var(--error); }
 
 /* ── LOADING / EMPTY ─────────────────────────────────────────── */
 .loading-msg {
