@@ -186,7 +186,7 @@ include 'layout/head.php';
       <!-- v2.3: Categorías para Socio comercial al crear -->
       <div class="form-group" id="grupo-categorias-socio" style="display:none">
         <label>Categorías del Socio comercial</label>
-        <div id="categorias-socio-lista" style="background:var(--negro);border:1px solid var(--gris2);border-radius:8px;padding:10px;max-height:240px;overflow-y:auto">
+        <div id="categorias-socio-lista" style="background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:10px;max-height:240px;overflow-y:auto">
           <!-- Se renderiza dinámicamente -->
         </div>
         <div id="hint-categorias-socio" style="font-size:11px;color:var(--gris4);margin-top:6px;font-family:'Roboto',sans-serif;line-height:1.5">
@@ -223,7 +223,7 @@ include 'layout/head.php';
     <div class="modal-body">
 
       <!-- Asignar nuevo manual -->
-      <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:9px;padding:14px;margin-bottom:16px">
+      <div style="background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:14px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Asignar manual</div>
         <div style="display:flex;gap:8px;align-items:flex-start">
           <!-- Buscador-select. El id elegido va al input oculto sel-manual-asignar. -->
@@ -280,7 +280,7 @@ include 'layout/head.php';
     </div>
     <div class="modal-body">
 
-      <div style="background:var(--negro);border:1px solid var(--gris2);border-radius:9px;padding:14px;margin-bottom:16px">
+      <div style="background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:14px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris4);margin-bottom:10px">Asignar documento</div>
         <div style="display:flex;gap:8px;align-items:flex-start">
           <!-- Buscador-select. El id elegido va al input oculto sel-doc-asignar. -->
@@ -427,7 +427,7 @@ include 'layout/head.php';
 
 <style>
 .filtro-btn {
-  padding:6px 14px;border-radius:20px;border:1px solid var(--gris2);
+  padding:6px 14px;border-radius: var(--radius);border:1px solid var(--gris2);
   background:transparent;font-size:12px;font-family:'Montserrat',sans-serif;
   color:var(--gris4);cursor:pointer;transition:all .15s;
 }
@@ -437,7 +437,7 @@ include 'layout/head.php';
 
 .filtro-select, .form-select {
   background:var(--gris2);border:1px solid var(--gris2);
-  border-radius:7px;color:var(--gris5);font-size:12px;
+  border-radius: var(--radius);color:var(--gris5);font-size:12px;
   font-family:'Montserrat',sans-serif;padding:7px 10px;
   cursor:pointer;outline:none;transition:border-color .2s;
 }
@@ -447,14 +447,14 @@ include 'layout/head.php';
 .form-select:disabled { opacity:.5;cursor:not-allowed; }
 
 .buscar-input {
-  background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;
+  background:var(--gris2);border:1px solid var(--gris2);border-radius: var(--radius);
   padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);
   font-family:'Montserrat',sans-serif;outline:none;width:220px;transition:border-color .2s;
 }
 .buscar-input:focus { border-color:var(--dorado); }
 
 /* ── Combobox de empresa/franquicia (mismo patrón que documentos/manuales/log) ── */
-.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);z-index:50; }
 .combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
@@ -474,7 +474,7 @@ include 'layout/head.php';
   display: inline-flex; align-items: center;
   background: rgba(191,174,118,.10); color: var(--dorado);
   border: 1px solid rgba(191,174,118,.28);
-  border-radius: 10px; padding: 2px 8px;
+  border-radius: var(--radius); padding: 2px 8px;
   font-size: 10.5px; font-family: 'Roboto', sans-serif;
   white-space: nowrap; max-width: 130px;
   overflow: hidden; text-overflow: ellipsis;
@@ -489,10 +489,10 @@ include 'layout/head.php';
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-width:560px;max-height:90vh;overflow-y:auto; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--gris1);z-index:1; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
@@ -503,18 +503,18 @@ include 'layout/head.php';
 .form-group input[type=email],
 .form-group input[type=password] {
   width:100%;background:var(--negro);border:1px solid var(--gris2);
-  border-radius:7px;padding:10px 12px;font-size:13px;
+  border-radius: var(--radius);padding:10px 12px;font-size:13px;
   font-family:'Montserrat',sans-serif;color:var(--blanco);
   outline:none;transition:border-color .2s;
 }
 .form-group input:focus { border-color:var(--dorado); }
 .form-group input::placeholder { color:var(--gris3); }
 .form-group input:disabled { opacity:.5;cursor:not-allowed; }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
-.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:5px;font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
+.accion-btn { background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius: var(--radius);font-size:12px;font-family:'Montserrat',sans-serif;transition:background .15s;display:inline-flex;align-items:center;gap:4px; }
 .accion-btn:hover { background:var(--gris2); }
 .btn-sm { padding:8px 14px;font-size:12px; }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:320px; }
 .toast.show { transform:translateY(0);opacity:1; }
 </style>
 
@@ -713,7 +713,7 @@ function renderTabla(lista) {
     // restaurar: no le queda email ni contrasena con los cuales entrar.
     const purgado       = !!u.anonimizado_at;
     const badgeElim     = eliminado
-      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'Montserrat',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado</span>`
+      ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius: var(--radius);font-size:10px;font-family:'Montserrat',sans-serif;background:rgba(226,92,92,.12);color:var(--error);border:1px solid rgba(226,92,92,.3);vertical-align:middle">Eliminado</span>`
       : '';
 
     // Empresa / franquicia según rol
@@ -1343,7 +1343,7 @@ function renderCategoriasSocio(estado) {
 
   // estado === 'lista'
   cont.innerHTML = categoriasParaSocio.map(c => `
-    <label class="cat-socio-item" style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;cursor:pointer;border-radius:5px;transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
+    <label class="cat-socio-item" style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;cursor:pointer;border-radius: var(--radius);transition:background .12s" onmouseover="this.style.background='var(--gris2)'" onmouseout="this.style.background='transparent'">
       <input type="checkbox" data-cat-id="${c.id}" class="cat-socio-check" style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado);flex-shrink:0">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(c.name)}</div>
@@ -1931,7 +1931,7 @@ async function cargarDocsEmpleado() {
 
     lista.innerHTML = asignados.map(a => {
       const doc = a.document;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px">
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);margin-bottom:8px">
         <div>
           <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(doc?.titulo || '—')}</div>
           <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">${esc(doc?.tipo || '')}</div>
@@ -2003,7 +2003,7 @@ async function cargarManualAsignados() {
     lista.innerHTML = asignaciones.map(a => {
       const manual = a.manual;
       const version = manual?.version_activa?.[0];
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px">
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);margin-bottom:8px">
         <div>
           <div style="font-size:13px;color:var(--blanco);font-weight:500">${esc(manual?.titulo || '—')}</div>
           <div style="font-size:11px;color:var(--gris4);margin-top:2px;font-family:'Roboto',sans-serif">
@@ -2100,7 +2100,7 @@ async function cargarCategoriasUsuario() {
     }
 
     lista.innerHTML = categoriasDisponibles.map(c => `
-      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color .15s"
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);margin-bottom:8px;cursor:pointer;transition:border-color .15s"
              onmouseover="this.style.borderColor='var(--gris3)'"
              onmouseout="this.style.borderColor='var(--gris2)'">
         <input type="checkbox" data-cat-id="${c.id}" ${idsActuales.has(c.id) ? 'checked' : ''} style="margin:0;cursor:pointer;accent-color:var(--dorado)">

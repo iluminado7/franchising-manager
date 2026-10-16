@@ -15,14 +15,34 @@ function esc(str) {
 }
 
 // ── TEMA ─────────────────────────────────────────────────────
+//
+// El tema vive en data-theme="dark" sobre <html>, no en una clase del body:
+// lo pide la guia de marca (§7) y permite aplicarlo antes de que se pinte
+// nada (ver el script inline de layout/head.php, que evita el destello).
+//
+// Claro es el estado por defecto. Oscuro es el atributo presente.
+function temaEsOscuro() {
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
 function aplicarTema() {
-  const esClaro = localStorage.getItem('tema') === 'claro';
-  document.body.classList.toggle('tema-claro', esClaro);
+  // head.php ya lo aplico al cargar. Esto solo mantiene el boton en sintonia
+  // si alguna pantalla lo vuelve a llamar.
+  pintarBotonTema(temaEsOscuro());
 }
 
 function toggleTema() {
-  const esClaro = document.body.classList.toggle('tema-claro');
-  localStorage.setItem('tema', esClaro ? 'claro' : 'oscuro');
+  const oscuro = !temaEsOscuro();
+  if (oscuro) document.documentElement.setAttribute('data-theme', 'dark');
+  else        document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('tema', oscuro ? 'oscuro' : 'claro'); } catch (e) {}
+  pintarBotonTema(oscuro);
+}
+
+// El boton ofrece el tema CONTRARIO al actual: estando en oscuro dice
+// "Modo claro".
+function pintarBotonTema(oscuro) {
+  const esClaro = !oscuro;
   const labelEl = document.getElementById('label-tema');
   const iconEl  = document.getElementById('icon-tema');
   if (labelEl) labelEl.textContent = esClaro ? 'Modo oscuro' : 'Modo claro';
@@ -230,9 +250,8 @@ async function mostrarPopupNotificaciones() {
           justify-content:center;padding-top:64px">
           <div style="
             background:var(--gris1);border:1px solid var(--gris2);
-            border-radius:14px;width:100%;max-width:420px;
-            margin:0 16px;overflow:hidden;
-            box-shadow:0 20px 60px rgba(0,0,0,.4)">
+            border-radius: var(--radius);width:100%;max-width:420px;
+            margin:0 16px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between">
               <div style="display:flex;align-items:center;gap:10px">
                 <div style="width:8px;height:8px;border-radius:50%;background:var(--dorado);flex-shrink:0"></div>
@@ -240,13 +259,13 @@ async function mostrarPopupNotificaciones() {
                   Tenés <span id="popup-notif-count" style="color:var(--dorado)"></span> novedad(es)
                 </span>
               </div>
-              <button onclick="cerrarPopupNotif()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
+              <button onclick="cerrarPopupNotif()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <div style="padding:8px 20px;max-height:280px;overflow-y:auto" id="popup-notif-lista"></div>
             <div style="padding:12px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px">
-              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--dorado);color:var(--negro);font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer">Cerrar</button>
+              <button onclick="marcarTodasYCerrar()" style="padding:7px 16px;border-radius: var(--radius);border:none;background:var(--dorado);color:var(--gh-black);font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer">Cerrar</button>
             </div>
           </div>
         </div>`;
@@ -316,17 +335,16 @@ async function abrirPanelNotificaciones() {
         position:fixed;top:0;right:0;height:100vh;width:360px;
         background:var(--gris1);border-left:1px solid var(--gris2);
         z-index:801;display:flex;flex-direction:column;
-        transform:translateX(100%);transition:transform .25s ease;
-        box-shadow:-8px 0 32px rgba(0,0,0,.3)">
+        transform:translateX(100%);transition:transform .25s ease;">
         <div style="padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
           <div style="display:flex;align-items:center;gap:10px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dorado)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span style="font-size:15px;font-weight:600;color:var(--blanco)">Notificaciones</span>
-            <span id="panel-count-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:rgba(191,174,118,.15);color:var(--dorado);display:none"></span>
+            <span id="panel-count-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius: var(--radius);background:rgba(191,174,118,.15);color:var(--dorado);display:none"></span>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button id="panel-marcar-btn" onclick="marcarTodasPanel()" style="font-size:11px;color:var(--gris4);background:transparent;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;display:none" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">Marcar todo leído</button>
-            <button onclick="cerrarPanelNotificaciones()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
+            <button onclick="cerrarPanelNotificaciones()" style="background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);display:flex" onmouseover="this.style.color='var(--blanco)'" onmouseout="this.style.color='var(--gris4)'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>

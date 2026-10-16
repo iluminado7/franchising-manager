@@ -66,8 +66,10 @@ body {
 
 .doc-page {
   width: 100%; max-width: 800px;
-  background: #FFFFFF; border-radius: 4px;
-  box-shadow: 0 2px 20px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.06);
+  background: #FFFFFF; border-radius: var(--radius);
+  /* La hoja del manual es blanca sobre un fondo gris claro: sin el borde
+     no se distingue donde empieza. Antes ese papel lo hacia la sombra. */
+  border: 1px solid var(--border);
   padding: 72px 80px; min-height: 600px;
   position: relative;
 }
@@ -116,7 +118,7 @@ body {
 .doc-find-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0;
-  background: transparent; border: 1px solid #E5E5E5; border-radius: 8px;
+  background: transparent; border: 1px solid #E5E5E5; border-radius: var(--radius);
   color: #666; cursor: pointer; transition: all .15s;
 }
 .doc-find-btn:hover { border-color: var(--dorado); color: #000000; }
@@ -126,7 +128,7 @@ body {
   display: flex; align-items: center; gap: 4px;
   padding: 6px 8px;
   background: #FFFFFF; border: 1px solid #E5E5E5;
-  border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.15);
+  border-radius: var(--radius);
 }
 .find-ico { width: 15px; height: 15px; color: #999; flex-shrink: 0; margin: 0 2px; }
 .find-input {
@@ -143,7 +145,7 @@ body {
 .find-nav, .find-close {
   display: flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; padding: 0;
-  background: transparent; border: none; border-radius: 6px;
+  background: transparent; border: none; border-radius: var(--radius);
   color: #666; cursor: pointer; transition: background .12s, color .12s;
 }
 .find-nav:hover, .find-close:hover { background: #F5F5F5; color: #000000; }
@@ -156,7 +158,7 @@ body {
 .doc-footer { width: 100%; max-width: 800px; margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
 
 .estado-aceptacion {
-  padding: 14px 20px; border-radius: 10px; font-size: 13px;
+  padding: 14px 20px; border-radius: var(--radius); font-size: 13px;
   font-family: 'Roboto', sans-serif;
   display: flex; align-items: center; gap: 10px;
 }
@@ -209,7 +211,7 @@ body.lectura-pdf .doc-page {
   margin-bottom: 16px;
   background: #F5F5F5;
   border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
   color: #444;
@@ -232,7 +234,6 @@ body.lectura-pdf .doc-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,.12);
   z-index: 120;
   transition: opacity .18s, visibility .18s, color .15s, border-color .15s;
 }
@@ -257,7 +258,7 @@ body.lectura-pdf .doc-page {
   height: 36px;
   padding: 0 13px;
   border: 1px solid #D8D4CC;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: #fff;
   color: #333;
   font-family: inherit;
@@ -294,7 +295,8 @@ body.lectura-pdf .doc-page {
   flex: 0 0 auto;
   margin-inline: auto;
   background: #fff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, .12);
+  /* Mismo motivo que .doc-page: pagina blanca sobre fondo claro. */
+  border: 1px solid var(--border);
 }
 .pdfjs-pagina canvas { display: block; }
 
@@ -334,7 +336,7 @@ body.lectura-pdf .doc-page {
 .pdf-hl {
   position: absolute;
   background: rgba(138,117,56, .45);
-  border-radius: 2px;
+  border-radius: var(--radius);
   pointer-events: none;
   mix-blend-mode: multiply;
 }
@@ -355,7 +357,7 @@ body.lectura-pdf .doc-page {
    manual en cada page load y queda en loop sin ninguna pista. */
 .btn-reintentar-lectura {
   margin-left: 10px; padding: 4px 12px;
-  border: 1px solid currentColor; border-radius: 6px;
+  border: 1px solid currentColor; border-radius: var(--radius);
   background: transparent; color: inherit; cursor: pointer;
   font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 600;
 }
@@ -363,16 +365,16 @@ body.lectura-pdf .doc-page {
 
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:#FFFFFF;border:1px solid #E5E5E5;border-radius:14px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.modal-box { background:#FFFFFF;border:1px solid #E5E5E5;border-radius: var(--radius);width:100%;max-width:420px;overflow:hidden; }
 .modal-header { padding:18px 20px;border-bottom:1px solid #E8E4DC;display:flex;align-items:center;justify-content:space-between; }
 .modal-header h3 { font-size:15px;font-weight:600;color:#000000; }
-.modal-close { background:transparent;border:none;cursor:pointer;color:#999;padding:4px;border-radius:5px;display:flex;transition:color .15s; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:#999;padding:4px;border-radius: var(--radius);display:flex;transition:color .15s; }
 .modal-close:hover { color:#000000; }
 .modal-body  { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid #E8E4DC;display:flex;justify-content:flex-end;gap:8px; }
-.btn-modal-cancel  { padding:8px 16px;border-radius:7px;border:1px solid #E5E5E5;background:transparent;font-size:13px;font-family:'Montserrat',sans-serif;color:#666;cursor:pointer;transition:all .15s; }
+.btn-modal-cancel  { padding:8px 16px;border-radius: var(--radius);border:1px solid #E5E5E5;background:transparent;font-size:13px;font-family:'Montserrat',sans-serif;color:#666;cursor:pointer;transition:all .15s; }
 .btn-modal-cancel:hover { border-color:#aaa;color:#000000; }
-.btn-modal-confirm { padding:8px 16px;border-radius:7px;border:none;background:var(--dorado);color:#000000;font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px; }
+.btn-modal-confirm { padding:8px 16px;border-radius: var(--radius);border:none;background:var(--dorado);color:#000000;font-size:13px;font-weight:600;font-family:'Montserrat',sans-serif;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px; }
 .btn-modal-confirm:hover    { opacity:.88; }
 .btn-modal-confirm:disabled { opacity:.4;cursor:not-allowed; }
 
@@ -380,12 +382,12 @@ body.lectura-pdf .doc-page {
 .spinner-doc { width:20px;height:20px;border:2px solid rgba(191,174,118,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius:10px;padding:12px 16px;font-size:13px;color:#FFFFFF;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
+.toast { position:fixed;bottom:24px;right:24px;background:#1A1A1A;border:1px solid #333;border-radius: var(--radius);padding:12px 16px;font-size:13px;color:#FFFFFF;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
 .toast.show { transform:translateY(0);opacity:1; }
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #F5F5F5; }
-::-webkit-scrollbar-thumb { background: #D0CDC6; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #D0CDC6; border-radius: var(--radius); }
 
 @media (max-width: 860px) { .doc-page { padding: 40px 28px; } }
 
@@ -450,11 +452,18 @@ body.lectura-pdf .doc-page {
 
   .doc-page {
     padding: 0 !important;
-    box-shadow: none !important;
+    /* Acá decía `box-shadow: none`. Desde que la guía prohíbe las sombras
+       (§8), lo que separa la hoja del fondo en pantalla es un borde de 1px
+       — y ese borde SÍ se imprimiría, dejando un marco alrededor del manual.
+       Por eso ahora se anula el borde en vez de la sombra. */
+    border: none !important;
     background: #fff !important;
     max-width: none !important;
     margin: 0 !important;
   }
+
+  /* Mismo caso para las páginas del visor de PDF. */
+  .pdfjs-pagina { border: none !important; }
 
   /* ── HEADER fijo: se repite arriba en CADA hoja ── */
   .doc-header {
@@ -523,20 +532,20 @@ body.lectura-pdf .doc-page {
 /* Notas / Sugerencias (vista franquiciado) */
 .notas-box {
   width: 100%; max-width: 800px; margin-top: 24px;
-  background: #FFFFFF; border: 1px solid #E5E5E5; border-radius: 12px;
-  padding: 24px 28px; box-shadow: 0 2px 20px rgba(0,0,0,.05);
+  background: #FFFFFF; border: 1px solid #E5E5E5; border-radius: var(--radius);
+  padding: 24px 28px;
 }
 .notas-box-title { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: #000000; margin-bottom: 4px; }
 .notas-box-sub   { font-size: 12.5px; color: #888; font-family: 'Roboto', sans-serif; margin-bottom: 14px; line-height: 1.5; }
 .nota-textarea {
-  width: 100%; background: #F5F5F5; border: 1px solid #E5E5E5; border-radius: 8px;
+  width: 100%; background: #F5F5F5; border: 1px solid #E5E5E5; border-radius: var(--radius);
   color: #000000; font-family: 'Roboto', sans-serif; font-size: 13.5px;
   padding: 10px 12px; resize: vertical; outline: none; line-height: 1.5;
 }
 .nota-textarea:focus { border-color: var(--dorado); }
 .btn-nota-enviar {
   margin-top: 10px; padding: 10px 18px; background: var(--dorado);
-  color: #000000; border: none; border-radius: 8px;
+  color: #000000; border: none; border-radius: var(--radius);
   font-size: 13px; font-weight: 600; font-family: 'Montserrat', sans-serif;
   cursor: pointer; transition: opacity .2s;
   display: inline-flex; align-items: center; gap: 8px;
@@ -545,12 +554,12 @@ body.lectura-pdf .doc-page {
 .btn-nota-enviar:disabled { opacity: .4; cursor: not-allowed; }
 .notas-list { display: flex; flex-direction: column; gap: 10px; }
 .notas-list .nota-item {
-  background: #F5F5F5; border: 1px solid #E8E4DC; border-radius: 10px; padding: 12px 14px;
+  background: #F5F5F5; border: 1px solid #E8E4DC; border-radius: var(--radius); padding: 12px 14px;
 }
 .nota-item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
 .nota-fecha { font-size: 11px; color: #999; font-family: 'Roboto', sans-serif; }
 .nota-contenido { font-size: 13.5px; color: #333; font-family: 'Roboto', sans-serif; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
-.nota-estado { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+.nota-estado { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: var(--radius); }
 .nota-estado.pendiente { background: rgba(191,174,118,.15); color: #8A6D1B; }
 .nota-estado.leida     { background: rgba(55,138,221,.12); color: #2A5E9E; }
 .nota-estado.resuelta  { background: rgba(92,184,122,.15); color: #27500A; }
@@ -566,7 +575,7 @@ body.lectura-pdf .doc-page {
 .nota-release-tag {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: .04em;

@@ -114,13 +114,13 @@ function verificarSesion(?string $rol_requerido = null): void
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #000000; color: #FFFFFF;
            display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { background: #1A1A1A; border: 1px solid #2C2C2C; border-radius: 12px;
+    .card { background: #1A1A1A; border: 1px solid #2C2C2C; border-radius: var(--radius);
             padding: 40px 32px; text-align: center; max-width: 380px; width: 90%; }
     .icon { font-size: 40px; margin-bottom: 16px; }
     h2 { color: #E25C5C; font-size: 20px; margin-bottom: 10px; }
     p  { color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
     a  { display: inline-block; background: #BFAE76; color: #000000;
-         padding: 10px 24px; border-radius: 7px; text-decoration: none;
+         padding: 10px 24px; border-radius: var(--radius); text-decoration: none;
          font-weight: 600; font-size: 13px; }
     a:hover { opacity: .85; }
   </style>

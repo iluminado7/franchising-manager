@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<!-- TEMA FIJO EN OSCURO, a proposito.
+     Las pantallas de acceso van siempre sobre negro: es la cara de entrada al
+     sistema y no sigue la preferencia del usuario, que ademas todavia no
+     inicio sesion. Por eso el atributo esta escrito aca y no lo pone ningun
+     script. -->
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/goharv-tokens.css">
 <link rel="stylesheet" href="styles/style.css">
 <link rel="stylesheet" href="styles/login.css?v=3">
 <link rel="preconnect" href="https://challenges.cloudflare.com">
@@ -58,7 +64,7 @@
           <button
             type="button"
             onclick="togglePassword()"
-            style="position:absolute;right:0;top:0;height:100%;width:44px;background:transparent;border:none;cursor:pointer;color:var(--gris4);display:flex;align-items:center;justify-content:center;border-radius:0 8px 8px 0;transition:color .2s"
+            style="position:absolute;right:0;top:0;height:100%;width:44px;background:transparent;border:none;cursor:pointer;color:var(--gris4);display:flex;align-items:center;justify-content:center;border-radius: var(--radius);transition:color .2s"
             onmouseover="this.style.color='var(--blanco)'"
             onmouseout="this.style.color='var(--gris4)'"
           >

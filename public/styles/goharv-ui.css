@@ -1,0 +1,236 @@
+/* goharv-ui.css — Componentes de la Marca Madre (§5 y §6 de la guia).
+   Depende de goharv-tokens.css: se carga DESPUES de ese archivo.
+
+   Todo lleva prefijo gh- para no chocar con el CSS historico del proyecto.
+   Mientras dure la migracion, una pantalla puede tener componentes gh- y
+   clases viejas conviviendo; no se mezclan en el mismo elemento.
+
+   REGLA: aca no se escribe ningun color, tamano ni radio a mano. Todo sale
+   de los tokens. Si algo falta, se combina con lo que hay. */
+
+
+/* ── §5.1 Etiqueta (eyebrow) ───────────────────────────────── */
+.gh-label {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  font-family: var(--font-display); font-weight: 600; font-size: 0.8rem;
+  text-transform: uppercase; letter-spacing: var(--tracking-label);
+  color: var(--label);
+}
+.gh-label--line::before {
+  content: ''; width: 40px; height: 1px; background: var(--accent);
+}
+
+
+/* ── §5.2 Botones ──────────────────────────────────────────── */
+.gh-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  font-family: var(--font-display); font-weight: 600; font-size: 0.875rem;
+  text-transform: uppercase; letter-spacing: var(--tracking-button);
+  padding: 1.1rem 2.5rem; border: 1px solid transparent; border-radius: var(--radius);
+  cursor: pointer; text-decoration: none; transition: background .2s, color .2s, border-color .2s;
+}
+.gh-btn--primary   { background: var(--accent); color: var(--gh-black); }
+.gh-btn--primary:hover { background: var(--gh-gold-dark); color: var(--gh-white); }
+
+.gh-btn--secondary { background: transparent; color: var(--text); border-color: var(--text); }
+.gh-btn--secondary:hover { background: var(--text); color: var(--bg-app); }
+
+/* Acciones dentro de tablas o cards: mas chico, sin relleno */
+.gh-btn--ghost {
+  padding: 0.6rem 1.2rem; font-size: 0.75rem;
+  background: transparent; color: var(--text); border-color: var(--border);
+}
+.gh-btn--ghost:hover { border-color: var(--accent); }
+
+.gh-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+
+/* ── §5.3 Card de metrica ──────────────────────────────────── */
+.gh-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+}
+.gh-stat__value {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(2rem, 1.6rem + 1.5vw, 2.75rem); line-height: 1;
+  color: var(--text);                 /* NUNCA en dorado */
+}
+.gh-stat__value small { font-size: 0.5em; color: var(--label); font-weight: 600; }
+.gh-stat__label { margin-top: var(--space-3); }
+
+.gh-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Metrica que lleva a otra pantalla. Sin sombra ni desplazamiento: la guia
+   (§8) prohibe las sombras, asi que el estado se marca con el borde. */
+.gh-stat--link { cursor: pointer; transition: border-color .15s; }
+.gh-stat--link:hover { border-color: var(--accent); }
+
+
+/* ── §5.4 Card de contenido / tabla ────────────────────────── */
+.gh-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.gh-card__header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.gh-table { width: 100%; border-collapse: collapse; }
+.gh-table th {
+  text-align: left; padding: var(--space-3) var(--space-5);
+  font-family: var(--font-display); font-weight: 600; font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: var(--tracking-label);
+  color: var(--label); border-bottom: 1px solid var(--border);
+}
+.gh-table td {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border); color: var(--text);
+}
+.gh-table tr:last-child td { border-bottom: 0; }
+.gh-table tr:hover td { background: var(--accent-soft); }
+
+/* Celda de apoyo: fechas, conteos, texto secundario dentro de la tabla. */
+.gh-table .gh-td-muted { color: var(--text-muted); }
+
+/* §6 responsive: la tabla scrollea DENTRO de su card; la pagina nunca. */
+.gh-table-scroll { overflow-x: auto; }
+
+
+/* ── §5.5 Estado ───────────────────────────────────────────── */
+.gh-status {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-display); font-weight: 600; font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+}
+.gh-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.gh-status--ok    { color: var(--success); }
+.gh-status--error { color: var(--error); }
+.gh-status--warn  { color: var(--warning); }
+.gh-status--draft { color: var(--text-muted); }
+
+
+/* ── §5.6 Barra de progreso ────────────────────────────────── */
+.gh-progress { height: 6px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
+.gh-progress__bar { height: 100%; background: var(--accent); }
+.gh-progress--done .gh-progress__bar { background: var(--gh-gold-dark); }
+
+
+/* ── §5.7 Formularios ──────────────────────────────────────── */
+.gh-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.gh-field label {
+  font-family: var(--font-display); font-weight: 600; font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: var(--tracking-label); color: var(--label);
+}
+.gh-input, .gh-select, .gh-textarea {
+  font-family: var(--font-body); font-size: 1rem; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+}
+.gh-input:focus, .gh-select:focus, .gh-textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);
+}
+.gh-field__error { font-size: 0.875rem; color: var(--error); }
+
+
+/* ── §5.8 Avatar ───────────────────────────────────────────── */
+.gh-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 600; font-size: 0.9rem; letter-spacing: 0.05em;
+  color: var(--label); background: var(--accent-soft); border: 1px solid var(--accent);
+}
+
+
+/* ── §6 Banda de encabezado de pagina ──────────────────────
+   Va en TODAS las paginas: eyebrow con linea + H1 + descripcion corta.
+
+   Los margenes negativos la hacen sangrar hasta los bordes del area de
+   contenido, que trae su propio relleno. Sin eso la banda quedaria como una
+   caja flotando con aire alrededor, y la guia la dibuja pegada al topbar y a
+   los costados.
+
+   El valor NO esta escrito a mano: sale de --content-pad-*, que define
+   .main-content en panel.css y cambia en cada breakpoint. Escribirlo a mano
+   dejaba la banda sobresaliendo apenas cambiaba el relleno del contenido. */
+.gh-banda {
+  background: var(--bg-band);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-5) var(--space-6);
+  margin:
+    calc(var(--content-pad-y, 0px) * -1)
+    calc(var(--content-pad-x, 0px) * -1)
+    var(--space-5);
+}
+.gh-banda h1 { margin-top: var(--space-2); }
+.gh-banda__desc {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  max-width: 70ch;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   ESCALA DE PANEL — desvio deliberado de §3
+
+   La escala de la guia esta pensada para la web institucional, donde un H1
+   ocupa media pantalla y hay un solo mensaje por vista. En un panel de
+   administracion, con cinco metricas y una tabla de diez filas arriba del
+   pliegue, esos tamanos dejan todo enorme y obligan a scrollear para ver lo
+   que antes entraba de una.
+
+   Se bajan SOLO los tamanos y los espacios. No se toca nada mas: misma
+   familia, mismos pesos, mismas mayusculas, mismo interletrado, mismos
+   colores. La jerarquia de la guia se mantiene intacta — un H1 sigue siendo
+   lo mas grande de la pantalla, y la relacion entre niveles no cambia.
+
+   Referencia: el panel venia de 22px en el titulo de pagina y 32px en los
+   numeros. Esto queda algo por encima de eso.
+   ══════════════════════════════════════════════════════════════ */
+.main-content h1 {
+  font-size: clamp(1.5rem, 1.35rem + 0.5vw, 1.75rem);  /* 24 → 28px */
+}
+.main-content h2 {
+  font-size: clamp(1.125rem, 1.05rem + 0.35vw, 1.3125rem); /* 18 → 21px */
+}
+.main-content h3 {
+  font-size: 0.9375rem;
+}
+
+.gh-stat { padding: var(--space-3) var(--space-4); }
+.gh-stat__value {
+  font-size: clamp(1.625rem, 1.5rem + 0.45vw, 2rem);   /* 26 → 32px */
+}
+.gh-stat__label { margin-top: var(--space-2); }
+.gh-stat__label.gh-label { font-size: 0.75rem; }
+
+/* El relleno vertical baja; el horizontal acompana al del contenido para
+   que el texto de la banda quede alineado con lo que viene debajo. */
+.gh-banda {
+  padding: var(--space-4) var(--content-pad-x, var(--space-5));
+}
+.gh-banda h1 { margin-top: var(--space-1); }
+.gh-banda__desc { margin-top: var(--space-1); }
+
+@media (max-width: 640px) {
+  .gh-banda { padding: var(--space-3) var(--content-pad-x, var(--space-3)); }
+}
+
+.gh-card__header { padding: var(--space-3) var(--space-4); }
+.gh-table th { padding: var(--space-2) var(--space-4); font-size: 0.6875rem; }
+.gh-table td { padding: var(--space-3) var(--space-4); font-size: 0.875rem; }
+
+/* Los botones de la guia llevan 1.1rem x 2.5rem: correcto para un "Contactanos"
+   en una landing, desmedido para una accion dentro de una fila de tabla. */
+.gh-btn { padding: 0.75rem 1.75rem; }
+.gh-btn--ghost { padding: 0.45rem 1rem; }

@@ -6,6 +6,16 @@ $titulo        = 'Dashboard';
 $pagina_actual = 'dashboard';
 include 'layout/head.php';
 ?>
+<!--
+  PANTALLA DE INICIO — primera vista migrada a la Marca Madre.
+
+  Usa los componentes gh- de goharv-ui.css y los roles de goharv-tokens.css.
+  No hay ni un color, radio ni tamano escrito a mano en este archivo.
+
+  Lo que todavia NO sigue la guia en esta pantalla es el marco compartido
+  (topbar, sidebar y pie): se toca en el paso de layout, porque cambiarlo
+  afecta a las 20 pantallas a la vez.
+-->
 
 <div class="app-layout">
   <?php include 'layout/topbar.php'; ?>
@@ -14,76 +24,91 @@ include 'layout/head.php';
     <?php include 'layout/sidebar.php'; ?>
 
     <main class="main-content">
-      <div class="page-header">
-        <div class="page-title">Inicio</div>
-        <div class="page-sub" id="page-sub">Cargando...</div>
+
+      <!-- §6 Banda de encabezado: eyebrow con linea + H1 + descripcion.
+           El eyebrow dice el ROL de quien mira; lo completa el JS. -->
+      <div class="gh-banda">
+        <span class="gh-label gh-label--line" id="banda-rol">&nbsp;</span>
+        <h1>Inicio</h1>
+        <p class="gh-banda__desc" id="banda-desc">Cargando…</p>
       </div>
 
-      <div class="stats-grid" id="stats-grid">
-        <!-- Solo super_admin -->
-        <div class="stat-card" id="card-empresas" style="display:none">
-          <div class="stat-card-label">Empresas activas</div>
-          <div class="stat-card-value dorado" id="stat-empresas">—</div>
+      <!-- §5.3 Metricas: numero arriba, etiqueta abajo, todas en --text -->
+      <div class="gh-stats-grid" id="stats-grid">
+        <div class="gh-stat" id="card-empresas" style="display:none">
+          <div class="gh-stat__value" id="stat-empresas">—</div>
+          <div class="gh-stat__label gh-label">Empresas activas</div>
         </div>
-        <div class="stat-card" id="card-franquicias">
-          <div class="stat-card-label">Franquicias activas</div>
-          <div class="stat-card-value dorado" id="stat-franquicias">—</div>
+        <div class="gh-stat" id="card-franquicias">
+          <div class="gh-stat__value" id="stat-franquicias">—</div>
+          <div class="gh-stat__label gh-label">Franquicias activas</div>
         </div>
-        <div class="stat-card" id="card-publicados">
-          <div class="stat-card-label">Manuales publicados</div>
-          <div class="stat-card-value" id="stat-publicados">—</div>
+        <div class="gh-stat" id="card-publicados">
+          <div class="gh-stat__value" id="stat-publicados">—</div>
+          <div class="gh-stat__label gh-label">Manuales publicados</div>
         </div>
-        <div class="stat-card" id="card-borradores">
-          <div class="stat-card-label">En borrador</div>
-          <div class="stat-card-value" id="stat-borradores">—</div>
+        <div class="gh-stat" id="card-borradores">
+          <div class="gh-stat__value" id="stat-borradores">—</div>
+          <div class="gh-stat__label gh-label">En borrador</div>
         </div>
-        <div class="stat-card" id="card-usuarios">
-          <div class="stat-card-label">Total usuarios</div>
-          <div class="stat-card-value" id="stat-usuarios">—</div>
+        <div class="gh-stat" id="card-usuarios">
+          <div class="gh-stat__value" id="stat-usuarios">—</div>
+          <div class="gh-stat__label gh-label">Total usuarios</div>
         </div>
       </div>
 
-      <div class="tabla-wrap">
-        <div class="tabla-header">
+      <!-- §5.4 Card con tabla -->
+      <div class="gh-card" style="margin-top:var(--space-5)">
+        <div class="gh-card__header">
           <h3 id="tabla-titulo">Franquicias registradas</h3>
         </div>
-        <table>
-          <thead id="tabla-head">
-            <tr>
-              <th>Nombre</th>
-              <th>Razón social</th>
-              <th>CUIT</th>
-              <th>Estado</th>
-              <th>Dashboard</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-lista">
-            <tr><td colspan="5" class="loading-msg">
-              <div class="spinner" style="display:block;border-top-color:var(--dorado)"></div>
-              Cargando...
-            </td></tr>
-          </tbody>
-        </table>
+        <div class="gh-table-scroll">
+          <table class="gh-table">
+            <thead id="tabla-head">
+              <tr>
+                <th>Nombre</th>
+                <th>Razón social</th>
+                <th>CUIT</th>
+                <th>Estado</th>
+                <th>Dashboard</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-lista">
+              <tr><td colspan="5" class="gh-td-muted" style="text-align:center;padding:var(--space-6)">
+                Cargando…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>
 </div>
 
 <style>
-.stat-card-link { cursor:pointer; transition:border-color .15s, transform .15s; }
-.stat-card-link:hover { border-color:var(--dorado); transform:translateY(-2px); }
-.fila-clickeable { cursor:pointer; transition:background .15s; }
-.fila-clickeable:hover { background:var(--gris2); }
+/* Lo unico propio de esta pantalla. Sin colores: solo el cursor de las filas
+   que llevan a otro lado. El resaltado al pasar ya lo da .gh-table. */
+.fila-clickeable { cursor: pointer; }
 </style>
 
 <script>
 const BASE_PHP = '<?= BASE_URL_PHP ?>';
+
+// El eyebrow de la banda muestra el rol, como en la guia ("SUPERADMIN").
+const ROTULO_ROL = {
+  super_admin:  'Superadmin',
+  franquiciante:'Franquiciante',
+  franquiciado: 'Socio comercial',
+  empleado:     'Empleado',
+};
 
 async function cargarDashboard() {
   try {
     const me      = await apiFetch('GET', '/me');
     const rol     = me.rol;
     const esSuper = rol === 'super_admin';
+
+    document.getElementById('banda-rol').textContent = ROTULO_ROL[rol] || rol;
 
     // Datos base; super_admin suma /empresas
     const reqs = [
@@ -104,13 +129,12 @@ async function cargarDashboard() {
     document.getElementById('stat-borradores').textContent  = borradores;
     document.getElementById('stat-usuarios').textContent    = usuarios.length;
 
-
     const nombreEmpresa = me.empresa?.nombre
       || [me.nombre, me.apellido].filter(Boolean).join(' ').trim()
       || me.email
       || '';
-    document.getElementById('page-sub').textContent =
-      esSuper ? 'Resumen general del sistema' : `Resumen de ${nombreEmpresa}`;
+    document.getElementById('banda-desc').textContent =
+      esSuper ? 'Resumen general del sistema.' : `Resumen de ${nombreEmpresa}.`;
 
     if (esSuper) {
       configurarVistaSuperAdmin(empresas);
@@ -120,26 +144,22 @@ async function cargarDashboard() {
     }
 
   } catch (e) {
-    document.getElementById('page-sub').textContent = 'Error al cargar datos.';
+    document.getElementById('banda-desc').textContent = 'Error al cargar datos.';
   }
 }
 
 // ── SUPER ADMIN ───────────────────────────────────────────────
 function configurarVistaSuperAdmin(empresas) {
-  // Tarjeta de empresas activas
   document.getElementById('card-empresas').style.display = '';
   document.getElementById('stat-empresas').textContent = empresas.filter(e => e.activa).length;
 
   // Tarjetas clickeables → su sección con el filtro puesto
-  // Al clickear la tarjeta "Empresas activas", vamos a empresas.php con el
-  // filtro "Activas" ya aplicado (query param ?estado=activas leído por esa página).
   hacerClickeable('card-empresas',    `${BASE_PHP}/empresas.php?estado=activas`);
   hacerClickeable('card-franquicias', `${BASE_PHP}/franquicias.php`);
   hacerClickeable('card-publicados',  `${BASE_PHP}/manuales.php?estado=publicado`);
   hacerClickeable('card-borradores',  `${BASE_PHP}/manuales.php?estado=borrador`);
   hacerClickeable('card-usuarios',    `${BASE_PHP}/usuarios.php`);
 
-  // Lista: empresas registradas → franquicias.php de esa empresa
   document.getElementById('tabla-titulo').textContent = 'Empresas registradas';
   document.getElementById('tabla-head').innerHTML = `
     <tr>
@@ -155,19 +175,19 @@ function configurarVistaSuperAdmin(empresas) {
   tbody.innerHTML = empresas.length
     ? empresas.map(e => `
         <tr class="fila-clickeable" onclick="window.location.href='${BASE_PHP}/franquicias.php?empresa_id=${e.id}'">
-          <td style="color:var(--blanco);font-weight:500">${esc(e.nombre)}</td>
-          <td>${esc(e.razon_social)}</td>
-          <td>${esc(e.cuit)}</td>
-          <td><span class="estado-pill ${e.activa ? 'estado-completo' : 'estado-pendiente'}">${e.activa ? 'Activa' : 'Suspendida'}</span></td>
-          <td>${e.franquicias_count ?? 0} franquicia(s)</td>
+          <td style="font-weight:500">${esc(e.nombre)}</td>
+          <td class="gh-td-muted">${esc(e.razon_social)}</td>
+          <td class="gh-td-muted">${esc(e.cuit)}</td>
+          <td><span class="gh-status ${e.activa ? 'gh-status--ok' : 'gh-status--error'}">${e.activa ? 'Activa' : 'Suspendida'}</span></td>
+          <td class="gh-td-muted">${e.franquicias_count ?? 0} franquicia(s)</td>
           <td>
-            <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px"
+            <button class="gh-btn gh-btn--ghost"
               onclick="event.stopPropagation(); window.location.href='${BASE_PHP}/manuales.php?empresa_id=${e.id}'">
               Ver manuales
             </button>
           </td>
         </tr>`).join('')
-    : `<tr><td colspan="6" class="empty-state" style="padding:24px">Sin empresas registradas.</td></tr>`;
+    : filaVacia(6, 'Sin empresas registradas.');
 }
 
 // ── FRANQUICIANTE: manuales publicados (con vista previa) ────
@@ -188,24 +208,29 @@ function renderManualesPublicados(manuales) {
         const v = m.version_activa?.[0]?.version_number ?? m.version_activa?.version_number;
         return `
         <tr>
-          <td style="color:var(--blanco);font-weight:500">${esc(m.titulo)}</td>
-          <td>${esc(m.categoria)}</td>
-          <td>${v ? 'v' + v : '—'}</td>
+          <td style="font-weight:500">${esc(m.titulo)}</td>
+          <td class="gh-td-muted">${esc(m.categoria)}</td>
+          <td class="gh-td-muted">${v ? 'v' + v : '—'}</td>
           <td>
-            <a href="${BASE_PHP}/lectura.php?id=${m.id}" class="btn btn-ghost" style="padding:4px 10px;font-size:12px">
+            <a href="${BASE_PHP}/lectura.php?id=${m.id}" class="gh-btn gh-btn--ghost">
               Vista previa
             </a>
           </td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="4" class="empty-state" style="padding:24px">Sin manuales publicados.</td></tr>`;
+    : filaVacia(4, 'Sin manuales publicados.');
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+function filaVacia(columnas, texto) {
+  return `<tr><td colspan="${columnas}" class="gh-td-muted"
+    style="text-align:center;padding:var(--space-6)">${texto}</td></tr>`;
+}
+
 function hacerClickeable(cardId, url) {
   const card = document.getElementById(cardId);
   if (!card) return;
-  card.classList.add('stat-card-link');
+  card.classList.add('gh-stat--link');
   card.addEventListener('click', () => { window.location.href = url; });
 }
 

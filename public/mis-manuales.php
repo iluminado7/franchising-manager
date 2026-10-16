@@ -125,52 +125,52 @@ include 'layout/head.php';
 </div>
 
 <style>
-.buscar-input { background:var(--gris2);border:1px solid var(--gris2);border-radius:7px;padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);font-family:'Montserrat',sans-serif;outline:none;width:260px;transition:border-color .2s; }
+.buscar-input { background:var(--gris2);border:1px solid var(--gris2);border-radius: var(--radius);padding:7px 12px 7px 32px;font-size:13px;color:var(--blanco);font-family:'Montserrat',sans-serif;outline:none;width:260px;transition:border-color .2s; }
 .buscar-input:focus { border-color:var(--dorado); }
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius:14px;width:100%;max-height:90vh;overflow-y:auto; }
+.modal-box { background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);width:100%;max-height:90vh;overflow-y:auto; }
 .modal-header { padding:18px 20px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--gris1);z-index:1; }
 .modal-header h3 { font-size:15px;font-weight:600;color:var(--blanco); }
-.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius:5px;transition:color .15s,background .15s;display:flex; }
+.modal-close { background:transparent;border:none;cursor:pointer;color:var(--gris4);padding:4px;border-radius: var(--radius);transition:color .15s,background .15s;display:flex; }
 .modal-close:hover { color:var(--blanco);background:var(--gris2); }
 .modal-body { padding:20px; }
 .modal-footer { padding:14px 20px;border-top:1px solid var(--gris2);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--gris1); }
-.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius:7px;padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
-.badge-aceptado { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;background:rgba(92,184,122,.12);color:var(--exito); }
-.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
+.form-error { background:rgba(226,92,92,.1);border:1px solid rgba(226,92,92,.3);border-radius: var(--radius);padding:10px 12px;font-size:13px;color:var(--error);display:none;margin-top:8px;line-height:1.5; }
+.badge-aceptado { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius: var(--radius);background:rgba(92,184,122,.12);color:var(--exito); }
+.toast { position:fixed;bottom:24px;right:24px;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 16px;font-size:13px;color:var(--blanco);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s,opacity .3s;z-index:600;font-family:'Roboto',sans-serif;max-width:340px; }
 .toast.show { transform:translateY(0);opacity:1; }
 /* ── Notas / sugerencias ── */
 .notas-intro { font-size:12px;color:var(--gris4);line-height:1.6;font-family:'Roboto',sans-serif;margin-bottom:14px; }
 .notas-label { display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:6px; }
-.nota-textarea { width:100%;min-height:90px;resize:vertical;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Roboto',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;line-height:1.5; }
+.nota-textarea { width:100%;min-height:90px;resize:vertical;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:10px 12px;font-size:13px;font-family:'Roboto',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;line-height:1.5; }
 .nota-textarea:focus { border-color:var(--dorado); }
 .nota-textarea::placeholder { color:var(--gris3); }
 .notas-hist-label { font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris5);margin-bottom:10px;padding-top:6px;border-top:1px solid var(--gris2); }
-.nota-card { background:var(--negro);border:1px solid var(--gris2);border-radius:10px;padding:12px 14px;margin-bottom:10px; }
+.nota-card { background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:12px 14px;margin-bottom:10px; }
 .nota-card:last-child { margin-bottom:0; }
 .nota-card-top { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px; }
 .nota-meta { font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif; }
-.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius:7px;padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
+.form-select { width:100%;background:var(--negro);border:1px solid var(--gris2);border-radius: var(--radius);padding:10px 12px;font-size:13px;font-family:'Montserrat',sans-serif;color:var(--blanco);outline:none;transition:border-color .2s;box-sizing:border-box;cursor:pointer; }
 .form-select:focus { border-color:var(--dorado); }
 .form-select option { background:var(--gris1); }
 /* Release notes: anuncios del publicador, estilo destacado */
 .nota-card.nota-release { background:rgba(196,162,107,.05);border-color:rgba(196,162,107,.3);border-left:3px solid var(--dorado); }
 .nota-release-tag {
-  display:inline-block;padding:2px 8px;border-radius:10px;
+  display:inline-block;padding:2px 8px;border-radius: var(--radius);
   font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
   background:rgba(196,162,107,.18);color:var(--dorado);
   border:1px solid rgba(196,162,107,.4);
   font-family:'Montserrat',sans-serif;
 }
 .nota-contenido { font-size:13px;color:var(--gris5);line-height:1.6;font-family:'Roboto',sans-serif;white-space:pre-wrap; }
-.nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
+.nota-estado-pill { flex-shrink:0;font-size:10px;font-weight:600;padding:3px 9px;border-radius: var(--radius);text-transform:uppercase;letter-spacing:.04em; }
 .nota-pendiente { background:rgba(191,174,118,.14);color:var(--dorado); }
 .nota-leida { background:rgba(255,255,255,.07);color:var(--gris5); }
 .nota-resuelta { background:rgba(92,184,122,.14);color:var(--exito); }
 /* Combobox de categoría. Estas clases YA existen en manuales.php; acá van
    porque en este proyecto casi nada es global (README §13). */
-.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);z-index:50; }
 .combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
@@ -434,7 +434,7 @@ function renderTabla(lista) {
 
     return `<tr>
       <td>
-        <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
+        <div style="color:var(--blanco);font-weight:500;margin-top:2px">${esc(m.titulo)}${m.tipo === 'pdf' ? `<span style="margin-left:8px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius: var(--radius);background:rgba(191,174,118,.14);color:var(--dorado);vertical-align:middle;font-family:'Roboto',sans-serif">PDF</span>` : ''}</div>
       </td>
       <td>${esc(m.categoria) || '—'}</td>
       <td style="font-size:12px;font-family:'Roboto',sans-serif;color:var(--gris4)">${fecha}</td>

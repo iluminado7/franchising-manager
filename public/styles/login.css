@@ -1,29 +1,14 @@
 @import url(style.css);
   /* ── PANTALLA DE LOGIN ──────────────────────────────────── */
-   /* Misma paleta de marca que panel.css. Esta duplicada porque el login no
-      carga panel.css; si se toca una, hay que tocar la otra. */
-   :root {
-    --negro:   #000000;
-    --blanco:  #FFFFFF;
-    --dorado:  #BFAE76;
-    --dorado-oscuro: #8A7538;
-    --gris1:   #1A1A1A;
-    --gris2:   #2C2C2C;
-    --gris3:   #444444;
-    --gris4:   #888888;
-    --gris5:   #CCCCCC;
-    --error:   #E25C5C;
-    --exito:   #5CB87A;
-  }
-body.tema-claro {
-  --negro:   #F5F5F5;
-  --blanco:  #000000;
-  --gris1:   #FFFFFF;
-  --gris2:   #E5E5E5;   /* borde, no fondo: ver la nota en panel.css */
-  --gris3:   #AAAAAA;
-  --gris4:   #555555;
-  --gris5:   #333333;
-}
+/* La paleta ya NO vive aca: esta en goharv-tokens.css, que se importa antes
+   que este archivo. Ahi estan los colores de la marca, los roles que usan los
+   componentes (--accent, --text, --surface, --border...) y el puente que
+   mantiene andando los nombres historicos (--dorado, --negro, --gris1..5).
+
+   El tema se cambia con data-theme="dark" en <html>, no con una clase en el
+   body: asi lo pide la guia de marca (§7) y asi el fondo correcto esta
+   aplicado antes de que se pinte nada. */
+
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -102,7 +87,7 @@ body.tema-claro {
   .brand-icon {
     width: 54px; height: 44px;
     background: var(--dorado);
-    border-radius: 10px;
+    border-radius: var(--radius);
     display: flex; align-items: center; justify-content: center;
   }
 
@@ -376,7 +361,7 @@ body.tema-claro {
     width: 100%;
     background: var(--gris1);
     border: 1px solid var(--gris2);
-    border-radius: 8px;
+    border-radius: var(--radius);
     padding: 13px 16px;
     font-size: 14px;
     font-family: 'Roboto', sans-serif;
@@ -397,9 +382,9 @@ body.tema-claro {
     width: 100%;
     padding: 14px;
     background: var(--dorado);
-    color: var(--negro);
+    color: var(--gh-black);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius);
     font-size: 14px;
     font-weight: 700;
     font-family: 'Roboto', sans-serif;
@@ -420,7 +405,7 @@ body.tema-claro {
   .login-error {
     background: rgba(226,92,92,.1);
     border: 1px solid rgba(226,92,92,.3);
-    border-radius: 8px;
+    border-radius: var(--radius);
     padding: 12px 14px;
     font-size: 13px;
     color: var(--error);
@@ -430,8 +415,8 @@ body.tema-claro {
 
   .spinner {
     width: 16px; height: 16px;
-    border: 2px solid rgba(10,10,10,.3);
-    border-top-color: var(--negro);
+    border: 2px solid rgba(0,0,0,.3);
+    border-top-color: var(--gh-black);
     border-radius: 50%;
     animation: spin .6s linear infinite;
     display: none;
@@ -470,7 +455,7 @@ body.tema-claro {
   .topbar-brand-dot {
     width: 8px; height: 8px;
     background: var(--dorado);
-    border-radius: 2px;
+    border-radius: var(--radius);
   }
 
   .topbar-right {
@@ -481,7 +466,7 @@ body.tema-claro {
     font-size: 11px;
     font-weight: 500;
     padding: 3px 10px;
-    border-radius: 20px;
+    border-radius: var(--radius);
     letter-spacing: .04em;
     text-transform: uppercase;
   }
@@ -503,7 +488,7 @@ body.tema-claro {
     cursor: pointer;
     color: var(--gris4);
     padding: 6px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     transition: color .2s, background .2s;
   }
 
@@ -513,7 +498,7 @@ body.tema-claro {
     position: absolute;
     top: 2px; right: 2px;
     background: var(--dorado);
-    color: var(--negro);
+    color: var(--gh-black);
     font-size: 11px;
     font-weight: 700;
     width: 16px; height: 16px;
@@ -530,7 +515,7 @@ body.tema-claro {
     color: var(--gris4);
     background: transparent;
     border: 1px solid var(--gris2);
-    border-radius: 6px;
+    border-radius: var(--radius);
     padding: 5px 12px;
     cursor: pointer;
     transition: color .2s, border-color .2s;
@@ -576,7 +561,7 @@ body.tema-claro {
     align-items: center;
     gap: 10px;
     padding: 9px 12px;
-    border-radius: 7px;
+    border-radius: var(--radius);
     font-size: 13px;
     font-family:'Roboto', sans-serif;
     color: var(--gris4);
@@ -635,7 +620,7 @@ body.tema-claro {
   .stat-card {
     background: var(--gris1);
     border: 1px solid var(--gris2);
-    border-radius: 12px;
+    border-radius: var(--radius);
     padding: 20px;
   }
 
@@ -661,7 +646,7 @@ body.tema-claro {
   .tabla-wrap {
     background: var(--gris1);
     border: 1px solid var(--gris2);
-    border-radius: 12px;
+    border-radius: var(--radius);
     overflow: hidden;
   }
 
@@ -712,7 +697,7 @@ body.tema-claro {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border-radius: 7px;
+    border-radius: var(--radius);
     font-size: 13px;
     font-weight: 500;
     font-family: 'Roboto', sans-serif;
@@ -722,7 +707,7 @@ body.tema-claro {
   }
 
   .btn:active { transform: scale(.97); }
-  .btn-primary { background: var(--dorado); color: var(--negro); }
+  .btn-primary { background: var(--dorado); color: var(--gh-black); }
   .btn-primary:hover { opacity: .88; }
   .btn-ghost { background: transparent; color: var(--gris5); border: 1px solid var(--gris2); }
   .btn-ghost:hover { border-color: var(--gris3); color: var(--blanco); }
@@ -737,7 +722,7 @@ body.tema-claro {
     font-size: 11px;
     font-weight: 500;
     padding: 3px 9px;
-    border-radius: 20px;
+    border-radius: var(--radius);
   }
 
   .estado-completo     { background: rgba(92,184,122,.12); color: var(--exito); }
@@ -904,7 +889,7 @@ body.tema-claro {
 
   .login-red:hover {
     background: var(--dorado);
-    color: var(--negro);
+    color: var(--gh-black);
     text-decoration: none;
   }
 

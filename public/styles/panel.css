@@ -1,46 +1,12 @@
-/* ── PALETA ──────────────────────────────────────────────────
-   Los seis colores de la marca (los mismos de la pagina madre):
+/* La paleta ya NO vive aca: esta en goharv-tokens.css, que se importa antes
+   que este archivo. Ahi estan los colores de la marca, los roles que usan los
+   componentes (--accent, --text, --surface, --border...) y el puente que
+   mantiene andando los nombres historicos (--dorado, --negro, --gris1..5).
 
-     Dorado         #BFAE76    Negro   #000000    Gris texto  #555555
-     Dorado oscuro  #8A7538    Blanco  #FFFFFF    Gris suave  #F5F5F5
+   El tema se cambia con data-theme="dark" en <html>, no con una clase en el
+   body: asi lo pide la guia de marca (§7) y asi el fondo correcto esta
+   aplicado antes de que se pinte nada. */
 
-   Los --gris1..5 NO son de la marca: son las superficies y bordes del panel.
-   La paleta de la marca esta pensada para un sitio claro y no cubre los
-   grises intermedios que necesita una interfaz oscura, asi que se conservan.
-
-   Cualquier color nuevo sale de estas variables. Escribirlo a mano rompe el
-   tema claro, que funciona redefiniendolas mas abajo. */
-:root {
-    --negro:   #000000;
-    --blanco:  #FFFFFF;
-    --dorado:  #BFAE76;
-    /* Dorado oscuro de la marca. Es el hover de lo dorado: un boton dorado
-       se oscurece al pasar el mouse, no se aclara. */
-    --dorado-oscuro: #8A7538;
-    --gris1:   #1A1A1A;
-    --gris2:   #2C2C2C;
-    --gris3:   #444444;
-    --gris4:   #888888;
-    --gris5:   #CCCCCC;
-    --error:   #E25C5C;
-    --exito:   #5CB87A;
-  }
-/* Tema claro: se da vuelta el par negro/blanco y se usan los dos grises de la
-   marca donde corresponde — gris suave como fondo de pantalla, gris texto
-   para lo secundario.
-
-   OJO con --gris2: es sobre todo color de BORDE (238 usos como borde contra
-   73 como fondo). Ponerle el gris suave de la marca dejaria los bordes
-   invisibles sobre tarjetas blancas; lleva un gris de borde propio. */
-body.tema-claro {
-  --negro:   #F5F5F5;
-  --blanco:  #000000;
-  --gris1:   #FFFFFF;
-  --gris2:   #E5E5E5;
-  --gris3:   #AAAAAA;
-  --gris4:   #555555;
-  --gris5:   #333333;
-}
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -130,7 +96,7 @@ body.tema-claro {
 .topbar-brand-dot {
   width: 8px; height: 8px;
   background: var(--dorado);
-  border-radius: 2px;
+  border-radius: var(--radius);
 }
 
 /* ── LOGO DE LA TOPBAR ───────────────────────────────────────
@@ -188,9 +154,10 @@ body.tema-claro {
 
 .rol-badge {
   font-size: 11px;
+  white-space: nowrap;
   font-weight: 500;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: var(--radius);
   letter-spacing: .04em;
   text-transform: uppercase;
 }
@@ -206,7 +173,7 @@ body.tema-claro {
   cursor: pointer;
   color: var(--gris4);
   padding: 6px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   transition: color .2s, background .2s;
   display: flex;
   align-items: center;
@@ -219,7 +186,7 @@ body.tema-claro {
   position: absolute;
   top: 2px; right: 2px;
   background: var(--dorado);
-  color: var(--negro);
+  color: var(--gh-black);
   font-size: 11px;
   font-weight: 700;
   width: 16px; height: 16px;
@@ -236,7 +203,7 @@ body.tema-claro {
   color: var(--gris4);
   background: transparent;
   border: 1px solid var(--gris2);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 5px 12px;
   cursor: pointer;
   transition: color .2s, border-color .2s;
@@ -272,7 +239,7 @@ body.tema-claro {
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   font-size: 16px;
   font-family: 'Roboto', sans-serif;
   color: var(--gris4);
@@ -291,9 +258,21 @@ body.tema-claro {
 
 /* ── CONTENIDO PRINCIPAL ─────────────────────────────────────── */
 .main-content {
-  padding: 32px;
+  /* El relleno va en variables porque la banda de encabezado (.gh-banda)
+     necesita sangrar EXACTAMENTE este valor con margen negativo para llegar
+     a los bordes. Con un numero escrito a mano en los dos lados, cualquier
+     cambio de relleno dejaba la banda sobresaliendo o con aire al costado. */
+  --content-pad-y: 32px;
+  --content-pad-x: 32px;
+  padding: var(--content-pad-y) var(--content-pad-x);
   overflow-y: auto;
   background: var(--negro);
+  /* ESTO ES LO QUE IMPIDE EL SCROLL HORIZONTAL DE PAGINA.
+     .app-body es un grid y esta columna es 1fr, pero un item de grid arranca
+     con min-width:auto: una tabla ancha estira la columna mas alla de 1fr y
+     termina scrolleando la pantalla entera. Con min-width:0 la columna puede
+     achicarse, y el que scrollea es .tabla-wrap, como pide la guia (§6). */
+  min-width: 0;
 }
 
 .page-header { margin-bottom: 28px; }
@@ -323,7 +302,7 @@ body.tema-claro {
 .stat-card {
   background: var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 20px;
 }
 
@@ -349,8 +328,11 @@ body.tema-claro {
 .tabla-wrap {
   background: var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: var(--radius);
+  /* La tabla scrollea ADENTRO de su caja; la pagina nunca (guia §6).
+     Antes era overflow:hidden, que estaba para recortar las esquinas
+     redondeadas — ya no hay esquinas que recortar. */
+  overflow-x: auto;
   margin-bottom: 24px;
 }
 
@@ -370,19 +352,24 @@ body.tema-claro {
 
 table { width: 100%; border-collapse: collapse; }
 
+/* Montserrat es bastante mas ancha que Archivo, la fuente que reemplazo.
+   Con 14px en MAYUSCULAS y letter-spacing, los encabezados estiraban la tabla
+   lo suficiente como para sacar la columna de acciones fuera de pantalla.
+   12px es ademas lo que usa la guia para encabezados de tabla (§5.4). */
 thead th {
   text-align: left;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--gris4);
-  padding: 10px 20px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--gris2);
+  white-space: nowrap;
 }
 
 tbody td {
-  padding: 12px 20px;
+  padding: 12px 14px;
   font-size: 14px;
   color: var(--gris5);
   border-bottom: 1px solid rgba(44,44,44,.5);
@@ -398,7 +385,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   font-size: 14px;
   font-weight: 500;
   font-family: 'Montserrat', sans-serif;
@@ -409,7 +396,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 }
 
 .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--dorado); color: var(--negro); }
+.btn-primary { background: var(--dorado); color: var(--gh-black); }
 .btn-primary:hover { opacity: .88; }
 .btn-ghost { background: transparent; color: var(--gris5); border: 1px solid var(--gris2); }
 .btn-ghost:hover { border-color: var(--gris3); color: var(--blanco); }
@@ -423,10 +410,11 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 500;
   padding: 3px 9px;
-  border-radius: 20px;
+  border-radius: var(--radius);
 }
 
 .estado-completo     { background: rgba(92,184,122,.12);  color: var(--exito); }
@@ -497,7 +485,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   .nav-item {
     justify-content: center;
     padding: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius);
     margin: 2px 4px;
     width: auto;
     position: relative;
@@ -514,7 +502,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     color: var(--blanco);
     font-size: 12px;
     padding: 5px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     white-space: nowrap;
     z-index: 200;
     pointer-events: none;
@@ -525,7 +513,8 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   }
 
   .main-content {
-    padding: 20px 16px;
+    --content-pad-y: 20px;
+    --content-pad-x: 16px;
   }
 
   /* Stats en 2 columnas */
@@ -575,7 +564,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     cursor: pointer;
     color: var(--gris4);
     padding: 6px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     transition: color .15s, background .15s;
     order: -1;
   }
@@ -598,7 +587,9 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     z-index: 300;
     transform: translateX(-100%);
     transition: transform .25s ease;
-    box-shadow: 4px 0 20px rgba(0,0,0,.4);
+    /* Panel que se desliza sobre el contenido: necesita un canto que lo
+       separe de lo que tapa, ahora que no hay sombra. */
+    border-right: 1px solid var(--border);
     padding: 12px 0 0;    /* ← era 0, le devolvemos padding-top */
     display: flex !important;
     flex-direction: column !important;
@@ -650,7 +641,8 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 
   /* Contenido */
   .main-content {
-    padding: 16px 12px;
+    --content-pad-y: 16px;
+    --content-pad-x: 12px;
     min-height: calc(100vh - 56px);
   }
 
@@ -710,7 +702,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   .modal-box {
     max-width: 100% !important;
     margin: 0 8px;
-    border-radius: 12px;
+    border-radius: var(--radius);
   }
 
   .modal-overlay {
@@ -843,8 +835,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   width: auto; height: auto;
   max-width: min(72vw, 560px);
   max-height: 72vh;
-  border-radius: 10px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+  border-radius: var(--radius);
 }
 
 .avatar-lb-cap {
@@ -901,7 +892,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   font-family: 'Montserrat', sans-serif;
   background: transparent;
   border: 1px solid var(--gris2);
-  border-radius: 7px;
+  border-radius: var(--radius);
   color: var(--gris5);
   cursor: pointer;
   transition: all .15s;
@@ -914,7 +905,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 .pag-activa {
   background: var(--dorado);
   border-color: var(--dorado);
-  color: var(--negro);
+  color: var(--gh-black);
   font-weight: 600;
 }
 .pag-activa:disabled { opacity: 1; }
@@ -937,7 +928,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   text-align: left;
   padding: 14px 16px;
   border: 1px solid var(--gris2);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--negro);
   cursor: pointer;
   transition: border-color .2s, background .2s;
@@ -958,7 +949,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   width: 100%;
   background: var(--negro);
   border: 1px solid var(--gris2);
-  border-radius: 7px;
+  border-radius: var(--radius);
   padding: 10px 12px;
   font-size: 13px;
   font-family: 'Montserrat', sans-serif;
@@ -970,7 +961,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 .vpdf-num:focus { border-color: var(--dorado); }
 .vpdf-preview-caja {
   margin-top: 16px; padding: 12px;
-  border: 1px solid var(--gris2); border-radius: 6px;
+  border: 1px solid var(--gris2); border-radius: var(--radius);
   background: rgba(191,174,118,.04);
 }
 .vpdf-preview-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--gris4); font-weight: 600; margin-bottom: 4px; }

@@ -40,10 +40,11 @@ function icono(string $nombre): string {
 </nav>
 
 <script>
-// Restaurar tema al cargar — antes de layout.js
+// El TEMA ya quedo aplicado por el script inline de head.php, que corre antes
+// de que se cargue el CSS para que no haya destello. Aca solo se pone el
+// boton en el estado que corresponde.
 (function() {
-  const esClaro = localStorage.getItem('tema') === 'claro';
-  if (esClaro) document.body.classList.add('tema-claro');
+  const esClaro = document.documentElement.getAttribute('data-theme') !== 'dark';
   const labelEl = document.getElementById('label-tema');
   const iconEl  = document.getElementById('icon-tema');
   if (labelEl) labelEl.textContent = esClaro ? 'Modo oscuro' : 'Modo claro';

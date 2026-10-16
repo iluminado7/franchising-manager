@@ -342,8 +342,8 @@ include 'layout/head.php';
           </div>
         </div>
         <input type="file" id="file-docx" accept=".docx" style="display:none" onchange="importarDocx(this.files[0])">
-        <div id="import-result"   style="display:none;margin-top:8px;background:rgba(92,184,122,.08);border:1px solid rgba(92,184,122,.2);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--exito)"></div>
-        <div id="import-warnings" style="display:none;margin-top:6px;background:rgba(191,174,118,.08);border:1px solid rgba(191,174,118,.2);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
+        <div id="import-result"   style="display:none;margin-top:8px;background:rgba(92,184,122,.08);border:1px solid rgba(92,184,122,.2);border-radius: var(--radius);padding:8px 10px;font-size:11px;color:var(--exito)"></div>
+        <div id="import-warnings" style="display:none;margin-top:6px;background:rgba(191,174,118,.08);border:1px solid rgba(191,174,118,.2);border-radius: var(--radius);padding:8px 10px;font-size:11px;color:var(--dorado);line-height:1.5"></div>
       </div>
 
       <!-- v2.3: Visible para qué categorías de Socios comerciales -->
@@ -374,7 +374,7 @@ include 'layout/head.php';
             Publicar versión
           </button>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris2)">
+        <div style="margin-top:10px;font-size:11px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border-radius: var(--radius);border-left:2px solid var(--gris2)">
           Al publicar se genera un hash SHA-256 y se notifica a todos los franquiciados activos.
         </div>
       </div>
@@ -385,7 +385,7 @@ include 'layout/head.php';
 
         <!-- Caja para escribir (solo franquiciante) -->
         <div id="nota-form" style="display:none;margin-bottom:12px">
-          <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; una sugerencia sobre este manual..." style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--gris2);border-radius:8px;color:var(--blanco);font-family:'Roboto',sans-serif;font-size:12.5px;padding:8px 10px;resize:vertical;outline:none;line-height:1.5"></textarea>
+          <textarea id="nota-texto" rows="3" maxlength="5000" placeholder="Escrib&iacute; una sugerencia sobre este manual..." style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--gris2);border-radius: var(--radius);color:var(--blanco);font-family:'Roboto',sans-serif;font-size:12.5px;padding:8px 10px;resize:vertical;outline:none;line-height:1.5"></textarea>
           <button class="btn btn-ghost" id="btn-nota-enviar" onclick="agregarNota()" style="width:100%;justify-content:center;margin-top:8px">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
             Enviar nota
@@ -472,7 +472,7 @@ include 'layout/head.php';
         </div>
       </div>
 
-      <div style="margin-top:16px;padding:12px;border:1px solid var(--gris2);border-radius:6px;background:rgba(191,174,118,.04)">
+      <div style="margin-top:16px;padding:12px;border:1px solid var(--gris2);border-radius: var(--radius);background:rgba(191,174,118,.04)">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris4);font-weight:600;margin-bottom:4px">Se publicará como</div>
         <div id="vi-preview" style="font-size:20px;font-weight:700;color:var(--dorado);font-family:'Montserrat',sans-serif">v1.0</div>
       </div>
@@ -502,14 +502,14 @@ include 'layout/head.php';
         <p style="font-size:15px;color:var(--gris5);line-height:1.7;font-family:'Roboto',sans-serif">
           Se creará una nueva versión del manual. Todos los franquiciados activos recibirán una notificación. Esta acción no se puede deshacer.
         </p>
-        <p style="margin-top:8px;font-size:14px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--gris3)">
+        <p style="margin-top:8px;font-size:14px;color:var(--gris4);font-family:'Roboto',sans-serif;line-height:1.5;padding:6px 8px;background:rgba(255,255,255,.03);border-radius: var(--radius);border-left:2px solid var(--gris3)">
           Las imágenes del documento no se importan. Solo se conserva el texto y el formato.
         </p>
       </div>
 
       <!-- Contenido para franquiciante: advertencia legal -->
       <div id="pub-body-franquiciante" style="display:none">
-        <div style="background:rgba(226,92,92,.08);border:1px solid rgba(226,92,92,.25);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="background:rgba(226,92,92,.08);border:1px solid rgba(226,92,92,.25);border-radius: var(--radius);padding:14px 16px;margin-bottom:14px">
           <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <div style="font-size:13px;font-weight:600;color:var(--error)">Advertencia importante</div>
@@ -526,7 +526,7 @@ include 'layout/head.php';
           Una vez publicado, todos los franquiciados activos de tu empresa recibirán una notificación y la versión quedará registrada con fecha, hora y autoría. Esta acción no se puede deshacer.
         </p>
 
-        <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--gris2)">
+        <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;padding:10px 12px;background:rgba(255,255,255,.03);border-radius: var(--radius);border:1px solid var(--gris2)">
           <input type="checkbox" id="pub-confirmo" onchange="toggleBotonPublicar()" style="margin-top:2px;width:15px;height:15px;accent-color:var(--dorado);flex-shrink:0">
           <span style="font-size:13px;color:var(--gris5);line-height:1.5;font-family:'Montserrat',sans-serif">
             Confirmo que reviso y asumo la responsabilidad por las modificaciones realizadas en este manual.
@@ -541,7 +541,7 @@ include 'layout/head.php';
         </label>
         <textarea id="pub-nota" maxlength="2000" rows="3"
           placeholder="Ej: Actualizamos las cláusulas 3 y 5 según el nuevo decreto. Revisar antes del 30/06."
-          style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;resize:vertical;outline:none;transition:border-color .15s"
+          style="width:100%;box-sizing:border-box;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);padding:10px 12px;font-size:13px;color:var(--blanco);font-family:'Roboto',sans-serif;resize:vertical;outline:none;transition:border-color .15s"
           onfocus="this.style.borderColor='var(--dorado)'" onblur="this.style.borderColor='var(--gris2)'"></textarea>
         <div style="font-size:11px;color:var(--gris4);margin-top:4px;font-family:'Roboto',sans-serif;line-height:1.5">
           Este mensaje aparecerá en el hilo de notas del manual para todos los que tengan acceso. Podés editarlo después.
@@ -651,7 +651,7 @@ include 'layout/head.php';
   display: flex; align-items: center; gap: 4px;
   padding: 6px 8px;
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  border-radius: var(--radius);
 }
 .find-ico { width: 15px; height: 15px; color: var(--gris4); flex-shrink: 0; margin: 0 2px; }
 .find-input {
@@ -668,7 +668,7 @@ include 'layout/head.php';
 .find-nav, .find-close {
   display: flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; padding: 0;
-  background: transparent; border: none; border-radius: 6px;
+  background: transparent; border: none; border-radius: var(--radius);
   color: var(--gris5); cursor: pointer; transition: background .12s, color .12s;
 }
 .find-nav:hover, .find-close:hover { background: var(--gris2); color: var(--blanco); }
@@ -696,7 +696,7 @@ include 'layout/head.php';
 .tb-btn {
   width: 30px; height: 30px;
   display: flex; align-items: center; justify-content: center;
-  background: transparent; border: none; border-radius: 5px;
+  background: transparent; border: none; border-radius: var(--radius);
   color: var(--gris4); cursor: pointer; transition: background .12s, color .12s;
 }
 .tb-btn svg { width: 14px; height: 14px; }
@@ -705,7 +705,7 @@ include 'layout/head.php';
 
 .tb-select {
   background: transparent; border: 1px solid var(--gris2);
-  border-radius: 5px; color: var(--gris5);
+  border-radius: var(--radius); color: var(--gris5);
   font-size: 12px; font-family: 'Montserrat', sans-serif;
   padding: 4px 8px; cursor: pointer; outline: none;
   transition: border-color .15s;
@@ -718,28 +718,28 @@ include 'layout/head.php';
 .tb-color-btn {
   width: 30px; height: 30px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; background: transparent; border: none; border-radius: 5px;
+  gap: 2px; background: transparent; border: none; border-radius: var(--radius);
   color: var(--gris4); cursor: pointer; transition: background .12s, color .12s;
 }
 .tb-color-btn:hover { background: var(--gris2); color: var(--blanco); }
 .tb-color-btn svg { width: 14px; height: 12px; }
-.tb-color-bar { display: block; width: 16px; height: 3px; border-radius: 2px; background: var(--dorado); }
+.tb-color-bar { display: block; width: 16px; height: 3px; border-radius: var(--radius); background: var(--dorado); }
 .tb-color-pop {
   position: absolute; top: calc(100% + 5px); left: 0; z-index: 60;
   width: 176px; padding: 9px;
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 9px; box-shadow: 0 10px 28px rgba(0,0,0,.45);
+  border-radius: var(--radius);
 }
 .tb-swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
 .tb-swatch {
   width: 100%; aspect-ratio: 1; padding: 0; cursor: pointer;
-  border: 1px solid rgba(255,255,255,.14); border-radius: 5px;
+  border: 1px solid rgba(255,255,255,.14); border-radius: var(--radius);
   transition: transform .1s, border-color .1s;
 }
 .tb-swatch:hover { transform: scale(1.12); border-color: var(--dorado); }
 .tb-color-more, .tb-color-none {
   width: 100%; padding: 6px; cursor: pointer;
-  background: transparent; border: 1px solid var(--gris2); border-radius: 6px;
+  background: transparent; border: 1px solid var(--gris2); border-radius: var(--radius);
   color: var(--gris5); font-family: 'Roboto', sans-serif; font-size: 11px;
   display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: border-color .12s, color .12s;
@@ -762,7 +762,7 @@ include 'layout/head.php';
   margin: 0 auto;
   background:  var(--gris1);
   border: 1px solid var(--gris2);
-  border-radius: 4px;
+  border-radius: var(--radius);
   min-height: 900px;
   padding: 56px 64px;
 }
@@ -786,7 +786,7 @@ include 'layout/head.php';
 .mini-editor-wrap {
   margin-bottom: 8px;
   border: 1px dashed var(--gris3);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: rgba(0,0,0,.02);
 }
 .mini-editor-label {
@@ -799,7 +799,7 @@ include 'layout/head.php';
   letter-spacing: .06em;
   border-bottom: 1px solid var(--gris2);
   background: rgba(0,0,0,.03);
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius);
 }
 .mini-toolbar {
   display: flex; align-items: center; gap: 3px;
@@ -811,7 +811,7 @@ include 'layout/head.php';
 .mini-btn {
   background: transparent; border: 1px solid transparent;
   color: var(--gris5); cursor: pointer;
-  padding: 3px 8px; border-radius: 4px;
+  padding: 3px 8px; border-radius: var(--radius);
   font-family: 'Roboto', sans-serif; font-size: 11px;
   min-width: 24px; height: 24px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -822,7 +822,7 @@ include 'layout/head.php';
 .mini-sep { width: 1px; height: 14px; background: var(--gris2); margin: 0 2px; }
 .mini-select {
   background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
-  border-radius: 4px; padding: 2px 6px; font-size: 11px; height: 24px;
+  border-radius: var(--radius); padding: 2px 6px; font-size: 11px; height: 24px;
   font-family: 'Roboto', sans-serif; cursor: pointer;
 }
 .mini-select option { background: var(--gris1); }
@@ -885,12 +885,11 @@ include 'layout/head.php';
   z-index: 500;
   background: var(--gris1);
   border: 1px solid var(--gris3);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 4px;
   display: flex;
   align-items: center;
   gap: 2px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
   font-family: 'Roboto', sans-serif;
 }
 .img-toolbar button {
@@ -899,7 +898,7 @@ include 'layout/head.php';
   color: var(--blanco);
   cursor: pointer;
   padding: 5px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-size: 11px;
   font-family: 'Roboto', sans-serif;
   transition: background .15s;
@@ -980,7 +979,7 @@ include 'layout/head.php';
 .status-value.pendiente { color: var(--dorado); }
 
 .drop-zone {
-  border: 1px dashed var(--gris2); border-radius: 8px;
+  border: 1px dashed var(--gris2); border-radius: var(--radius);
   padding: 16px 10px; text-align: center; cursor: pointer;
   display: flex; flex-direction: column; align-items: center;
   transition: border-color .2s, background .2s;
@@ -992,7 +991,7 @@ include 'layout/head.php';
 
 .version-item {
   background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
-  border-radius: 8px; padding: 10px 12px; cursor: pointer;
+  border-radius: var(--radius); padding: 10px 12px; cursor: pointer;
   transition: border-color .15s, background .15s;
 }
 .version-item:hover  { border-color: var(--gris3); background: rgba(255,255,255,.05); }
@@ -1002,14 +1001,14 @@ include 'layout/head.php';
 .version-num  { font-size: 13px; font-weight: 600; color: var(--blanco); }
 .version-fecha { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
 .version-autor { font-size: 11px; color: var(--gris4); font-family: 'Roboto', sans-serif; }
-.version-tag   { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; background: rgba(191,174,118,.15); color: var(--dorado); margin-top: 4px; }
+.version-tag   { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: var(--radius); background: rgba(191,174,118,.15); color: var(--dorado); margin-top: 4px; }
 
 /* Modal elegir tipo de version (menor / mayor) */
 .ver-opciones { display: flex; flex-direction: column; gap: 10px; }
 .ver-opcion {
   text-align: left; width: 100%; cursor: pointer;
   background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
-  border-radius: 10px; padding: 14px 16px;
+  border-radius: var(--radius); padding: 14px 16px;
   transition: border-color .15s, background .15s;
 }
 .ver-opcion:hover { border-color: var(--dorado); background: rgba(191,174,118,.06); }
@@ -1027,7 +1026,7 @@ include 'layout/head.php';
 
 .modal-box {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 14px; width: 50%; overflow: hidden;
+  border-radius: var(--radius); width: 50%; overflow: hidden;
 }
 
 .modal-header {
@@ -1038,7 +1037,7 @@ include 'layout/head.php';
 
 .modal-close {
   background: transparent; border: none; cursor: pointer;
-  color: var(--gris4); padding: 4px; border-radius: 5px;
+  color: var(--gris4); padding: 4px; border-radius: var(--radius);
   transition: color .15s, background .15s; display: flex;
 }
 .modal-close:hover { color: var(--blanco); background: var(--gris2); }
@@ -1061,7 +1060,7 @@ include 'layout/head.php';
 .form-input {
   width: 100%; box-sizing: border-box;
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 8px; padding: 10px 12px;
+  border-radius: var(--radius); padding: 10px 12px;
   font-size: 13px; color: var(--blanco);
   font-family: 'Roboto', sans-serif;
   transition: border-color .15s, background .15s;
@@ -1072,7 +1071,7 @@ include 'layout/head.php';
 }
 .form-error {
   display: none; background: rgba(226,92,92,.1);
-  border: 1px solid rgba(226,92,92,.3); border-radius: 8px;
+  border: 1px solid rgba(226,92,92,.3); border-radius: var(--radius);
   padding: 10px 12px; color: var(--error); font-size: 12px;
   margin-top: 12px; font-family: 'Roboto', sans-serif;
 }
@@ -1084,7 +1083,7 @@ include 'layout/head.php';
 .toast {
   position: fixed; bottom: 24px; right: 24px;
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 10px; padding: 12px 16px;
+  border-radius: var(--radius); padding: 12px 16px;
   font-size: 13px; color: var(--blanco);
   display: flex; align-items: center; gap: 10px;
   transform: translateY(80px); opacity: 0;
@@ -1096,7 +1095,7 @@ include 'layout/head.php';
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--gris2); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--gris2); border-radius: var(--radius); }
 ::-webkit-scrollbar-thumb:hover { background: var(--gris3); }
 
 .version-item.cargada {
@@ -1111,7 +1110,7 @@ include 'layout/head.php';
 .notas-list { display: flex; flex-direction: column; gap: 8px; }
 .nota-item {
   background: rgba(255,255,255,.03); border: 1px solid var(--gris2);
-  border-radius: 8px; padding: 10px 12px;
+  border-radius: var(--radius); padding: 10px 12px;
 }
 .nota-item-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -1124,7 +1123,7 @@ include 'layout/head.php';
 .nota-estado {
   display: inline-block; font-size: 9.5px; font-weight: 600;
   letter-spacing: .04em; text-transform: uppercase;
-  padding: 2px 7px; border-radius: 20px;
+  padding: 2px 7px; border-radius: var(--radius);
 }
 .nota-estado.pendiente { background: rgba(191,174,118,.15); color: var(--dorado); }
 .nota-estado.leida     { background: rgba(55,138,221,.15); color: #378ADD; }
@@ -1133,7 +1132,7 @@ include 'layout/head.php';
 .nota-acciones { display: flex; gap: 6px; margin-top: 8px; }
 .nota-btn {
   flex: 1; font-size: 10.5px; font-family: 'Roboto', sans-serif;
-  padding: 5px 8px; border-radius: 6px; cursor: pointer;
+  padding: 5px 8px; border-radius: var(--radius); cursor: pointer;
   background: transparent; border: 1px solid var(--gris2); color: var(--gris5);
   transition: border-color .15s, color .15s, background .15s;
 }
@@ -2585,7 +2584,7 @@ function renderListaModalVisible() {
   const cont = document.getElementById('modal-visible-lista');
 
   if (!categoriasEmpresa.length) {
-    cont.innerHTML = `<div style="font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:12px;text-align:center;background:var(--negro);border-radius:8px">
+    cont.innerHTML = `<div style="font-size:13px;color:var(--gris4);font-family:'Roboto',sans-serif;padding:12px;text-align:center;background:var(--negro);border-radius: var(--radius)">
       No hay categorías activas en esta empresa.<br>
       <a href="${BASE_PHP}/categorias.php" style="color:var(--dorado);text-decoration:underline">Crear una categoría primero</a>.
     </div>`;
@@ -2599,7 +2598,7 @@ function renderListaModalVisible() {
   const todasMarcadas = categoriasEmpresa.every(c => idsAsignadasManual.has(c.id));
 
   cont.innerHTML = `
-    <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;cursor:pointer;border-radius:6px;background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);margin-bottom:10px">
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;cursor:pointer;border-radius: var(--radius);background:rgba(212,165,46,.08);border:1px solid rgba(212,165,46,.3);margin-bottom:10px">
       <input type="checkbox" id="modal-toda-empresa" ${todasMarcadas ? 'checked' : ''} style="margin:0;margin-top:2px;cursor:pointer;accent-color:var(--dorado)" onchange="onToggleTodaLaEmpresaEditor()">
       <div style="flex:1">
         <div style="font-size:13px;color:var(--dorado);font-weight:600">Toda la empresa</div>
@@ -2616,7 +2615,7 @@ function renderListaModalVisible() {
     <div id="modal-cats-especificas" style="max-height:280px;overflow-y:auto">
       ${categoriasEmpresa.map(c => `
         <div class="cat-item-wrap" data-cat-wrap="${c.id}">
-          <div class="cat-item-editor" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:5px;${todasMarcadas ? 'opacity:.45;pointer-events:none' : ''}">
+          <div class="cat-item-editor" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius: var(--radius);${todasMarcadas ? 'opacity:.45;pointer-events:none' : ''}">
             <input type="checkbox" data-cat-id="${c.id}" class="cat-especifica-editor" ${todasMarcadas ? 'disabled' : ''} style="margin:0;cursor:pointer;accent-color:var(--dorado);flex-shrink:0" onchange="onToggleCategoriaManualEditor(${c.id})">
             <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleCheckCatEditor(${c.id})">
               <div style="font-size:13px;color:var(--blanco);font-weight:500">${escNota(c.name)} <span style="color:var(--gris4);font-weight:400;font-size:11px">(${usuariosDeCategoria(c.id).length})</span></div>
@@ -2624,7 +2623,7 @@ function renderListaModalVisible() {
             </div>
             <button type="button" class="cat-chevron" data-chevron="${c.id}" onclick="onToggleSublistaEditor(${c.id})" style="display:none;background:none;border:none;color:var(--gris4);cursor:pointer;font-size:12px;padding:2px 6px">▾</button>
           </div>
-          <div class="cat-sublista" data-sublista="${c.id}" style="display:none;margin:2px 0 8px 26px;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid var(--gris2);border-radius:6px">
+          <div class="cat-sublista" data-sublista="${c.id}" style="display:none;margin:2px 0 8px 26px;padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid var(--gris2);border-radius: var(--radius)">
             ${sublistaUsuariosHTMLEditor(c.id)}
           </div>
         </div>

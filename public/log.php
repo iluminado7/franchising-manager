@@ -259,7 +259,7 @@ include 'layout/head.php';
   font-family: 'Montserrat', sans-serif;
   background: transparent;
   border: 1px solid var(--gris2);
-  border-radius: 7px;
+  border-radius: var(--radius);
   color: var(--gris5);
   cursor: pointer;
   transition: all .15s;
@@ -272,7 +272,7 @@ include 'layout/head.php';
 .pag-activa {
   background: var(--dorado);
   border-color: var(--dorado);
-  color: var(--negro);
+  color: var(--gh-black);
   font-weight: 600;
 }
 .pag-activa:disabled { opacity: 1; }
@@ -286,7 +286,7 @@ include 'layout/head.php';
 }
 .filtro-select, .filtro-date {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; color: var(--gris5);
+  border-radius: var(--radius); color: var(--gris5);
   font-size: 12px; font-family: 'Montserrat', sans-serif;
   padding: 7px 10px; cursor: pointer; outline: none;
   transition: border-color .2s;
@@ -297,7 +297,7 @@ include 'layout/head.php';
 
 .buscar-input {
   background: var(--gris2); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 7px 12px 7px 32px;
+  border-radius: var(--radius); padding: 7px 12px 7px 32px;
   font-size: 13px; color: var(--blanco);
   font-family: 'Montserrat', sans-serif; outline: none;
   width: 260px; transition: border-color .2s;
@@ -305,7 +305,7 @@ include 'layout/head.php';
 .buscar-input:focus { border-color: var(--dorado); }
 
 /* ── Combobox de empresa (mismo patrón que documentos.php) ── */
-.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius:8px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.combo-opciones { display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--gris1);border:1px solid var(--gris2);border-radius: var(--radius);z-index:50; }
 .combo-opcion { padding:9px 12px;font-size:13px;color:var(--gris5);cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s; }
 .combo-opcion:hover { background:var(--gris2);color:var(--blanco); }
 .combo-vacio { padding:10px 12px;font-size:12px;color:var(--gris4);font-family:'Roboto',sans-serif; }
@@ -313,7 +313,7 @@ include 'layout/head.php';
 .accion-pill {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 500;
-  padding: 3px 9px; border-radius: 20px;
+  padding: 3px 9px; border-radius: var(--radius);
   white-space: nowrap;
 }
 
@@ -333,7 +333,7 @@ include 'layout/head.php';
 
 .modal-box {
   background: var(--gris1); border: 1px solid var(--gris2);
-  border-radius: 14px; width: 100%; max-height: 90vh; overflow-y: auto;
+  border-radius: var(--radius); width: 100%; max-height: 90vh; overflow-y: auto;
 }
 
 .modal-header {
@@ -345,7 +345,7 @@ include 'layout/head.php';
 
 .modal-close {
   background: transparent; border: none; cursor: pointer;
-  color: var(--gris4); padding: 4px; border-radius: 5px;
+  color: var(--gris4); padding: 4px; border-radius: var(--radius);
   transition: color .15s, background .15s; display: flex;
 }
 .modal-close:hover { color: var(--blanco); background: var(--gris2); }
@@ -366,13 +366,13 @@ include 'layout/head.php';
 
 .json-block {
   background: var(--negro); border: 1px solid var(--gris2);
-  border-radius: 7px; padding: 12px; font-size: 12px;
+  border-radius: var(--radius); padding: 12px; font-size: 12px;
   font-family: monospace; color: var(--gris5);
   white-space: pre-wrap; word-break: break-all;
   line-height: 1.6; margin-top: 4px;
 }
 .log-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
-.log-tab { background:transparent; border:1px solid var(--gris2); border-radius:20px; padding:7px 16px; font-size:12px; font-family:'Montserrat',sans-serif; color:var(--gris4); cursor:pointer; transition:all .15s; }
+.log-tab { background:transparent; border:1px solid var(--gris2); border-radius: var(--radius); padding:7px 16px; font-size:12px; font-family:'Montserrat',sans-serif; color:var(--gris4); cursor:pointer; transition:all .15s; }
 .log-tab:hover { color:var(--blanco); border-color:var(--gris3); }
 .log-tab.active { background:rgba(191,174,118,.12); border-color:rgba(191,174,118,.3); color:var(--dorado); }
 </style>
