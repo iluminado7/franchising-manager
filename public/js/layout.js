@@ -39,19 +39,60 @@ function toggleTema() {
   pintarBotonTema(oscuro);
 }
 
-// El boton ofrece el tema CONTRARIO al actual: estando en oscuro dice
-// "Modo claro".
+// El boton muestra el tema que se va a APLICAR al tocarlo, no el actual:
+// estando en oscuro muestra el sol.
+//
+// Es solo un icono, sin texto: desde que paso al topbar (guia §6) no hay
+// lugar para una etiqueta, y el aria-label del boton ya dice que hace.
 function pintarBotonTema(oscuro) {
-  const esClaro = !oscuro;
-  const labelEl = document.getElementById('label-tema');
-  const iconEl  = document.getElementById('icon-tema');
-  if (labelEl) labelEl.textContent = esClaro ? 'Modo oscuro' : 'Modo claro';
-  if (iconEl)  iconEl.innerHTML    = esClaro
-    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
-    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+  const iconEl = document.getElementById('icon-tema');
+  if (!iconEl) return;
+  iconEl.innerHTML = oscuro
+    ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+    : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 }
 
 aplicarTema();
+
+// ── USUARIO DEL TOPBAR ────────────────────────────────────────
+//
+// Avatar, nombre y rol de quien esta usando el sistema, dentro del boton que
+// lleva a perfil.php.
+const ROL_LEGIBLE = {
+  super_admin:   'Superadmin',
+  franquiciante: 'Franquiciante',
+  franquiciado:  'Socio comercial',
+  empleado:      'Empleado',
+};
+
+function pintarUsuarioTopbar(me, nombreCompleto) {
+  const avatarEl = document.getElementById('topbar-avatar');
+  const nombreEl = document.getElementById('topbar-nombre');
+  const rolEl    = document.getElementById('topbar-rol');
+
+  if (nombreEl) nombreEl.textContent = nombreCompleto || me.email;
+  if (rolEl)    rolEl.textContent    = ROL_LEGIBLE[me.rol] || me.rol.replace('_', ' ');
+
+  if (!avatarEl) return;
+
+  // Iniciales abajo, foto encima: si el endpoint devuelve 404 (sin foto,
+  // archivo faltante) el onerror borra la imagen y quedan las iniciales.
+  //
+  // Se pinta a mano y no con avatarUsuario() porque esa funcion agrega
+  // u-avatar-click, y aca el clic tiene que ir al boton (perfil.php), no al
+  // visor de imagen.
+  avatarEl.textContent = inicialesDeUsuario(me);
+  if (me.avatar_url) {
+    const img = document.createElement('img');
+    img.className = 'u-avatar-img';
+    img.alt = '';
+    img.onerror = () => img.remove();
+    // Con API y no con me.avatar_url tal cual: ese campo es una ruta
+    // absoluta y en XAMPP el proyecto vive en un subpath.
+    img.src = `${API}/perfil/foto/${me.id}`;
+    avatarEl.appendChild(img);
+  }
+}
 
 // ── SIDEBAR ───────────────────────────────────────────────────
 function renderSidebar(rol) {
@@ -119,6 +160,8 @@ function renderSidebar(rol) {
       <a href="${BASE_URL}/${item.href}"
          class="nav-item ${paginaActual === item.id ? 'active' : ''}"
          data-tooltip="${item.label}"
+         aria-label="${item.label}"
+         ${paginaActual === item.id ? 'aria-current="page"' : ''}
          onclick="cerrarSidebar()">
         ${ICONOS[item.icon] || ''}
         <span>${item.label}</span>
@@ -141,36 +184,11 @@ document.addEventListener('DOMContentLoaded', async function iniciarLayout() {
   try {
     const me = await apiFetch('GET', '/me');
 
-    const nombreEl = document.getElementById('topbar-nombre');
-    const rolEl    = document.getElementById('topbar-rol');
     // v2.3: nombre/apellido viven en users — vienen al toplevel de /me
     const nombreCompleto = [me.nombre, me.apellido].filter(Boolean).join(' ').trim();
-    if (nombreEl) nombreEl.textContent = nombreCompleto || me.email;
 
-    // Avatar del topbar. Se pinta a mano y no con avatarUsuario() porque esa
-    // funcion agrega u-avatar-click, y aca el clic tiene que ir al boton
-    // (perfil.php), no al lightbox.
-    //
-    // La <img> se monta ENCIMA de las iniciales; si el endpoint devuelve 404
-    // (sin foto, archivo faltante) el onerror la borra y quedan las iniciales.
-    const avatarEl = document.getElementById('topbar-avatar');
-    if (avatarEl) {
-      avatarEl.textContent = inicialesDeUsuario(me);
-      if (me.avatar_url) {
-        const img = document.createElement('img');
-        img.className = 'u-avatar-img';
-        img.alt = '';
-        img.onerror = () => img.remove();
-        // Con API y no con me.avatar_url tal cual: ese campo es una ruta
-        // absoluta y en XAMPP el proyecto vive en un subpath.
-        img.src = `${API}/perfil/foto/${me.id}`;
-        avatarEl.appendChild(img);
-      }
-    }
-    if (rolEl) {
-      rolEl.textContent = me.rol.replace('_', ' ');
-      rolEl.className   = `rol-badge ${me.rol}`;
-    }
+    // Avatar, nombre y rol del topbar, en una sola llamada.
+    pintarUsuarioTopbar(me, nombreCompleto);
 
     if (typeof MODO_EDITOR === 'undefined' || !MODO_EDITOR) {
       renderSidebar(me.rol);

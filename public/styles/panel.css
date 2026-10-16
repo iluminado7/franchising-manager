@@ -48,11 +48,17 @@
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  background: var(--gris1);
-  border-top: 1px solid var(--gris2);
-  font-family: 'Roboto', sans-serif;
-  font-size: 11.5px;
-  color: var(--gris4);
+  background: var(--surface);
+  /* Borde dorado arriba: guia §6. */
+  border-top: 1px solid var(--accent);
+  /* El pie es una etiqueta de marca, no un parrafo legal (guia §6):
+     "GOHARV BUSINESS PARTNER · 2026" en mayusculas. */
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--label);
   text-align: center;
   /* Que no lo apriete un contenido largo al lado. */
   flex-shrink: 0;
@@ -72,8 +78,9 @@
 /* ── TOPBAR ──────────────────────────────────────────────────── */
 .topbar {
   height: 56px;
-  background: var(--gris1);
-  border-bottom: 1px solid var(--gris2);
+  background: var(--surface);
+  /* Borde dorado: guia §6. Es lo que enmarca la aplicacion. */
+  border-bottom: 1px solid var(--accent);
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -83,14 +90,34 @@
   z-index: 100;
 }
 
+/* La marca va en DOS lineas: logotipo arriba y nombre del producto abajo
+   (guia §6).
+
+   La guia fija --topbar-h en 92px para que entren comodas. Acá la topbar
+   mide 56px y ese numero esta escrito a mano en cuatro archivos mas, entre
+   ellos los dos visores de lectura, que calculan sus barras pegajosas a
+   partir de el. Tocarlo era arriesgar justo la pantalla mas delicada por un
+   detalle visual, asi que en vez de agrandar la barra se achico el logo: el
+   bloque entra en 56px y el resto del layout no se entera. */
 .topbar-brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--blanco);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
   flex: 1;
+  min-width: 0;
+}
+
+.topbar-producto {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--label);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .topbar-brand-dot {
@@ -113,8 +140,8 @@
    esa clase, pisa las variables en su propio <style> y deja la topbar en
    blanco — el logo habria quedado invisible justo ahi. */
 .topbar-logo {
-  width: 166px;
-  height: 26px;
+  width: 134px;
+  height: 21px;
   background-color: var(--blanco);
   -webkit-mask: url('../img/logo-goharv-marca.png') no-repeat center / contain;
           mask: url('../img/logo-goharv-marca.png') no-repeat center / contain;
@@ -149,7 +176,35 @@
 .topbar-user-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  max-width: 230px;
+}
+
+/* Nombre arriba, rol abajo. El bloque se achica si hace falta (min-width:0)
+   para que un nombre largo recorte con puntos suspensivos en vez de empujar
+   el topbar y sacar la campana de la pantalla. */
+.topbar-user-btn__datos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.topbar-user-btn__nombre {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-user-btn__rol {
+  font-size: 9.5px;
+  margin-top: 1px;
 }
 
 .rol-badge {
@@ -166,7 +221,8 @@
 .rol-badge.franquiciado  { background: rgba(92,184,122,.15); color: var(--exito); }
 .rol-badge.empleado      { background: rgba(136,136,136,.15); color: var(--gris5); }
 
-.notif-btn {
+.notif-btn,
+.topbar-icon-btn {
   position: relative;
   background: transparent;
   border: none;
@@ -180,7 +236,8 @@
   justify-content: center;
 }
 
-.notif-btn:hover { color: var(--blanco); background: var(--gris2); }
+.notif-btn:hover,
+.topbar-icon-btn:hover { color: var(--blanco); background: var(--gris2); }
 
 .notif-badge {
   position: absolute;
@@ -213,8 +270,9 @@
 
 /* ── SIDEBAR ─────────────────────────────────────────────────── */
 .sidebar {
-  background: var(--gris1);
-  border-right: 1px solid var(--gris2);
+  background: var(--surface);
+  /* Borde dorado: guia §6, igual que el inferior del topbar. */
+  border-right: 1px solid var(--accent);
   padding: 20px 0 0;
   position: sticky;
   top: 56px;
@@ -232,6 +290,10 @@
   margin-top: auto;
 }
 
+/* Boton de icono del topbar (tema). Comparte todo con el de notificaciones:
+   si cambia uno, cambian los dos. */
+.topbar-icon-btn { /* ver .notif-btn, abajo */ }
+
 .nav-section { margin-bottom: 2px; }
 
 .nav-item {
@@ -240,7 +302,7 @@
   gap: 10px;
   padding: 9px 12px;
   border-radius: var(--radius);
-  font-size: 16px;
+  font-size: 15px;
   font-family: 'Roboto', sans-serif;
   color: var(--gris4);
   cursor: pointer;
@@ -253,7 +315,26 @@
 }
 
 .nav-item:hover  { background: var(--gris2); color: var(--blanco); }
-.nav-item.active { background: rgba(191,174,118,.12); color: var(--dorado); }
+/* Item activo (guia §6): fondo dorado muy suave + barra vertical dorada a
+   la izquierda, y el TEXTO EN --text, no en dorado.
+
+   El texto se saca del dorado por una razon concreta y no por seguir la guia
+   de memoria: sobre ese fondo (dorado al 12% sobre blanco) el dorado claro
+   queda en 2,1:1 y no se lee. Es el unico caso del paso de "sacar el dorado
+   de los textos" que se aplico, porque aca el fondo nuevo lo volvio ilegible.
+   Si se prefiere el dorado, es esta linea. */
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--text);
+  position: relative;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
 .nav-item svg    { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* ── CONTENIDO PRINCIPAL ─────────────────────────────────────── */
@@ -545,10 +626,12 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
     font-size: 13px;
   }
 
-  .topbar-user,
-  .topbar-user-btn {
-    display: none;
-  }
+  .topbar-user { display: none; }
+
+  /* En celular se esconde SOLO el texto, no el boton: el avatar sigue
+     siendo el acceso al perfil, y sin el no quedaria ninguno. */
+  .topbar-user-btn__datos { display: none; }
+  .topbar-user-btn { max-width: none; padding: 4px; }
 
   .topbar-right {
     gap: 6px;
